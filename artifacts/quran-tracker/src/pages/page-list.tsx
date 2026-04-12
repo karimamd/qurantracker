@@ -1,6 +1,6 @@
 import { useListPageProgress, useAddToScope, useRemoveFromScope, getListPageProgressQueryKey } from "@workspace/api-client-react";
 import type { ListPageProgressParams, ListPageProgressStatus } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,12 +8,28 @@ import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Minus } from "lucide-react";
+import { Plus, Minus, LayoutGrid, LayoutList } from "lucide-react";
+import { format } from "date-fns";
+
+function formatDate(d: Date | string | null | undefined): string {
+  if (!d) return "—";
+  return format(new Date(d), "MMM d, yyyy");
+}
+
+function dueDateLabel(daysUntilDue: number | null, dueDate: Date | string | null | undefined): string {
+  if (!dueDate) return "—";
+  if (daysUntilDue === null) return formatDate(dueDate);
+  if (daysUntilDue < 0) return `${Math.abs(daysUntilDue)}d overdue`;
+  if (daysUntilDue === 0) return "Today";
+  if (daysUntilDue === 1) return "Tomorrow";
+  return `in ${daysUntilDue}d`;
+}
 
 export default function PageList() {
   const [juzFilter, setJuzFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [scopeFilter, setScopeFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const params = useMemo<ListPageProgressParams>(() => {
     const p: ListPageProgressParams = {};
@@ -120,8 +136,31 @@ export default function PageList() {
           </SelectContent>
         </Select>
 
+        <div className="flex gap-1 border rounded-md p-0.5 ml-auto">
+          <Button
+            variant={viewMode === "grid" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => setViewMode("grid")}
+            aria-label="Grid view"
+            data-testid="btn-grid-view"
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            variant={viewMode === "list" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => setViewMode("list")}
+            aria-label="List view"
+            data-testid="btn-list-view"
+          >
+            <LayoutList className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+
         {selectedPages.size > 0 && (
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-2">
             <span className="text-sm text-muted-foreground">{selectedPages.size} selected</span>
             <Button size="sm" onClick={handleAddToScope} disabled={addToScope.isPending} data-testid="btn-add-scope">
               <Plus className="w-3 h-3 mr-1" /> Add to Scope
@@ -150,10 +189,16 @@ export default function PageList() {
       )}
 
       {isLoading ? (
-        <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-12 gap-2">
-          {Array.from({ length: 24 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
-        </div>
-      ) : (
+        viewMode === "grid" ? (
+          <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-12 gap-2">
+            {Array.from({ length: 24 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}
+          </div>
+        )
+      ) : viewMode === "grid" ? (
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-1.5">
           {pages?.map(page => {
             const isSelected = selectedPages.has(page.pageNumber);
@@ -182,6 +227,104 @@ export default function PageList() {
             );
           })}
         </div>
+      ) : (
+        <Card className="border shadow-sm overflow-hidden">
+          <div className="hidden sm:grid grid-cols-[56px_1fr_90px_90px_110px_110px_80px] gap-x-4 px-4 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <span>Page</span>
+            <span>Surah(s)</span>
+            <span>Quality</span>
+            <span>Status</span>
+            <span>Last Recited</span>
+            <span>Due Date</span>
+            <span className="text-right">Due In</span>
+          </div>
+          <div className="divide-y max-h-[70vh] overflow-y-auto" data-testid="page-list-rows">
+            {pages?.map(page => {
+              const isSelected = selectedPages.has(page.pageNumber);
+              const surahList = page.surahs ? page.surahs.split(", ") : [];
+
+              return (
+                <div
+                  key={page.pageNumber}
+                  onClick={() => togglePage(page.pageNumber)}
+                  className={`cursor-pointer transition-colors px-4 py-3 ${
+                    isSelected
+                      ? "bg-primary/10 ring-inset ring-1 ring-primary"
+                      : page.status === "overdue"
+                      ? "hover:bg-rose-50/60 bg-rose-50/30"
+                      : page.status === "due_soon"
+                      ? "hover:bg-amber-50/60 bg-amber-50/30"
+                      : page.status === "on_track"
+                      ? "hover:bg-emerald-50/30"
+                      : "hover:bg-muted/40"
+                  }`}
+                  data-testid={`page-row-${page.pageNumber}`}
+                >
+                  <div className="hidden sm:grid grid-cols-[56px_1fr_90px_90px_110px_110px_80px] gap-x-4 items-center">
+                    <span className="font-semibold text-sm">{page.pageNumber}</span>
+                    <div className="min-w-0">
+                      {surahList.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {surahList.map(s => (
+                            <span key={s} className="text-xs bg-muted px-1.5 py-0.5 rounded-md truncate max-w-[140px]">{s}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </div>
+                    <div>{page.quality ? <QualityBadge quality={page.quality} /> : <span className="text-xs text-muted-foreground">—</span>}</div>
+                    <div><StatusBadge status={page.status} /></div>
+                    <span className="text-xs text-muted-foreground">{formatDate(page.lastRecited)}</span>
+                    <span className="text-xs text-muted-foreground">{formatDate(page.dueDate)}</span>
+                    <span className={`text-xs font-medium text-right ${
+                      page.daysUntilDue !== null && page.daysUntilDue < 0
+                        ? "text-rose-600"
+                        : page.daysUntilDue !== null && page.daysUntilDue <= 3
+                        ? "text-amber-600"
+                        : "text-muted-foreground"
+                    }`}>
+                      {dueDateLabel(page.daysUntilDue ?? null, page.dueDate)}
+                    </span>
+                  </div>
+
+                  <div className="sm:hidden flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-1 h-10 rounded-full shrink-0 ${
+                        page.status === "overdue" ? "bg-rose-500"
+                        : page.status === "due_soon" ? "bg-amber-400"
+                        : page.status === "on_track" ? "bg-emerald-500"
+                        : "bg-blue-400"
+                      }`} />
+                      <div className="min-w-0">
+                        <div className="font-semibold text-sm">Page {page.pageNumber}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {surahList[0] ?? "—"}{surahList.length > 1 ? ` +${surahList.length - 1}` : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {page.quality ? <QualityBadge quality={page.quality} /> : null}
+                      <span className={`text-xs font-medium ${
+                        page.daysUntilDue !== null && page.daysUntilDue < 0
+                          ? "text-rose-600"
+                          : page.daysUntilDue !== null && page.daysUntilDue <= 3
+                          ? "text-amber-600"
+                          : "text-muted-foreground"
+                      }`}>
+                        {dueDateLabel(page.daysUntilDue ?? null, page.dueDate)}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{formatDate(page.lastRecited)}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {(!pages || pages.length === 0) && (
+              <div className="py-12 text-center text-sm text-muted-foreground">No pages match the current filters.</div>
+            )}
+          </div>
+        </Card>
       )}
     </div>
   );
