@@ -11,6 +11,8 @@ export * from "./activityEntryQuality";
 export * from "./batchRecitationBody";
 export * from "./batchRecitationBodyQuality";
 export * from "./createHomeworkBody";
+export * from "./dailyChartEntry";
+export * from "./getDailyChartParams";
 export * from "./getRecentActivityParams";
 export * from "./healthStatus";
 export * from "./homeworkItem";

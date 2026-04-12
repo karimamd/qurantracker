@@ -479,6 +479,21 @@ export const UpdateHomeworkItemResponse = zod.object({
 });
 
 /**
+ * @summary Daily distinct pages recited (last N days)
+ */
+export const getDailyChartQueryDaysDefault = 30;
+
+export const GetDailyChartQueryParams = zod.object({
+  days: zod.coerce.number().default(getDailyChartQueryDaysDefault),
+});
+
+export const GetDailyChartResponseItem = zod.object({
+  date: zod.string().describe("ISO date string (YYYY-MM-DD)"),
+  pages: zod.number().describe("Count of distinct pages recited on this day"),
+});
+export const GetDailyChartResponse = zod.array(GetDailyChartResponseItem);
+
+/**
  * @summary Recent recitation activity feed
  */
 export const getRecentActivityQueryLimitDefault = 20;

@@ -165,6 +165,13 @@ export interface RecordRecitationBody {
   recitedAt?: string;
 }
 
+export interface DailyChartEntry {
+  /** ISO date string (YYYY-MM-DD) */
+  date: string;
+  /** Count of distinct pages recited on this day */
+  pages: number;
+}
+
 export type BatchRecitationBodyQuality =
   (typeof BatchRecitationBodyQuality)[keyof typeof BatchRecitationBodyQuality];
 
@@ -311,6 +318,10 @@ export const ListPageProgressStatus = {
   on_track: "on_track",
   not_started: "not_started",
 } as const;
+
+export type GetDailyChartParams = {
+  days?: number;
+};
 
 export type GetRecentActivityParams = {
   limit?: number;

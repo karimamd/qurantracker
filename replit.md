@@ -27,6 +27,8 @@ A personal Quran memorization progress tracker. Tracks revision across multiple 
 - **Homework tracking**: Create bi-weekly sessions with memorize/revise pages
 - **Activity feed**: Recent recitation history
 - **Streak counter**: Track consecutive days of revision
+- **Due pages dashboard section**: Pages requiring attention (overdue + due soon) sorted by due date, shown above the chart
+- **Daily recitation chart**: Bar chart of distinct pages recited per day over the last 30 days
 
 ## Database Tables
 
@@ -40,7 +42,7 @@ A personal Quran memorization progress tracker. Tracks revision across multiple 
 
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec; then rebuild declarations with `pnpm --filter @workspace/api-zod exec tsc -p tsconfig.json && pnpm --filter @workspace/api-client-react exec tsc -p tsconfig.json`
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 

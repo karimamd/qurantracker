@@ -367,6 +367,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/HomeworkItem"
 
+  /progress/daily-chart:
+    get:
+      operationId: getDailyChart
+      tags: [progress]
+      summary: Daily distinct pages recited (last N days)
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Daily chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyChartEntry"
+
   /progress/activity:
     get:
       operationId: getRecentActivity
@@ -684,6 +706,19 @@ components:
           format: date-time
       required:
         - quality
+
+    DailyChartEntry:
+      type: object
+      properties:
+        date:
+          type: string
+          description: ISO date string (YYYY-MM-DD)
+        pages:
+          type: integer
+          description: Count of distinct pages recited on this day
+      required:
+        - date
+        - pages
 
     BatchRecitationBody:
       type: object

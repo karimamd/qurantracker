@@ -20,6 +20,8 @@ import type {
   ActivityEntry,
   BatchRecitationBody,
   CreateHomeworkBody,
+  DailyChartEntry,
+  GetDailyChartParams,
   GetRecentActivityParams,
   HealthStatus,
   HomeworkItem,
@@ -1569,6 +1571,100 @@ export const useUpdateHomeworkItem = <
 > => {
   return useMutation(getUpdateHomeworkItemMutationOptions(options));
 };
+
+/**
+ * @summary Daily distinct pages recited (last N days)
+ */
+export const getGetDailyChartUrl = (params?: GetDailyChartParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/progress/daily-chart?${stringifiedParams}`
+    : `/api/progress/daily-chart`;
+};
+
+export const getDailyChart = async (
+  params?: GetDailyChartParams,
+  options?: RequestInit,
+): Promise<DailyChartEntry[]> => {
+  return customFetch<DailyChartEntry[]>(getGetDailyChartUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDailyChartQueryKey = (params?: GetDailyChartParams) => {
+  return [`/api/progress/daily-chart`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetDailyChartQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDailyChart>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetDailyChartParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDailyChart>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDailyChartQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDailyChart>>> = ({
+    signal,
+  }) => getDailyChart(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDailyChart>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDailyChartQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDailyChart>>
+>;
+export type GetDailyChartQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Daily distinct pages recited (last N days)
+ */
+
+export function useGetDailyChart<
+  TData = Awaited<ReturnType<typeof getDailyChart>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetDailyChartParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDailyChart>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDailyChartQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Recent recitation activity feed

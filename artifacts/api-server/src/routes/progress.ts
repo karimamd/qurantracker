@@ -20,6 +20,8 @@ import {
   RemoveFromScopeResponse,
   GetRecentActivityQueryParams,
   GetRecentActivityResponse,
+  GetDailyChartQueryParams,
+  GetDailyChartResponse,
 } from "@workspace/api-zod";
 import {
   TOTAL_PAGES,
@@ -439,6 +441,44 @@ router.delete("/progress/scope", async (req, res): Promise<void> => {
   }
 
   res.json(RemoveFromScopeResponse.parse(results));
+});
+
+router.get("/progress/daily-chart", async (req, res): Promise<void> => {
+  const queryParams = GetDailyChartQueryParams.safeParse(req.query);
+  const numDays = queryParams.success ? queryParams.data.days : 30;
+
+  // Build an array of the last numDays dates
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dateList: string[] = [];
+  for (let i = numDays - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    dateList.push(d.toISOString().slice(0, 10));
+  }
+
+  const since = new Date(today);
+  since.setDate(since.getDate() - (numDays - 1));
+
+  // Query: count distinct pages per day
+  const rows = await db
+    .select({
+      date: sql<string>`DATE(${recitationLogTable.recitedAt} AT TIME ZONE 'UTC')`.as("date"),
+      pages: sql<number>`COUNT(DISTINCT ${recitationLogTable.pageNumber})`.as("pages"),
+    })
+    .from(recitationLogTable)
+    .where(gte(recitationLogTable.recitedAt, since))
+    .groupBy(sql`DATE(${recitationLogTable.recitedAt} AT TIME ZONE 'UTC')`)
+    .orderBy(sql`DATE(${recitationLogTable.recitedAt} AT TIME ZONE 'UTC')`);
+
+  const rowMap = new Map(rows.map(r => [r.date, Number(r.pages)]));
+
+  const result = dateList.map(date => ({
+    date,
+    pages: rowMap.get(date) ?? 0,
+  }));
+
+  res.json(GetDailyChartResponse.parse(result));
 });
 
 router.get("/progress/activity", async (req, res): Promise<void> => {
