@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Quran Memorization Tracker API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: progress
+    description: Quran memorization progress tracking
+  - name: settings
+    description: User settings
+  - name: homework
+    description: Homework session tracking
 paths:
   /healthz:
     get:
@@ -24,6 +30,365 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get user settings
+      responses:
+        "200":
+          description: Current settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update user settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
+  /progress/overview:
+    get:
+      operationId: getProgressOverview
+      tags: [progress]
+      summary: Dashboard overview of memorization progress
+      responses:
+        "200":
+          description: Progress overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressOverview"
+
+  /progress/juz:
+    get:
+      operationId: listJuzProgress
+      tags: [progress]
+      summary: List all 30 juz with aggregated progress
+      responses:
+        "200":
+          description: Juz progress list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JuzProgress"
+
+  /progress/juz/{juzNumber}:
+    get:
+      operationId: getJuzDetail
+      tags: [progress]
+      summary: Get detail for a specific juz with its rob3s
+      parameters:
+        - name: juzNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Juz detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JuzDetail"
+        "404":
+          description: Juz not found
+
+  /progress/surah:
+    get:
+      operationId: listSurahProgress
+      tags: [progress]
+      summary: List all 114 surahs with aggregated progress
+      responses:
+        "200":
+          description: Surah progress list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SurahProgress"
+
+  /progress/pages:
+    get:
+      operationId: listPageProgress
+      tags: [progress]
+      summary: List pages with progress, filterable
+      parameters:
+        - name: juz
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: surah
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: inScope
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [overdue, due_soon, on_track, not_started]
+      responses:
+        "200":
+          description: Page progress list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PageProgress"
+
+  /progress/pages/{pageNumber}:
+    patch:
+      operationId: updatePageProgress
+      tags: [progress]
+      summary: Record a recitation for a page
+      parameters:
+        - name: pageNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordRecitationBody"
+      responses:
+        "200":
+          description: Updated page progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageProgress"
+
+  /progress/recite-batch:
+    post:
+      operationId: recordBatchRecitation
+      tags: [progress]
+      summary: Record recitation for multiple pages at once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchRecitationBody"
+      responses:
+        "200":
+          description: Updated pages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PageProgress"
+
+  /progress/scope:
+    post:
+      operationId: addToScope
+      tags: [progress]
+      summary: Add pages to memorization scope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopeBody"
+      responses:
+        "200":
+          description: Updated pages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PageProgress"
+    delete:
+      operationId: removeFromScope
+      tags: [progress]
+      summary: Remove pages from memorization scope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopeBody"
+      responses:
+        "200":
+          description: Updated pages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PageProgress"
+
+  /homework:
+    get:
+      operationId: listHomework
+      tags: [homework]
+      summary: List homework sessions
+      responses:
+        "200":
+          description: Homework sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HomeworkSession"
+    post:
+      operationId: createHomework
+      tags: [homework]
+      summary: Create a homework session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHomeworkBody"
+      responses:
+        "201":
+          description: Created homework session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeworkSession"
+
+  /homework/{id}:
+    get:
+      operationId: getHomework
+      tags: [homework]
+      summary: Get homework session with items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Homework session detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeworkSessionDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateHomework
+      tags: [homework]
+      summary: Update homework session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateHomeworkBody"
+      responses:
+        "200":
+          description: Updated homework session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeworkSession"
+    delete:
+      operationId: deleteHomework
+      tags: [homework]
+      summary: Delete homework session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /homework/{homeworkId}/items/{itemId}:
+    patch:
+      operationId: updateHomeworkItem
+      tags: [homework]
+      summary: Update a homework item (mark page as done)
+      parameters:
+        - name: homeworkId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateHomeworkItemBody"
+      responses:
+        "200":
+          description: Updated homework item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeworkItem"
+
+  /progress/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [progress]
+      summary: Recent recitation activity feed
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEntry"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +399,465 @@ components:
       required:
         - status
 
+    Settings:
+      type: object
+      properties:
+        id:
+          type: integer
+        excellentDays:
+          type: integer
+        goodDays:
+          type: integer
+        hardDays:
+          type: integer
+        relearnDays:
+          type: integer
+      required:
+        - id
+        - excellentDays
+        - goodDays
+        - hardDays
+        - relearnDays
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        excellentDays:
+          type: integer
+        goodDays:
+          type: integer
+        hardDays:
+          type: integer
+        relearnDays:
+          type: integer
+
+    ProgressOverview:
+      type: object
+      properties:
+        totalPages:
+          type: integer
+        pagesInScope:
+          type: integer
+        pagesOverdue:
+          type: integer
+        pagesDueSoon:
+          type: integer
+        pagesOnTrack:
+          type: integer
+        pagesNotStarted:
+          type: integer
+        excellentCount:
+          type: integer
+        goodCount:
+          type: integer
+        hardCount:
+          type: integer
+        relearnCount:
+          type: integer
+        lastRecitedDate:
+          type: ["string", "null"]
+          format: date-time
+        streakDays:
+          type: integer
+      required:
+        - totalPages
+        - pagesInScope
+        - pagesOverdue
+        - pagesDueSoon
+        - pagesOnTrack
+        - pagesNotStarted
+        - excellentCount
+        - goodCount
+        - hardCount
+        - relearnCount
+        - lastRecitedDate
+        - streakDays
+
+    JuzProgress:
+      type: object
+      properties:
+        juzNumber:
+          type: integer
+        name:
+          type: string
+        startPage:
+          type: integer
+        endPage:
+          type: integer
+        totalPages:
+          type: integer
+        pagesInScope:
+          type: integer
+        pagesOverdue:
+          type: integer
+        pagesDueSoon:
+          type: integer
+        pagesOnTrack:
+          type: integer
+        averageQuality:
+          type: ["string", "null"]
+        lastRecited:
+          type: ["string", "null"]
+          format: date-time
+        nextDue:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - juzNumber
+        - name
+        - startPage
+        - endPage
+        - totalPages
+        - pagesInScope
+        - pagesOverdue
+        - pagesDueSoon
+        - pagesOnTrack
+        - averageQuality
+        - lastRecited
+        - nextDue
+
+    JuzDetail:
+      type: object
+      properties:
+        juzNumber:
+          type: integer
+        name:
+          type: string
+        startPage:
+          type: integer
+        endPage:
+          type: integer
+        rob3s:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rob3Progress"
+        pages:
+          type: array
+          items:
+            $ref: "#/components/schemas/PageProgress"
+      required:
+        - juzNumber
+        - name
+        - startPage
+        - endPage
+        - rob3s
+        - pages
+
+    Rob3Progress:
+      type: object
+      properties:
+        rob3Number:
+          type: integer
+        juzNumber:
+          type: integer
+        startPage:
+          type: integer
+        endPage:
+          type: integer
+        totalPages:
+          type: integer
+        pagesInScope:
+          type: integer
+        pagesOverdue:
+          type: integer
+        averageQuality:
+          type: ["string", "null"]
+        lastRecited:
+          type: ["string", "null"]
+          format: date-time
+        nextDue:
+          type: ["string", "null"]
+          format: date-time
+        totalMistakes:
+          type: ["integer", "null"]
+      required:
+        - rob3Number
+        - juzNumber
+        - startPage
+        - endPage
+        - totalPages
+        - pagesInScope
+        - pagesOverdue
+        - averageQuality
+        - lastRecited
+        - nextDue
+        - totalMistakes
+
+    SurahProgress:
+      type: object
+      properties:
+        surahNumber:
+          type: integer
+        name:
+          type: string
+        arabicName:
+          type: string
+        startPage:
+          type: integer
+        endPage:
+          type: integer
+        totalPages:
+          type: integer
+        pagesInScope:
+          type: integer
+        pagesOverdue:
+          type: integer
+        pagesOnTrack:
+          type: integer
+        averageQuality:
+          type: ["string", "null"]
+        lastRecited:
+          type: ["string", "null"]
+          format: date-time
+        nextDue:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - surahNumber
+        - name
+        - arabicName
+        - startPage
+        - endPage
+        - totalPages
+        - pagesInScope
+        - pagesOverdue
+        - pagesOnTrack
+        - averageQuality
+        - lastRecited
+        - nextDue
+
+    PageProgress:
+      type: object
+      properties:
+        pageNumber:
+          type: integer
+        juzNumber:
+          type: integer
+        rob3Number:
+          type: integer
+        surahs:
+          type: string
+        inScope:
+          type: boolean
+        quality:
+          type: ["string", "null"]
+          enum: [excellent, good, hard, relearn, null]
+        mistakes:
+          type: ["integer", "null"]
+        lastRecited:
+          type: ["string", "null"]
+          format: date-time
+        dueDate:
+          type: ["string", "null"]
+          format: date-time
+        daysSinceRecited:
+          type: ["integer", "null"]
+        daysUntilDue:
+          type: ["integer", "null"]
+        status:
+          type: string
+          enum: [overdue, due_soon, on_track, not_started, out_of_scope]
+      required:
+        - pageNumber
+        - juzNumber
+        - rob3Number
+        - surahs
+        - inScope
+        - quality
+        - mistakes
+        - lastRecited
+        - dueDate
+        - daysSinceRecited
+        - daysUntilDue
+        - status
+
+    RecordRecitationBody:
+      type: object
+      properties:
+        quality:
+          type: string
+          enum: [excellent, good, hard, relearn]
+        mistakes:
+          type: integer
+        recitedAt:
+          type: string
+          format: date-time
+      required:
+        - quality
+
+    BatchRecitationBody:
+      type: object
+      properties:
+        pageNumbers:
+          type: array
+          items:
+            type: integer
+        quality:
+          type: string
+          enum: [excellent, good, hard, relearn]
+        mistakes:
+          type: integer
+        recitedAt:
+          type: string
+          format: date-time
+      required:
+        - pageNumbers
+        - quality
+
+    ScopeBody:
+      type: object
+      properties:
+        pageNumbers:
+          type: array
+          items:
+            type: integer
+      required:
+        - pageNumbers
+
+    HomeworkSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        completedItems:
+          type: integer
+        totalItems:
+          type: integer
+        status:
+          type: string
+          enum: [active, completed, overdue]
+      required:
+        - id
+        - title
+        - dueDate
+        - createdAt
+        - completedItems
+        - totalItems
+        - status
+
+    CreateHomeworkBody:
+      type: object
+      properties:
+        title:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+        memorizePages:
+          type: array
+          items:
+            type: integer
+        revisePages:
+          type: array
+          items:
+            type: integer
+      required:
+        - title
+        - dueDate
+
+    UpdateHomeworkBody:
+      type: object
+      properties:
+        title:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+
+    HomeworkSessionDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/HomeworkItem"
+      required:
+        - id
+        - title
+        - dueDate
+        - createdAt
+        - items
+
+    HomeworkItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        homeworkId:
+          type: integer
+        pageNumber:
+          type: integer
+        type:
+          type: string
+          enum: [memorize, revise]
+        completed:
+          type: boolean
+        quality:
+          type: ["string", "null"]
+          enum: [excellent, good, hard, relearn, null]
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - id
+        - homeworkId
+        - pageNumber
+        - type
+        - completed
+        - quality
+        - completedAt
+
+    UpdateHomeworkItemBody:
+      type: object
+      properties:
+        completed:
+          type: boolean
+        quality:
+          type: string
+          enum: [excellent, good, hard, relearn]
+
+    ActivityEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        pageNumber:
+          type: integer
+        juzNumber:
+          type: integer
+        surahName:
+          type: string
+        quality:
+          type: string
+          enum: [excellent, good, hard, relearn]
+        mistakes:
+          type: ["integer", "null"]
+        recitedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - pageNumber
+        - juzNumber
+        - surahName
+        - quality
+        - mistakes
+        - recitedAt
