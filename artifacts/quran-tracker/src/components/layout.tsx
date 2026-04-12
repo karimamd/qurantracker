@@ -1,5 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { LayoutDashboard, BookOpen, Layers, FileText, PenLine, ClipboardList, Settings } from "lucide-react";
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -11,42 +13,128 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+const bottomNavItems = [
+  { href: "/", label: "Home", icon: LayoutDashboard },
+  { href: "/juz", label: "Juz", icon: Layers },
+  { href: "/recite", label: "Recite", icon: PenLine },
+  { href: "/homework", label: "Homework", icon: ClipboardList },
+  { href: "/pages", label: "Pages", icon: FileText },
+];
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const isActive = (href: string) =>
+    location === href || (href !== "/" && location.startsWith(href));
 
   return (
     <div className="min-h-screen flex" data-testid="app-layout">
-      <aside className="w-56 bg-sidebar border-r border-sidebar-border flex flex-col py-4 shrink-0" data-testid="sidebar">
+      <aside className="hidden md:flex w-56 bg-sidebar border-r border-sidebar-border flex-col py-4 shrink-0" data-testid="sidebar">
         <div className="px-5 mb-6">
           <h1 className="text-lg font-semibold text-sidebar-foreground tracking-tight">Quran Tracker</h1>
           <p className="text-xs text-muted-foreground mt-0.5">Memorization Progress</p>
         </div>
         <nav className="flex-1 px-3 space-y-0.5">
-          {navItems.map(item => {
-            const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent"
-                }`}
-                data-testid={`nav-${item.label.toLowerCase()}`}
-              >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+          {navItems.map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive(item.href)
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent"
+              }`}
+              data-testid={`nav-${item.label.toLowerCase()}`}
+            >
+              <item.icon className="w-4 h-4" />
+              {item.label}
+            </Link>
+          ))}
         </nav>
       </aside>
-      <main className="flex-1 overflow-auto">
-        <div className="max-w-6xl mx-auto p-6">
-          {children}
-        </div>
-      </main>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-background sticky top-0 z-30">
+          <div>
+            <h1 className="text-base font-semibold leading-tight">Quran Tracker</h1>
+          </div>
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="p-2 rounded-lg hover:bg-muted transition-colors"
+            aria-label="Open menu"
+            data-testid="mobile-menu-btn"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        </header>
+
+        {drawerOpen && (
+          <div className="md:hidden fixed inset-0 z-50 flex">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setDrawerOpen(false)}
+            />
+            <div className="relative w-64 bg-sidebar h-full flex flex-col py-4 shadow-xl z-10">
+              <div className="flex items-center justify-between px-5 mb-6">
+                <div>
+                  <h1 className="text-lg font-semibold text-sidebar-foreground">Quran Tracker</h1>
+                  <p className="text-xs text-muted-foreground mt-0.5">Memorization Progress</p>
+                </div>
+                <button
+                  onClick={() => setDrawerOpen(false)}
+                  className="p-1.5 rounded-lg hover:bg-sidebar-accent transition-colors"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5 text-sidebar-foreground" />
+                </button>
+              </div>
+              <nav className="flex-1 px-3 space-y-0.5">
+                {navItems.map(item => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setDrawerOpen(false)}
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      isActive(item.href)
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent"
+                    }`}
+                    data-testid={`mobile-nav-${item.label.toLowerCase()}`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          </div>
+        )}
+
+        <main className="flex-1 overflow-auto pb-20 md:pb-0">
+          <div className="max-w-6xl mx-auto p-4 md:p-6">
+            {children}
+          </div>
+        </main>
+
+        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-background border-t z-30 flex" data-testid="bottom-nav">
+          {bottomNavItems.map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-[10px] font-medium transition-colors ${
+                isActive(item.href)
+                  ? "text-primary"
+                  : "text-muted-foreground"
+              }`}
+              data-testid={`bottom-nav-${item.label.toLowerCase()}`}
+            >
+              <item.icon className={`w-5 h-5 ${isActive(item.href) ? "text-primary" : "text-muted-foreground"}`} />
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
     </div>
   );
 }
