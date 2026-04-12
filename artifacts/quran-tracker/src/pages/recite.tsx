@@ -5,6 +5,7 @@ import {
   getListJuzProgressQueryKey,
   getListSurahProgressQueryKey,
   getGetRecentActivityQueryKey,
+  getListHomeworkQueryKey,
 } from "@workspace/api-client-react";
 import type { BatchRecitationBodyQuality } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,6 +92,8 @@ export default function Recite() {
           queryClient.invalidateQueries({ queryKey: getListJuzProgressQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListSurahProgressQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
+          queryClient.invalidateQueries({ predicate: q => String(q.queryKey[0]).startsWith("/api/homework/") });
           setTimeout(() => setSubmitted(false), 3000);
         },
       }

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, pageProgressTable, recitationLogTable } from "@workspace/db";
-import { eq, and, inArray, desc, sql } from "drizzle-orm";
+import { db, pageProgressTable, recitationLogTable, homeworkItemsTable, homeworkSessionsTable } from "@workspace/db";
+import { eq, and, inArray, desc, sql, gte } from "drizzle-orm";
 import {
   GetProgressOverviewResponse,
   ListJuzProgressResponse,
@@ -357,6 +357,43 @@ router.post("/progress/recite-batch", async (req, res): Promise<void> => {
     });
 
     results.push(enrichPageProgress(updated));
+  }
+
+  // Sync with active homework sessions
+  const validPageNumbers = parsed.data.pageNumbers.filter(p => p >= 1 && p <= TOTAL_PAGES);
+  if (validPageNumbers.length > 0) {
+    const activeSessions = await db
+      .select({ id: homeworkSessionsTable.id })
+      .from(homeworkSessionsTable)
+      .where(gte(homeworkSessionsTable.dueDate, recitedAt));
+
+    const activeSessionIds = activeSessions.map(s => s.id);
+
+    if (activeSessionIds.length > 0) {
+      const isPositive = parsed.data.quality === "good" || parsed.data.quality === "excellent";
+
+      if (isPositive) {
+        await db
+          .update(homeworkItemsTable)
+          .set({ completed: true, quality: parsed.data.quality, completedAt: recitedAt })
+          .where(
+            and(
+              inArray(homeworkItemsTable.homeworkId, activeSessionIds),
+              inArray(homeworkItemsTable.pageNumber, validPageNumbers)
+            )
+          );
+      } else {
+        await db
+          .update(homeworkItemsTable)
+          .set({ completed: false, quality: null, completedAt: null })
+          .where(
+            and(
+              inArray(homeworkItemsTable.homeworkId, activeSessionIds),
+              inArray(homeworkItemsTable.pageNumber, validPageNumbers)
+            )
+          );
+      }
+    }
   }
 
   res.json(RecordBatchRecitationResponse.parse(results));
