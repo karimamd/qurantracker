@@ -1,14 +1,35 @@
-import { useGetHomework, useUpdateHomeworkItem, getGetHomeworkQueryKey, getListHomeworkQueryKey, getGetProgressOverviewQueryKey, getListPageProgressQueryKey } from "@workspace/api-client-react";
+import {
+  useGetHomework,
+  useUpdateHomeworkItem,
+  getGetHomeworkQueryKey,
+  getListHomeworkQueryKey,
+  getGetProgressOverviewQueryKey,
+  getListPageProgressQueryKey,
+} from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
+
+type Quality = "excellent" | "good" | "hard" | "relearn";
+
+const QUALITIES: { value: Quality; label: string; checked: boolean }[] = [
+  { value: "excellent", label: "Excellent", checked: true },
+  { value: "good", label: "Good", checked: true },
+  { value: "hard", label: "Hard", checked: false },
+  { value: "relearn", label: "Relearn", checked: false },
+];
+
+const qualityColors: Record<Quality, { active: string; text: string }> = {
+  excellent: { active: "bg-emerald-500 border-emerald-500 text-white", text: "text-emerald-700" },
+  good:      { active: "bg-sky-500 border-sky-500 text-white",        text: "text-sky-700" },
+  hard:      { active: "bg-amber-500 border-amber-500 text-white",    text: "text-amber-700" },
+  relearn:   { active: "bg-rose-500 border-rose-500 text-white",      text: "text-rose-700" },
+};
 
 export default function HomeworkDetail() {
   const params = useParams<{ id: string }>();
@@ -20,15 +41,20 @@ export default function HomeworkDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const handleToggle = (itemId: number, completed: boolean, quality?: string) => {
+  const handleQualitySelect = (itemId: number, newQuality: Quality, currentQuality: string | null | undefined) => {
+    const isToggleOff = currentQuality === newQuality;
+    const isChecked = !isToggleOff && QUALITIES.find(q => q.value === newQuality)?.checked;
+
     updateItem.mutate(
       {
         homeworkId,
         itemId,
-        data: {
-          completed,
-          quality: quality as "excellent" | "good" | "hard" | "relearn" | undefined,
-        },
+        data: isToggleOff
+          ? { completed: false }
+          : {
+              completed: !!isChecked,
+              quality: newQuality,
+            },
       },
       {
         onSuccess: () => {
@@ -36,6 +62,9 @@ export default function HomeworkDetail() {
           queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
+        },
+        onError: () => {
+          toast({ title: "Failed to update page", variant: "destructive" });
         },
       }
     );
@@ -57,71 +86,94 @@ export default function HomeworkDetail() {
   const memorizeItems = detail.items.filter(i => i.type === "memorize");
   const reviseItems = detail.items.filter(i => i.type === "revise");
 
-  const renderItems = (items: typeof detail.items, label: string) => (
-    items.length > 0 && (
+  const renderItems = (items: typeof detail.items, label: string) => {
+    if (items.length === 0) return null;
+
+    const doneCount = items.filter(i => i.completed).length;
+    const hardCount = items.filter(i => !i.completed && i.quality && ["hard", "relearn"].includes(i.quality)).length;
+
+    return (
       <Card className="border shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">{label} ({items.filter(i => i.completed).length}/{items.length})</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            {label}
+            <span className="font-normal text-sm text-muted-foreground">
+              {doneCount}/{items.length}
+              {hardCount > 0 && <span className="ml-1 text-amber-600">· {hardCount} needs work</span>}
+            </span>
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-1">
-            {items.map(item => (
-              <div
-                key={item.id}
-                className={`flex items-center justify-between py-2 px-3 rounded-lg ${
-                  item.completed ? "bg-emerald-50" : "hover:bg-muted/50"
-                }`}
-                data-testid={`hw-item-${item.id}`}
-              >
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    checked={item.completed}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        handleToggle(item.id, true, "good");
-                      } else {
-                        handleToggle(item.id, false);
-                      }
-                    }}
-                    data-testid={`hw-checkbox-${item.id}`}
-                  />
-                  <span className={`text-sm font-medium ${item.completed ? "line-through text-muted-foreground" : ""}`}>
-                    Page {item.pageNumber}
-                  </span>
-                  <Badge variant="outline" className="text-xs">
-                    {item.type}
-                  </Badge>
+        <CardContent className="p-0">
+          <div className="divide-y">
+            {items.map(item => {
+              const q = item.quality as Quality | null | undefined;
+              const isChecked = item.completed;
+              const hasQuality = !!q;
+              const isHardOrRelearn = q === "hard" || q === "relearn";
+
+              return (
+                <div
+                  key={item.id}
+                  className={`flex items-center justify-between px-4 py-3 gap-3 transition-colors ${
+                    isChecked
+                      ? "bg-emerald-50/60"
+                      : isHardOrRelearn
+                      ? "bg-amber-50/40"
+                      : "hover:bg-muted/30"
+                  }`}
+                  data-testid={`hw-item-${item.id}`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                      isChecked
+                        ? "border-emerald-500 bg-emerald-500"
+                        : isHardOrRelearn
+                        ? "border-amber-400 bg-amber-400"
+                        : "border-muted-foreground/30 bg-transparent"
+                    }`}>
+                      {(isChecked || isHardOrRelearn) && (
+                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <span className={`text-sm font-medium ${isChecked ? "text-muted-foreground line-through" : ""}`}>
+                        Page {item.pageNumber}
+                      </span>
+                      <Badge variant="outline" className="ml-2 text-xs py-0">
+                        {item.type}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    {QUALITIES.map(({ value, label: ql }) => {
+                      const isActive = q === value;
+                      const colors = qualityColors[value];
+                      return (
+                        <button
+                          key={value}
+                          onClick={() => handleQualitySelect(item.id, value, q)}
+                          disabled={updateItem.isPending}
+                          className={`text-xs px-2 py-1 rounded-md border font-medium transition-all ${
+                            isActive
+                              ? colors.active
+                              : `border-border bg-background hover:border-${value === "excellent" ? "emerald" : value === "good" ? "sky" : value === "hard" ? "amber" : "rose"}-300 hover:bg-muted/60 text-muted-foreground`
+                          }`}
+                          data-testid={`hw-quality-btn-${item.id}-${value}`}
+                        >
+                          {ql}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {item.completed && (
-                    <Select
-                      value={item.quality || "good"}
-                      onValueChange={(val) => handleToggle(item.id, true, val)}
-                    >
-                      <SelectTrigger className="w-28 h-8 text-xs" data-testid={`hw-quality-${item.id}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="excellent">Excellent</SelectItem>
-                        <SelectItem value="good">Good</SelectItem>
-                        <SelectItem value="hard">Hard</SelectItem>
-                        <SelectItem value="relearn">Relearn</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {item.completedAt && (
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(item.completedAt).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
-    )
-  );
+    );
+  };
 
   return (
     <div className="space-y-6" data-testid="homework-detail-page">

@@ -118,7 +118,7 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const items = await db.select().from(homeworkItemsTable).where(eq(homeworkItemsTable.homeworkId, session.id));
+  const items = await db.select().from(homeworkItemsTable).where(eq(homeworkItemsTable.homeworkId, session.id)).orderBy(homeworkItemsTable.pageNumber);
 
   const detail = {
     id: session.id,
@@ -252,7 +252,7 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
     .where(eq(homeworkItemsTable.id, params.data.itemId))
     .returning();
 
-  if (parsed.data.completed && parsed.data.quality) {
+  if (parsed.data.quality) {
     await ensurePageExists(item.pageNumber);
     const settings = await getSettings();
     const now = new Date();
