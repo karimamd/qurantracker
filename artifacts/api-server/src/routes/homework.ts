@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, homeworkSessionsTable, homeworkItemsTable, pageProgressTable } from "@workspace/db";
-import { eq, and, sql, count } from "drizzle-orm";
+import { db, homeworkSessionsTable, homeworkItemsTable, pageProgressTable, recitationLogTable } from "@workspace/db";
+import { eq, and, sql, count, gte, inArray } from "drizzle-orm";
 import {
   ListHomeworkResponse,
   CreateHomeworkBody,
@@ -15,7 +15,6 @@ import {
   UpdateHomeworkItemResponse,
 } from "@workspace/api-zod";
 import { ensurePageExists, getSettings, calculateDueDate, enrichPageProgress } from "../lib/progress-helpers";
-import { recitationLogTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -132,6 +131,28 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
     .where(eq(homeworkItemsTable.homeworkId, session.id))
     .orderBy(homeworkItemsTable.pageNumber);
 
+  const pageNumbers = rows.map(r => r.pageNumber);
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const todayCounts = pageNumbers.length > 0
+    ? await db
+        .select({
+          pageNumber: recitationLogTable.pageNumber,
+          todayCount: count(),
+        })
+        .from(recitationLogTable)
+        .where(
+          and(
+            inArray(recitationLogTable.pageNumber, pageNumbers),
+            gte(recitationLogTable.recitedAt, todayStart)
+          )
+        )
+        .groupBy(recitationLogTable.pageNumber)
+    : [];
+
+  const todayCountMap = new Map(todayCounts.map(t => [t.pageNumber, Number(t.todayCount)]));
+
   const detail = {
     id: session.id,
     title: session.title,
@@ -145,6 +166,7 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
       completed: r.quality === "good" || r.quality === "excellent",
       quality: r.quality ?? null,
       completedAt: r.lastRecited ?? null,
+      todayCount: todayCountMap.get(r.pageNumber) ?? 0,
     })),
   };
 
@@ -286,14 +308,34 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
     });
   }
 
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const [todayRow] = await db
+    .select({ todayCount: count() })
+    .from(recitationLogTable)
+    .where(
+      and(
+        eq(recitationLogTable.pageNumber, item.pageNumber),
+        gte(recitationLogTable.recitedAt, todayStart)
+      )
+    );
+
+  const currentProgress = await db
+    .select({ quality: pageProgressTable.quality, lastRecited: pageProgressTable.lastRecited })
+    .from(pageProgressTable)
+    .where(eq(pageProgressTable.pageNumber, item.pageNumber));
+  const globalQuality = currentProgress[0]?.quality ?? updated.quality;
+  const globalLastRecited = currentProgress[0]?.lastRecited ?? updated.completedAt;
+
   res.json(UpdateHomeworkItemResponse.parse({
     id: updated.id,
     homeworkId: updated.homeworkId,
     pageNumber: updated.pageNumber,
     type: updated.type,
-    completed: updated.completed,
-    quality: updated.quality,
-    completedAt: updated.completedAt,
+    completed: globalQuality === "good" || globalQuality === "excellent",
+    quality: globalQuality,
+    completedAt: globalLastRecited,
+    todayCount: Number(todayRow?.todayCount ?? 0),
   }));
 });
 

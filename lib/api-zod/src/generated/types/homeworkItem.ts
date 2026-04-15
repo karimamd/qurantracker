@@ -18,4 +18,6 @@ export interface HomeworkItem {
   quality: HomeworkItemQuality;
   /** @nullable */
   completedAt: Date | null;
+  /** Number of times this page has been recited today */
+  todayCount: number;
 }

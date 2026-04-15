@@ -851,6 +851,9 @@ components:
         completedAt:
           type: ["string", "null"]
           format: date-time
+        todayCount:
+          type: integer
+          description: Number of times this page has been recited today
       required:
         - id
         - homeworkId
@@ -859,6 +862,7 @@ components:
         - completed
         - quality
         - completedAt
+        - todayCount
 
     UpdateHomeworkItemBody:
       type: object

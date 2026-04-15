@@ -256,6 +256,8 @@ export interface HomeworkItem {
   quality: HomeworkItemQuality;
   /** @nullable */
   completedAt: string | null;
+  /** Number of times this page has been recited today */
+  todayCount: number;
 }
 
 export interface HomeworkSessionDetail {

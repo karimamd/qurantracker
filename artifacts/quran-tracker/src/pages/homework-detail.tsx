@@ -100,6 +100,14 @@ export default function HomeworkDetail() {
   const memorizeItems = detail.items.filter(i => i.type === "memorize");
   const reviseItems   = detail.items.filter(i => i.type === "revise");
 
+  const lastStoppedId = detail.items.reduce<number | null>((best, item) => {
+    if (!item.completedAt) return best;
+    if (best === null) return item.id;
+    const prev = detail.items.find(i => i.id === best);
+    const prevTime = prev?.completedAt ? new Date(prev.completedAt).getTime() : 0;
+    return new Date(item.completedAt).getTime() > prevTime ? item.id : best;
+  }, null);
+
   const renderItems = (items: typeof detail.items, label: string) => {
     if (items.length === 0) return null;
 
@@ -125,15 +133,22 @@ export default function HomeworkDetail() {
               const q = item.quality as Quality | null | undefined;
               const hasQuality = !!q;
               const isCompleted = item.completed;
-              const isHardOrRelearn = q === "hard" || q === "relearn";
+              const isLastStopped = item.id === lastStoppedId;
               const lastRecitedAt = item.completedAt
                 ? format(new Date(item.completedAt), "MMM d, h:mm a")
                 : null;
+              const todayCount = item.todayCount ?? 0;
 
               return (
                 <div
                   key={item.id}
-                  className={`px-4 py-3 transition-colors ${hasQuality ? (rowStyle[q] ?? "") : "hover:bg-muted/30"}`}
+                  className={`px-4 py-3 transition-colors relative ${
+                    isLastStopped
+                      ? "bg-violet-50/70 border-l-4 border-l-violet-400"
+                      : hasQuality
+                      ? (rowStyle[q] ?? "")
+                      : "hover:bg-muted/30"
+                  }`}
                   data-testid={`hw-item-${item.id}`}
                 >
                   <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
@@ -144,11 +159,25 @@ export default function HomeworkDetail() {
                         {hasQuality && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className={`text-sm font-medium ${isCompleted ? "text-muted-foreground line-through" : ""}`}>
                             Page {item.pageNumber}
                           </span>
                           <Badge variant="outline" className="text-xs py-0">{item.type}</Badge>
+                          {isLastStopped && (
+                            <Badge className="text-xs py-0 bg-violet-500 hover:bg-violet-500 text-white border-0" data-testid={`hw-last-stopped-${item.id}`}>
+                              Last stopped
+                            </Badge>
+                          )}
+                          {todayCount > 0 && (
+                            <span
+                              className="text-xs font-semibold bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full border border-sky-200"
+                              data-testid={`hw-today-count-${item.id}`}
+                              title={`Recited ${todayCount}× today`}
+                            >
+                              {todayCount}× today
+                            </span>
+                          )}
                         </div>
                         {lastRecitedAt && (
                           <div className="text-xs text-muted-foreground mt-0.5" data-testid={`hw-last-recited-${item.id}`}>

@@ -414,6 +414,9 @@ export const GetHomeworkResponse = zod.object({
         ])
         .nullable(),
       completedAt: zod.coerce.date().nullable(),
+      todayCount: zod
+        .number()
+        .describe("Number of times this page has been recited today"),
     }),
   ),
 });
@@ -476,6 +479,9 @@ export const UpdateHomeworkItemResponse = zod.object({
     ])
     .nullable(),
   completedAt: zod.coerce.date().nullable(),
+  todayCount: zod
+    .number()
+    .describe("Number of times this page has been recited today"),
 });
 
 /**
