@@ -236,14 +236,13 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
   const updateData: Record<string, unknown> = {};
   if (parsed.data.completed !== undefined) {
     updateData.completed = parsed.data.completed;
-    if (parsed.data.completed) {
-      updateData.completedAt = new Date();
-    } else {
+    if (!parsed.data.completed && parsed.data.quality === undefined) {
       updateData.completedAt = null;
     }
   }
   if (parsed.data.quality !== undefined) {
     updateData.quality = parsed.data.quality;
+    updateData.completedAt = new Date();
   }
 
   const [updated] = await db

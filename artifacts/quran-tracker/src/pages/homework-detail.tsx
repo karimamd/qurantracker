@@ -13,22 +13,37 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, X } from "lucide-react";
+import { format } from "date-fns";
 
 type Quality = "excellent" | "good" | "hard" | "relearn";
 
-const QUALITIES: { value: Quality; label: string; checked: boolean }[] = [
-  { value: "excellent", label: "Excellent", checked: true },
-  { value: "good", label: "Good", checked: true },
-  { value: "hard", label: "Hard", checked: false },
-  { value: "relearn", label: "Relearn", checked: false },
+const QUALITIES: { value: Quality; label: string; completed: boolean }[] = [
+  { value: "excellent", label: "Excellent", completed: true },
+  { value: "good",      label: "Good",      completed: true },
+  { value: "hard",      label: "Hard",      completed: false },
+  { value: "relearn",   label: "Relearn",   completed: false },
 ];
 
-const qualityColors: Record<Quality, { active: string; text: string }> = {
-  excellent: { active: "bg-emerald-500 border-emerald-500 text-white", text: "text-emerald-700" },
-  good:      { active: "bg-sky-500 border-sky-500 text-white",        text: "text-sky-700" },
-  hard:      { active: "bg-amber-500 border-amber-500 text-white",    text: "text-amber-700" },
-  relearn:   { active: "bg-rose-500 border-rose-500 text-white",      text: "text-rose-700" },
+const qualityStyle: Record<Quality, { active: string; hover: string }> = {
+  excellent: { active: "bg-emerald-500 border-emerald-500 text-white", hover: "hover:border-emerald-300 hover:text-emerald-700" },
+  good:      { active: "bg-sky-500 border-sky-500 text-white",         hover: "hover:border-sky-300 hover:text-sky-700" },
+  hard:      { active: "bg-amber-500 border-amber-500 text-white",     hover: "hover:border-amber-300 hover:text-amber-700" },
+  relearn:   { active: "bg-rose-500 border-rose-500 text-white",       hover: "hover:border-rose-300 hover:text-rose-700" },
+};
+
+const dotStyle: Record<string, string> = {
+  excellent: "border-emerald-500 bg-emerald-500",
+  good:      "border-emerald-500 bg-emerald-500",
+  hard:      "border-amber-400 bg-amber-400",
+  relearn:   "border-amber-400 bg-amber-400",
+};
+
+const rowStyle: Record<string, string> = {
+  excellent: "bg-emerald-50/60",
+  good:      "bg-emerald-50/60",
+  hard:      "bg-amber-50/40",
+  relearn:   "bg-amber-50/40",
 };
 
 export default function HomeworkDetail() {
@@ -41,31 +56,30 @@ export default function HomeworkDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const handleQualitySelect = (itemId: number, newQuality: Quality, currentQuality: string | null | undefined) => {
-    const isToggleOff = currentQuality === newQuality;
-    const isChecked = !isToggleOff && QUALITIES.find(q => q.value === newQuality)?.checked;
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: getGetHomeworkQueryKey(homeworkId) });
+    queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
+  };
 
+  const handleQualitySelect = (itemId: number, quality: Quality) => {
+    const isCompleted = QUALITIES.find(q => q.value === quality)!.completed;
     updateItem.mutate(
+      { homeworkId, itemId, data: { completed: isCompleted, quality } },
       {
-        homeworkId,
-        itemId,
-        data: isToggleOff
-          ? { completed: false }
-          : {
-              completed: !!isChecked,
-              quality: newQuality,
-            },
-      },
+        onSuccess: invalidate,
+        onError: () => toast({ title: "Failed to update page", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleClear = (itemId: number) => {
+    updateItem.mutate(
+      { homeworkId, itemId, data: { completed: false } },
       {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getGetHomeworkQueryKey(homeworkId) });
-          queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
-        },
-        onError: () => {
-          toast({ title: "Failed to update page", variant: "destructive" });
-        },
+        onSuccess: invalidate,
+        onError: () => toast({ title: "Failed to clear page", variant: "destructive" }),
       }
     );
   };
@@ -84,22 +98,24 @@ export default function HomeworkDetail() {
   if (!detail) return <div>Not found</div>;
 
   const memorizeItems = detail.items.filter(i => i.type === "memorize");
-  const reviseItems = detail.items.filter(i => i.type === "revise");
+  const reviseItems   = detail.items.filter(i => i.type === "revise");
 
   const renderItems = (items: typeof detail.items, label: string) => {
     if (items.length === 0) return null;
 
     const doneCount = items.filter(i => i.completed).length;
-    const hardCount = items.filter(i => !i.completed && i.quality && ["hard", "relearn"].includes(i.quality)).length;
+    const needsWorkCount = items.filter(i => !i.completed && i.quality && ["hard", "relearn"].includes(i.quality)).length;
 
     return (
       <Card className="border shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="text-base flex items-center gap-2 flex-wrap">
             {label}
             <span className="font-normal text-sm text-muted-foreground">
               {doneCount}/{items.length}
-              {hardCount > 0 && <span className="ml-1 text-amber-600">· {hardCount} needs work</span>}
+              {needsWorkCount > 0 && (
+                <span className="ml-1 text-amber-600">· {needsWorkCount} needs work</span>
+              )}
             </span>
           </CardTitle>
         </CardHeader>
@@ -107,64 +123,71 @@ export default function HomeworkDetail() {
           <div className="divide-y">
             {items.map(item => {
               const q = item.quality as Quality | null | undefined;
-              const isChecked = item.completed;
               const hasQuality = !!q;
+              const isCompleted = item.completed;
               const isHardOrRelearn = q === "hard" || q === "relearn";
+              const lastRecitedAt = item.completedAt
+                ? format(new Date(item.completedAt), "MMM d, h:mm a")
+                : null;
 
               return (
                 <div
                   key={item.id}
-                  className={`flex items-center justify-between px-4 py-3 gap-3 transition-colors ${
-                    isChecked
-                      ? "bg-emerald-50/60"
-                      : isHardOrRelearn
-                      ? "bg-amber-50/40"
-                      : "hover:bg-muted/30"
-                  }`}
+                  className={`px-4 py-3 transition-colors ${hasQuality ? (rowStyle[q] ?? "") : "hover:bg-muted/30"}`}
                   data-testid={`hw-item-${item.id}`}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                      isChecked
-                        ? "border-emerald-500 bg-emerald-500"
-                        : isHardOrRelearn
-                        ? "border-amber-400 bg-amber-400"
-                        : "border-muted-foreground/30 bg-transparent"
-                    }`}>
-                      {(isChecked || isHardOrRelearn) && (
-                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                  <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                        hasQuality ? (dotStyle[q] ?? "border-muted-foreground/30 bg-transparent") : "border-muted-foreground/30 bg-transparent"
+                      }`}>
+                        {hasQuality && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-medium ${isCompleted ? "text-muted-foreground line-through" : ""}`}>
+                            Page {item.pageNumber}
+                          </span>
+                          <Badge variant="outline" className="text-xs py-0">{item.type}</Badge>
+                        </div>
+                        {lastRecitedAt && (
+                          <div className="text-xs text-muted-foreground mt-0.5" data-testid={`hw-last-recited-${item.id}`}>
+                            Last recited: {lastRecitedAt}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0 ml-auto">
+                      {QUALITIES.map(({ value, label: ql }) => {
+                        const isActive = q === value;
+                        const style = qualityStyle[value];
+                        return (
+                          <button
+                            key={value}
+                            onClick={() => handleQualitySelect(item.id, value)}
+                            disabled={updateItem.isPending}
+                            className={`text-xs px-2 py-1 rounded-md border font-medium transition-all ${
+                              isActive ? style.active : `border-border bg-background text-muted-foreground ${style.hover}`
+                            }`}
+                            data-testid={`hw-quality-btn-${item.id}-${value}`}
+                          >
+                            {ql}
+                          </button>
+                        );
+                      })}
+                      {hasQuality && (
+                        <button
+                          onClick={() => handleClear(item.id)}
+                          disabled={updateItem.isPending}
+                          className="ml-1 w-6 h-6 flex items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                          aria-label="Clear quality"
+                          data-testid={`hw-clear-btn-${item.id}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
                       )}
                     </div>
-                    <div className="min-w-0">
-                      <span className={`text-sm font-medium ${isChecked ? "text-muted-foreground line-through" : ""}`}>
-                        Page {item.pageNumber}
-                      </span>
-                      <Badge variant="outline" className="ml-2 text-xs py-0">
-                        {item.type}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1 shrink-0">
-                    {QUALITIES.map(({ value, label: ql }) => {
-                      const isActive = q === value;
-                      const colors = qualityColors[value];
-                      return (
-                        <button
-                          key={value}
-                          onClick={() => handleQualitySelect(item.id, value, q)}
-                          disabled={updateItem.isPending}
-                          className={`text-xs px-2 py-1 rounded-md border font-medium transition-all ${
-                            isActive
-                              ? colors.active
-                              : `border-border bg-background hover:border-${value === "excellent" ? "emerald" : value === "good" ? "sky" : value === "hard" ? "amber" : "rose"}-300 hover:bg-muted/60 text-muted-foreground`
-                          }`}
-                          data-testid={`hw-quality-btn-${item.id}-${value}`}
-                        >
-                          {ql}
-                        </button>
-                      );
-                    })}
                   </div>
                 </div>
               );
