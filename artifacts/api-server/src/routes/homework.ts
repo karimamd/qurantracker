@@ -118,21 +118,33 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const items = await db.select().from(homeworkItemsTable).where(eq(homeworkItemsTable.homeworkId, session.id)).orderBy(homeworkItemsTable.pageNumber);
+  const rows = await db
+    .select({
+      id: homeworkItemsTable.id,
+      homeworkId: homeworkItemsTable.homeworkId,
+      pageNumber: homeworkItemsTable.pageNumber,
+      type: homeworkItemsTable.type,
+      quality: pageProgressTable.quality,
+      lastRecited: pageProgressTable.lastRecited,
+    })
+    .from(homeworkItemsTable)
+    .leftJoin(pageProgressTable, eq(pageProgressTable.pageNumber, homeworkItemsTable.pageNumber))
+    .where(eq(homeworkItemsTable.homeworkId, session.id))
+    .orderBy(homeworkItemsTable.pageNumber);
 
   const detail = {
     id: session.id,
     title: session.title,
     dueDate: session.dueDate,
     createdAt: session.createdAt,
-    items: items.map(i => ({
-      id: i.id,
-      homeworkId: i.homeworkId,
-      pageNumber: i.pageNumber,
-      type: i.type,
-      completed: i.completed,
-      quality: i.quality,
-      completedAt: i.completedAt,
+    items: rows.map(r => ({
+      id: r.id,
+      homeworkId: r.homeworkId,
+      pageNumber: r.pageNumber,
+      type: r.type,
+      completed: r.quality === "good" || r.quality === "excellent",
+      quality: r.quality ?? null,
+      completedAt: r.lastRecited ?? null,
     })),
   };
 
