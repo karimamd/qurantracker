@@ -3,11 +3,16 @@ import {
   useGetRecentActivity,
   useListPageProgress,
   useGetDailyChart,
+  useListHomework,
+  useUpdatePageProgress,
+  getListPageProgressQueryKey,
+  getGetProgressOverviewQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QualityBadge } from "@/components/quality-badge";
-import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -19,10 +24,73 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { PageLabel } from "@/components/page-label";
+import { Link } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+
+type Quality = "excellent" | "good" | "hard" | "relearn";
+
+const QUALITIES: { value: Quality; label: string }[] = [
+  { value: "excellent", label: "Excellent" },
+  { value: "good",      label: "Good" },
+  { value: "hard",      label: "Hard" },
+  { value: "relearn",   label: "Relearn" },
+];
+
+const qualityStyle: Record<Quality, { active: string; hover: string }> = {
+  excellent: { active: "bg-emerald-500 border-emerald-500 text-white", hover: "hover:border-emerald-300 hover:text-emerald-700" },
+  good:      { active: "bg-sky-500 border-sky-500 text-white",         hover: "hover:border-sky-300 hover:text-sky-700" },
+  hard:      { active: "bg-amber-500 border-amber-500 text-white",     hover: "hover:border-amber-300 hover:text-amber-700" },
+  relearn:   { active: "bg-rose-500 border-rose-500 text-white",       hover: "hover:border-rose-300 hover:text-rose-700" },
+};
+
+function ActiveHomeworkSection() {
+  const { data: sessions, isLoading } = useListHomework();
+
+  if (isLoading) {
+    return <Skeleton className="h-20 rounded-xl" />;
+  }
+
+  const active = sessions?.find(s => s.status === "active");
+  if (!active) return null;
+
+  const pct = active.totalItems > 0 ? Math.round((active.completedItems / active.totalItems) * 100) : 0;
+  const remaining = active.totalItems - active.completedItems;
+
+  return (
+    <Link href={`/homework/${active.id}`}>
+      <Card
+        className="border shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer"
+        data-testid="active-homework-card"
+      >
+        <CardContent className="py-4 px-5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-primary uppercase tracking-wide mb-0.5">Active Homework</p>
+              <p className="font-semibold text-sm truncate">{active.title}</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 ml-3">
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Due {new Date(active.dueDate).toLocaleDateString()}</p>
+                <p className="text-xs font-medium">{remaining > 0 ? `${remaining} left` : "All done!"}</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </div>
+          </div>
+          <Progress value={pct} className="h-2" />
+          <p className="text-xs text-muted-foreground mt-1.5">{active.completedItems}/{active.totalItems} pages completed</p>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
 
 function DuePagesSection() {
   const { data: overdue, isLoading: loadingOverdue } = useListPageProgress({ status: "overdue", inScope: true });
   const { data: dueSoon, isLoading: loadingDueSoon } = useListPageProgress({ status: "due_soon", inScope: true });
+  const updatePage = useUpdatePageProgress();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const allPages = [
     ...(overdue ?? []).map(p => ({ ...p, urgency: "overdue" as const })),
@@ -34,6 +102,19 @@ function DuePagesSection() {
   });
 
   const isLoading = loadingOverdue || loadingDueSoon;
+
+  const handleQuality = (pageNumber: number, quality: Quality) => {
+    updatePage.mutate(
+      { pageNumber, data: { quality } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
+        },
+        onError: () => toast({ title: "Failed to record recitation", variant: "destructive" }),
+      }
+    );
+  };
 
   if (isLoading) {
     return <Skeleton className="h-48 rounded-xl" />;
@@ -61,25 +142,25 @@ function DuePagesSection() {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="divide-y max-h-64 overflow-y-auto">
+        <div className="divide-y max-h-[28rem] overflow-y-auto">
           {allPages.map(page => {
             const isOverdue = page.urgency === "overdue";
-            const dueDate = page.dueDate ? new Date(page.dueDate) : null;
             const daysLabel = page.daysUntilDue !== null
               ? isOverdue
                 ? `${Math.abs(page.daysUntilDue)}d overdue`
                 : `due in ${page.daysUntilDue}d`
               : null;
+            const q = page.quality as Quality | null;
 
             return (
               <div
                 key={page.pageNumber}
-                className={`flex items-center justify-between px-4 py-2.5 ${isOverdue ? "bg-rose-50/50" : "bg-amber-50/30"}`}
+                className={`px-4 py-3 ${isOverdue ? "bg-rose-50/50" : "bg-amber-50/30"}`}
                 data-testid={`due-page-${page.pageNumber}`}
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 mb-2">
                   <div className={`w-1.5 h-7 rounded-full shrink-0 ${isOverdue ? "bg-rose-500" : "bg-amber-400"}`} />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <PageLabel
                       pageNumber={page.pageNumber}
                       customName={page.customName}
@@ -88,14 +169,33 @@ function DuePagesSection() {
                     />
                     <div className="text-xs text-muted-foreground truncate">{page.surahs.split(",")[0]}</div>
                   </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <QualityBadge quality={page.quality} />
+                    {daysLabel && (
+                      <span className={`text-xs font-medium ${isOverdue ? "text-rose-600" : "text-amber-600"}`}>
+                        {daysLabel}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  <QualityBadge quality={page.quality} />
-                  {daysLabel && (
-                    <span className={`text-xs font-medium ${isOverdue ? "text-rose-600" : "text-amber-600"}`}>
-                      {daysLabel}
-                    </span>
-                  )}
+                <div className="flex items-center gap-1 pl-4">
+                  {QUALITIES.map(({ value, label }) => {
+                    const isActive = q === value;
+                    const style = qualityStyle[value];
+                    return (
+                      <button
+                        key={value}
+                        onClick={() => handleQuality(page.pageNumber, value)}
+                        disabled={updatePage.isPending}
+                        className={`text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
+                          isActive ? style.active : `border-border bg-background text-muted-foreground ${style.hover}`
+                        }`}
+                        data-testid={`due-page-quality-${page.pageNumber}-${value}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -229,6 +329,8 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      <ActiveHomeworkSection />
 
       <DuePagesSection />
 
