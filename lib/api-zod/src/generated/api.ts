@@ -529,9 +529,9 @@ export const GetHomeworkResponse = zod.object({
         ])
         .nullable(),
       completedAt: zod.coerce.date().nullable(),
-      todayCount: zod
+      weekCount: zod
         .number()
-        .describe("Number of times this page has been recited today"),
+        .describe("Number of times this page has been recited in the past 7 days (including today)"),
     }),
   ),
 });
@@ -596,9 +596,9 @@ export const UpdateHomeworkItemResponse = zod.object({
     ])
     .nullable(),
   completedAt: zod.coerce.date().nullable(),
-  todayCount: zod
+  weekCount: zod
     .number()
-    .describe("Number of times this page has been recited today"),
+    .describe("Number of times this page has been recited in the past 7 days (including today)"),
 });
 
 /**

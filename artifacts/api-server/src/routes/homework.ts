@@ -133,26 +133,27 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
     .orderBy(homeworkItemsTable.pageNumber);
 
   const pageNumbers = rows.map(r => r.pageNumber);
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 6);
+  weekStart.setHours(0, 0, 0, 0);
 
-  const todayCounts = pageNumbers.length > 0
+  const weekCounts = pageNumbers.length > 0
     ? await db
         .select({
           pageNumber: recitationLogTable.pageNumber,
-          todayCount: count(),
+          weekCount: count(),
         })
         .from(recitationLogTable)
         .where(
           and(
             inArray(recitationLogTable.pageNumber, pageNumbers),
-            gte(recitationLogTable.recitedAt, todayStart)
+            gte(recitationLogTable.recitedAt, weekStart)
           )
         )
         .groupBy(recitationLogTable.pageNumber)
     : [];
 
-  const todayCountMap = new Map(todayCounts.map(t => [t.pageNumber, Number(t.todayCount)]));
+  const weekCountMap = new Map(weekCounts.map(t => [t.pageNumber, Number(t.weekCount)]));
 
   const detail = {
     id: session.id,
@@ -171,7 +172,7 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
         completed: r.quality === "good" || r.quality === "excellent",
         quality: r.quality ?? null,
         completedAt: r.lastRecited ?? null,
-        todayCount: todayCountMap.get(r.pageNumber) ?? 0,
+        weekCount: weekCountMap.get(r.pageNumber) ?? 0,
       };
     }),
   };
@@ -314,15 +315,16 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
     });
   }
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const [todayRow] = await db
-    .select({ todayCount: count() })
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 6);
+  weekStart.setHours(0, 0, 0, 0);
+  const [weekRow] = await db
+    .select({ weekCount: count() })
     .from(recitationLogTable)
     .where(
       and(
         eq(recitationLogTable.pageNumber, item.pageNumber),
-        gte(recitationLogTable.recitedAt, todayStart)
+        gte(recitationLogTable.recitedAt, weekStart)
       )
     );
 
@@ -349,7 +351,7 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
     completed: globalQuality === "good" || globalQuality === "excellent",
     quality: globalQuality,
     completedAt: globalLastRecited,
-    todayCount: Number(todayRow?.todayCount ?? 0),
+    weekCount: Number(weekRow?.weekCount ?? 0),
   }));
 });
 

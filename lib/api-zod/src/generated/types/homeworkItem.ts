@@ -22,5 +22,5 @@ export interface HomeworkItem {
   /** @nullable */
   completedAt: Date | null;
   /** Number of times this page has been recited today */
-  todayCount: number;
+  weekCount: number;
 }

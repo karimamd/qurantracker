@@ -138,7 +138,7 @@ export default function HomeworkDetail() {
               const lastRecitedAt = item.completedAt
                 ? format(new Date(item.completedAt), "MMM d, h:mm a")
                 : null;
-              const todayCount = item.todayCount ?? 0;
+              const weekCount = item.weekCount ?? 0;
 
               return (
                 <div
@@ -176,13 +176,13 @@ export default function HomeworkDetail() {
                               Last stopped
                             </Badge>
                           )}
-                          {todayCount > 0 && (
+                          {weekCount > 0 && (
                             <span
                               className="text-xs font-semibold bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full border border-sky-200"
-                              data-testid={`hw-today-count-${item.id}`}
-                              title={`Recited ${todayCount}× today`}
+                              data-testid={`hw-week-count-${item.id}`}
+                              title={`Recited ${weekCount}× in the past 7 days`}
                             >
-                              {todayCount}× today
+                              {weekCount}× this week
                             </span>
                           )}
                         </div>

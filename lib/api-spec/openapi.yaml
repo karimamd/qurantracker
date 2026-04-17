@@ -899,9 +899,9 @@ components:
         completedAt:
           type: ["string", "null"]
           format: date-time
-        todayCount:
+        weekCount:
           type: integer
-          description: Number of times this page has been recited today
+          description: Number of times this page has been recited in the past 7 days (including today)
       required:
         - id
         - homeworkId
@@ -912,7 +912,7 @@ components:
         - completed
         - quality
         - completedAt
-        - todayCount
+        - weekCount
 
     UpdateHomeworkItemBody:
       type: object
