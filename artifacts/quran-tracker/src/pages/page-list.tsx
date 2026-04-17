@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Minus, LayoutGrid, LayoutList } from "lucide-react";
 import { format } from "date-fns";
+import { PageLabel } from "@/components/page-label";
 
 function formatDate(d: Date | string | null | undefined): string {
   if (!d) return "—";
@@ -231,7 +232,7 @@ export default function PageList() {
         <Card className="border shadow-sm overflow-hidden">
           <div className="hidden sm:grid grid-cols-[56px_1fr_90px_90px_110px_110px_80px] gap-x-4 px-4 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground uppercase tracking-wide">
             <span>Page</span>
-            <span>Surah(s)</span>
+            <span>Name</span>
             <span>Quality</span>
             <span>Status</span>
             <span>Last Recited</span>
@@ -262,16 +263,18 @@ export default function PageList() {
                 >
                   <div className="hidden sm:grid grid-cols-[56px_1fr_90px_90px_110px_110px_80px] gap-x-4 items-center">
                     <span className="font-semibold text-sm">{page.pageNumber}</span>
-                    <div className="min-w-0">
-                      {surahList.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {surahList.map(s => (
-                            <span key={s} className="text-xs bg-muted px-1.5 py-0.5 rounded-md truncate max-w-[140px]">{s}</span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
+                    <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                      <PageLabel
+                        pageNumber={page.pageNumber}
+                        customName={page.customName}
+                        prefixClassName="sr-only"
+                        nameClassName="text-base"
+                      />
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {surahList.map(s => (
+                          <span key={s} className="text-[10px] bg-muted px-1.5 py-0.5 rounded-md truncate max-w-[140px] text-muted-foreground">{s}</span>
+                        ))}
+                      </div>
                     </div>
                     <div>{page.quality ? <QualityBadge quality={page.quality} /> : <span className="text-xs text-muted-foreground">—</span>}</div>
                     <div><StatusBadge status={page.status} /></div>
@@ -296,8 +299,13 @@ export default function PageList() {
                         : page.status === "on_track" ? "bg-emerald-500"
                         : "bg-blue-400"
                       }`} />
-                      <div className="min-w-0">
-                        <div className="font-semibold text-sm">Page {page.pageNumber}</div>
+                      <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                        <PageLabel
+                          pageNumber={page.pageNumber}
+                          customName={page.customName}
+                          prefixClassName="font-semibold text-sm"
+                          nameClassName="text-sm"
+                        />
                         <div className="text-xs text-muted-foreground truncate">
                           {surahList[0] ?? "—"}{surahList.length > 1 ? ` +${surahList.length - 1}` : ""}
                         </div>

@@ -1,9 +1,19 @@
 import { db, settingsTable, pageProgressTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getJuzForPage, getRob3ForPage, getSurahsForPage } from "./quran-data";
+import pageNamesData from "./page-names.json" with { type: "json" };
+
+const PAGE_NAMES = pageNamesData as Record<string, { surah: number; ayah: number; text: string }>;
+
+export function getDefaultPageName(pageNumber: number): string {
+  return PAGE_NAMES[String(pageNumber)]?.text ?? "";
+}
 
 export interface PageProgressEnriched {
   pageNumber: number;
+  name: string;
+  defaultName: string;
+  customName: string | null;
   juzNumber: number;
   rob3Number: number;
   surahs: string;
@@ -58,8 +68,12 @@ export function enrichPageProgress(page: typeof pageProgressTable.$inferSelect):
     status = "on_track";
   }
 
+  const defaultName = getDefaultPageName(page.pageNumber);
   return {
     pageNumber: page.pageNumber,
+    name: page.customName && page.customName.length > 0 ? page.customName : defaultName,
+    defaultName,
+    customName: page.customName,
     juzNumber: getJuzForPage(page.pageNumber),
     rob3Number: getRob3ForPage(page.pageNumber),
     surahs: getSurahsForPage(page.pageNumber),

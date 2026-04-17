@@ -33,6 +33,7 @@ import type {
   PageProgress,
   ProgressOverview,
   RecordRecitationBody,
+  RenamePageBody,
   ScopeBody,
   Settings,
   SurahProgress,
@@ -779,6 +780,93 @@ export const useUpdatePageProgress = <
   TContext
 > => {
   return useMutation(getUpdatePageProgressMutationOptions(options));
+};
+
+/**
+ * @summary Set or clear a custom name for a page
+ */
+export const getRenamePageUrl = (pageNumber: number) => {
+  return `/api/progress/pages/${pageNumber}/name`;
+};
+
+export const renamePage = async (
+  pageNumber: number,
+  renamePageBody: RenamePageBody,
+  options?: RequestInit,
+): Promise<PageProgress> => {
+  return customFetch<PageProgress>(getRenamePageUrl(pageNumber), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(renamePageBody),
+  });
+};
+
+export const getRenamePageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renamePage>>,
+    TError,
+    { pageNumber: number; data: BodyType<RenamePageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof renamePage>>,
+  TError,
+  { pageNumber: number; data: BodyType<RenamePageBody> },
+  TContext
+> => {
+  const mutationKey = ["renamePage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof renamePage>>,
+    { pageNumber: number; data: BodyType<RenamePageBody> }
+  > = (props) => {
+    const { pageNumber, data } = props ?? {};
+
+    return renamePage(pageNumber, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RenamePageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof renamePage>>
+>;
+export type RenamePageMutationBody = BodyType<RenamePageBody>;
+export type RenamePageMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set or clear a custom name for a page
+ */
+export const useRenamePage = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renamePage>>,
+    TError,
+    { pageNumber: number; data: BodyType<RenamePageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof renamePage>>,
+  TError,
+  { pageNumber: number; data: BodyType<RenamePageBody> },
+  TContext
+> => {
+  return useMutation(getRenamePageMutationOptions(options));
 };
 
 /**

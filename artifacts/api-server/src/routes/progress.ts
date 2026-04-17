@@ -12,6 +12,9 @@ import {
   UpdatePageProgressParams,
   UpdatePageProgressBody,
   UpdatePageProgressResponse,
+  RenamePageParams,
+  RenamePageBody,
+  RenamePageResponse,
   RecordBatchRecitationBody,
   RecordBatchRecitationResponse,
   AddToScopeBody,
@@ -34,7 +37,7 @@ import {
   getRob3Range,
   ROB3S_PER_JUZ,
 } from "../lib/quran-data";
-import { enrichPageProgress, getSettings, calculateDueDate, ensurePageExists } from "../lib/progress-helpers";
+import { enrichPageProgress, getSettings, calculateDueDate, ensurePageExists, getDefaultPageName } from "../lib/progress-helpers";
 
 const router: IRouter = Router();
 
@@ -240,8 +243,12 @@ router.get("/progress/pages", async (req, res): Promise<void> => {
   const fullList = allPageNumbers.map(num => {
     const existing = enriched.find(e => e.pageNumber === num);
     if (existing) return existing;
+    const defaultName = getDefaultPageName(num);
     return {
       pageNumber: num,
+      name: defaultName,
+      defaultName,
+      customName: null,
       juzNumber: getJuzForPage(num),
       rob3Number: getRob3ForPage(num),
       surahs: getSurahsForPage(num),
@@ -322,6 +329,33 @@ router.patch("/progress/pages/:pageNumber", async (req, res): Promise<void> => {
 
   const enrichedResult = enrichPageProgress(updated);
   res.json(UpdatePageProgressResponse.parse(enrichedResult));
+});
+
+router.put("/progress/pages/:pageNumber/name", async (req, res): Promise<void> => {
+  const params = RenamePageParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const parsed = RenamePageBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const pageNumber = params.data.pageNumber;
+  if (pageNumber < 1 || pageNumber > TOTAL_PAGES) {
+    res.status(400).json({ error: "Invalid page number" });
+    return;
+  }
+  await ensurePageExists(pageNumber);
+  const raw = parsed.data.customName;
+  const next = raw == null || raw.trim().length === 0 ? null : raw.trim();
+  const [updated] = await db
+    .update(pageProgressTable)
+    .set({ customName: next })
+    .where(eq(pageProgressTable.pageNumber, pageNumber))
+    .returning();
+  res.json(RenamePageResponse.parse(enrichPageProgress(updated)));
 });
 
 router.post("/progress/recite-batch", async (req, res): Promise<void> => {

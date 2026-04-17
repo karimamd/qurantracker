@@ -187,6 +187,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/PageProgress"
 
+  /progress/pages/{pageNumber}/name:
+    put:
+      operationId: renamePage
+      tags: [progress]
+      summary: Set or clear a custom name for a page
+      parameters:
+        - name: pageNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenamePageBody"
+      responses:
+        "200":
+          description: Updated page progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageProgress"
+
   /progress/recite-batch:
     post:
       operationId: recordBatchRecitation
@@ -653,6 +678,15 @@ components:
       properties:
         pageNumber:
           type: integer
+        name:
+          type: string
+          description: Display name (customName if set, otherwise defaultName)
+        defaultName:
+          type: string
+          description: First 6 words of the ayah this page begins with
+        customName:
+          type: ["string", "null"]
+          description: User-set custom name overriding defaultName
         juzNumber:
           type: integer
         rob3Number:
@@ -681,6 +715,9 @@ components:
           enum: [overdue, due_soon, on_track, not_started, out_of_scope]
       required:
         - pageNumber
+        - name
+        - defaultName
+        - customName
         - juzNumber
         - rob3Number
         - surahs
@@ -692,6 +729,13 @@ components:
         - daysSinceRecited
         - daysUntilDue
         - status
+
+    RenamePageBody:
+      type: object
+      properties:
+        customName:
+          type: ["string", "null"]
+          description: Set null or empty string to clear and revert to default name
 
     RecordRecitationBody:
       type: object
@@ -840,6 +884,10 @@ components:
           type: integer
         pageNumber:
           type: integer
+        name:
+          type: string
+        customName:
+          type: ["string", "null"]
         type:
           type: string
           enum: [memorize, revise]
@@ -858,6 +906,8 @@ components:
         - id
         - homeworkId
         - pageNumber
+        - name
+        - customName
         - type
         - completed
         - quality

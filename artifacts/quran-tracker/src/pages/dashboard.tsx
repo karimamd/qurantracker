@@ -18,6 +18,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { format, parseISO } from "date-fns";
+import { PageLabel } from "@/components/page-label";
 
 function DuePagesSection() {
   const { data: overdue, isLoading: loadingOverdue } = useListPageProgress({ status: "overdue", inScope: true });
@@ -79,9 +80,13 @@ function DuePagesSection() {
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-1.5 h-7 rounded-full shrink-0 ${isOverdue ? "bg-rose-500" : "bg-amber-400"}`} />
                   <div className="min-w-0">
-                    <span className="font-medium text-sm">Page {page.pageNumber}</span>
-                    <span className="text-xs text-muted-foreground ml-2 truncate hidden sm:inline">{page.surahs.split(",")[0]}</span>
-                    <div className="text-xs text-muted-foreground sm:hidden truncate">{page.surahs.split(",")[0]}</div>
+                    <PageLabel
+                      pageNumber={page.pageNumber}
+                      customName={page.customName}
+                      prefixClassName="font-medium text-sm"
+                      nameClassName="text-sm"
+                    />
+                    <div className="text-xs text-muted-foreground truncate">{page.surahs.split(",")[0]}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -275,8 +280,14 @@ export default function Dashboard() {
                 {activity.map(entry => (
                   <div key={entry.id} className="flex items-center justify-between py-2 border-b border-border last:border-0" data-testid={`activity-${entry.id}`}>
                     <div>
-                      <span className="text-sm font-medium">Page {entry.pageNumber}</span>
-                      <span className="text-xs text-muted-foreground ml-2">{entry.surahName}</span>
+                      <PageLabel
+                        pageNumber={entry.pageNumber}
+                        customName={null}
+                        showEdit={false}
+                        prefixClassName="text-sm font-medium"
+                        nameClassName="text-sm"
+                      />
+                      <div className="text-xs text-muted-foreground">{entry.surahName}</div>
                     </div>
                     <div className="flex items-center gap-2">
                       <QualityBadge quality={entry.quality} />

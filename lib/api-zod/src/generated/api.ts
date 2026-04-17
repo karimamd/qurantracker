@@ -111,6 +111,16 @@ export const GetJuzDetailResponse = zod.object({
   pages: zod.array(
     zod.object({
       pageNumber: zod.number(),
+      name: zod
+        .string()
+        .describe("Display name (customName if set, otherwise defaultName)"),
+      defaultName: zod
+        .string()
+        .describe("First 6 words of the ayah this page begins with"),
+      customName: zod
+        .string()
+        .nullable()
+        .describe("User-set custom name overriding defaultName"),
       juzNumber: zod.number(),
       rob3Number: zod.number(),
       surahs: zod.string(),
@@ -175,6 +185,16 @@ export const ListPageProgressQueryParams = zod.object({
 
 export const ListPageProgressResponseItem = zod.object({
   pageNumber: zod.number(),
+  name: zod
+    .string()
+    .describe("Display name (customName if set, otherwise defaultName)"),
+  defaultName: zod
+    .string()
+    .describe("First 6 words of the ayah this page begins with"),
+  customName: zod
+    .string()
+    .nullable()
+    .describe("User-set custom name overriding defaultName"),
   juzNumber: zod.number(),
   rob3Number: zod.number(),
   surahs: zod.string(),
@@ -218,6 +238,69 @@ export const UpdatePageProgressBody = zod.object({
 
 export const UpdatePageProgressResponse = zod.object({
   pageNumber: zod.number(),
+  name: zod
+    .string()
+    .describe("Display name (customName if set, otherwise defaultName)"),
+  defaultName: zod
+    .string()
+    .describe("First 6 words of the ayah this page begins with"),
+  customName: zod
+    .string()
+    .nullable()
+    .describe("User-set custom name overriding defaultName"),
+  juzNumber: zod.number(),
+  rob3Number: zod.number(),
+  surahs: zod.string(),
+  inScope: zod.boolean(),
+  quality: zod
+    .union([
+      zod.literal("excellent"),
+      zod.literal("good"),
+      zod.literal("hard"),
+      zod.literal("relearn"),
+      zod.literal(null),
+    ])
+    .nullable(),
+  mistakes: zod.number().nullable(),
+  lastRecited: zod.coerce.date().nullable(),
+  dueDate: zod.coerce.date().nullable(),
+  daysSinceRecited: zod.number().nullable(),
+  daysUntilDue: zod.number().nullable(),
+  status: zod.enum([
+    "overdue",
+    "due_soon",
+    "on_track",
+    "not_started",
+    "out_of_scope",
+  ]),
+});
+
+/**
+ * @summary Set or clear a custom name for a page
+ */
+export const RenamePageParams = zod.object({
+  pageNumber: zod.coerce.number(),
+});
+
+export const RenamePageBody = zod.object({
+  customName: zod
+    .string()
+    .nullish()
+    .describe("Set null or empty string to clear and revert to default name"),
+});
+
+export const RenamePageResponse = zod.object({
+  pageNumber: zod.number(),
+  name: zod
+    .string()
+    .describe("Display name (customName if set, otherwise defaultName)"),
+  defaultName: zod
+    .string()
+    .describe("First 6 words of the ayah this page begins with"),
+  customName: zod
+    .string()
+    .nullable()
+    .describe("User-set custom name overriding defaultName"),
   juzNumber: zod.number(),
   rob3Number: zod.number(),
   surahs: zod.string(),
@@ -257,6 +340,16 @@ export const RecordBatchRecitationBody = zod.object({
 
 export const RecordBatchRecitationResponseItem = zod.object({
   pageNumber: zod.number(),
+  name: zod
+    .string()
+    .describe("Display name (customName if set, otherwise defaultName)"),
+  defaultName: zod
+    .string()
+    .describe("First 6 words of the ayah this page begins with"),
+  customName: zod
+    .string()
+    .nullable()
+    .describe("User-set custom name overriding defaultName"),
   juzNumber: zod.number(),
   rob3Number: zod.number(),
   surahs: zod.string(),
@@ -296,6 +389,16 @@ export const AddToScopeBody = zod.object({
 
 export const AddToScopeResponseItem = zod.object({
   pageNumber: zod.number(),
+  name: zod
+    .string()
+    .describe("Display name (customName if set, otherwise defaultName)"),
+  defaultName: zod
+    .string()
+    .describe("First 6 words of the ayah this page begins with"),
+  customName: zod
+    .string()
+    .nullable()
+    .describe("User-set custom name overriding defaultName"),
   juzNumber: zod.number(),
   rob3Number: zod.number(),
   surahs: zod.string(),
@@ -333,6 +436,16 @@ export const RemoveFromScopeBody = zod.object({
 
 export const RemoveFromScopeResponseItem = zod.object({
   pageNumber: zod.number(),
+  name: zod
+    .string()
+    .describe("Display name (customName if set, otherwise defaultName)"),
+  defaultName: zod
+    .string()
+    .describe("First 6 words of the ayah this page begins with"),
+  customName: zod
+    .string()
+    .nullable()
+    .describe("User-set custom name overriding defaultName"),
   juzNumber: zod.number(),
   rob3Number: zod.number(),
   surahs: zod.string(),
@@ -402,6 +515,8 @@ export const GetHomeworkResponse = zod.object({
       id: zod.number(),
       homeworkId: zod.number(),
       pageNumber: zod.number(),
+      name: zod.string(),
+      customName: zod.string().nullable(),
       type: zod.enum(["memorize", "revise"]),
       completed: zod.boolean(),
       quality: zod
@@ -467,6 +582,8 @@ export const UpdateHomeworkItemResponse = zod.object({
   id: zod.number(),
   homeworkId: zod.number(),
   pageNumber: zod.number(),
+  name: zod.string(),
+  customName: zod.string().nullable(),
   type: zod.enum(["memorize", "revise"]),
   completed: zod.boolean(),
   quality: zod

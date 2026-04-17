@@ -31,6 +31,7 @@ export * from "./pageProgressStatus";
 export * from "./progressOverview";
 export * from "./recordRecitationBody";
 export * from "./recordRecitationBodyQuality";
+export * from "./renamePageBody";
 export * from "./rob3Progress";
 export * from "./scopeBody";
 export * from "./settings";

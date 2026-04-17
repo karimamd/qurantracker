@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 export const pageProgressTable = pgTable("page_progress", {
   id: serial("id").primaryKey(),
   pageNumber: integer("page_number").notNull().unique(),
+  customName: text("custom_name"),
   inScope: boolean("in_scope").notNull().default(false),
   quality: text("quality"),
   mistakes: integer("mistakes"),

@@ -14,7 +14,7 @@ import {
   UpdateHomeworkItemBody,
   UpdateHomeworkItemResponse,
 } from "@workspace/api-zod";
-import { ensurePageExists, getSettings, calculateDueDate, enrichPageProgress } from "../lib/progress-helpers";
+import { ensurePageExists, getSettings, calculateDueDate, enrichPageProgress, getDefaultPageName } from "../lib/progress-helpers";
 
 const router: IRouter = Router();
 
@@ -125,6 +125,7 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
       type: homeworkItemsTable.type,
       quality: pageProgressTable.quality,
       lastRecited: pageProgressTable.lastRecited,
+      customName: pageProgressTable.customName,
     })
     .from(homeworkItemsTable)
     .leftJoin(pageProgressTable, eq(pageProgressTable.pageNumber, homeworkItemsTable.pageNumber))
@@ -158,16 +159,21 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
     title: session.title,
     dueDate: session.dueDate,
     createdAt: session.createdAt,
-    items: rows.map(r => ({
-      id: r.id,
-      homeworkId: r.homeworkId,
-      pageNumber: r.pageNumber,
-      type: r.type,
-      completed: r.quality === "good" || r.quality === "excellent",
-      quality: r.quality ?? null,
-      completedAt: r.lastRecited ?? null,
-      todayCount: todayCountMap.get(r.pageNumber) ?? 0,
-    })),
+    items: rows.map(r => {
+      const defaultName = getDefaultPageName(r.pageNumber);
+      return {
+        id: r.id,
+        homeworkId: r.homeworkId,
+        pageNumber: r.pageNumber,
+        name: r.customName && r.customName.length > 0 ? r.customName : defaultName,
+        customName: r.customName ?? null,
+        type: r.type,
+        completed: r.quality === "good" || r.quality === "excellent",
+        quality: r.quality ?? null,
+        completedAt: r.lastRecited ?? null,
+        todayCount: todayCountMap.get(r.pageNumber) ?? 0,
+      };
+    }),
   };
 
   res.json(GetHomeworkResponse.parse(detail));
@@ -321,16 +327,24 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
     );
 
   const currentProgress = await db
-    .select({ quality: pageProgressTable.quality, lastRecited: pageProgressTable.lastRecited })
+    .select({
+      quality: pageProgressTable.quality,
+      lastRecited: pageProgressTable.lastRecited,
+      customName: pageProgressTable.customName,
+    })
     .from(pageProgressTable)
     .where(eq(pageProgressTable.pageNumber, item.pageNumber));
   const globalQuality = currentProgress[0]?.quality ?? updated.quality;
   const globalLastRecited = currentProgress[0]?.lastRecited ?? updated.completedAt;
+  const customName = currentProgress[0]?.customName ?? null;
+  const defaultName = getDefaultPageName(updated.pageNumber);
 
   res.json(UpdateHomeworkItemResponse.parse({
     id: updated.id,
     homeworkId: updated.homeworkId,
     pageNumber: updated.pageNumber,
+    name: customName && customName.length > 0 ? customName : defaultName,
+    customName,
     type: updated.type,
     completed: globalQuality === "good" || globalQuality === "excellent",
     quality: globalQuality,

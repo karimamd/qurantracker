@@ -10,6 +10,15 @@ import type { PageProgressStatus } from "./pageProgressStatus";
 
 export interface PageProgress {
   pageNumber: number;
+  /** Display name (customName if set, otherwise defaultName) */
+  name: string;
+  /** First 6 words of the ayah this page begins with */
+  defaultName: string;
+  /**
+   * User-set custom name overriding defaultName
+   * @nullable
+   */
+  customName: string | null;
   juzNumber: number;
   rob3Number: number;
   surahs: string;

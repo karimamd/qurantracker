@@ -12,6 +12,9 @@ export interface HomeworkItem {
   id: number;
   homeworkId: number;
   pageNumber: number;
+  name: string;
+  /** @nullable */
+  customName: string | null;
   type: HomeworkItemType;
   completed: boolean;
   /** @nullable */

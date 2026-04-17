@@ -103,6 +103,15 @@ export const PageProgressStatus = {
 
 export interface PageProgress {
   pageNumber: number;
+  /** Display name (customName if set, otherwise defaultName) */
+  name: string;
+  /** First 6 words of the ayah this page begins with */
+  defaultName: string;
+  /**
+   * User-set custom name overriding defaultName
+   * @nullable
+   */
+  customName: string | null;
   juzNumber: number;
   rob3Number: number;
   surahs: string;
@@ -147,6 +156,14 @@ export interface SurahProgress {
   lastRecited: string | null;
   /** @nullable */
   nextDue: string | null;
+}
+
+export interface RenamePageBody {
+  /**
+   * Set null or empty string to clear and revert to default name
+   * @nullable
+   */
+  customName?: string | null;
 }
 
 export type RecordRecitationBodyQuality =
@@ -250,6 +267,9 @@ export interface HomeworkItem {
   id: number;
   homeworkId: number;
   pageNumber: number;
+  name: string;
+  /** @nullable */
+  customName: string | null;
   type: HomeworkItemType;
   completed: boolean;
   /** @nullable */

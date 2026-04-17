@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Check, X } from "lucide-react";
 import { format } from "date-fns";
+import { PageLabel } from "@/components/page-label";
 
 type Quality = "excellent" | "good" | "hard" | "relearn";
 
@@ -161,7 +162,13 @@ export default function HomeworkDetail() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`text-sm font-medium ${isCompleted ? "text-muted-foreground line-through" : ""}`}>
-                            Page {item.pageNumber}
+                            <PageLabel
+                              pageNumber={item.pageNumber}
+                              customName={item.customName}
+                              homeworkId={homeworkId}
+                              prefixClassName="text-sm font-medium"
+                              nameClassName="text-base"
+                            />
                           </span>
                           <Badge variant="outline" className="text-xs py-0">{item.type}</Badge>
                           {isLastStopped && (
