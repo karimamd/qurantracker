@@ -48,7 +48,14 @@ All user-facing tables include a nullable `user_id` column scoped to the Clerk s
 
 - Clerk publishable/secret keys are provisioned via Replit's `setupClerkWhitelabelAuth` — accessed in code through `VITE_CLERK_PUBLISHABLE_KEY` (client) and `CLERK_SECRET_KEY` / `CLERK_PUBLISHABLE_KEY` (server). Do not hardcode.
 - Server: `app.ts` mounts the Clerk proxy middleware before body parsers, then `clerkMiddleware`, then the API router (which uses `requireAuth`).
-- Client: `App.tsx` wraps the app in `<ClerkProvider>` (shadcn theme + brand variables). Routing uses wouter — `HomeRedirect` and `ProtectedApp` use `useAuth()` to gate signed-in vs signed-out (showing a small loading spinner during the auth-loading window). Sign-in/Sign-up rendered via `<SignIn />` / `<SignUp />` at `/sign-in` and `/sign-up`.
+- Client: `App.tsx` wraps the app in `<ClerkProvider>` (shadcn theme + brand variables). Routing uses wouter — `HomeRedirect` and `ProtectedApp` use `useAuth()` to gate signed-in vs signed-out (showing a small loading spinner during the auth-loading window). Sign-in/Sign-up rendered via `<SignIn />` / `<SignUp />` at `/sign-in` and `/sign-up` using wouter's `nest` modifier so Clerk's nested verification subpaths work.
+
+## Routing Notes (wouter 3 + regexparam 3)
+
+- The outer catch-all route in `App.tsx` MUST use `path="*"`. **Do not use `path="/:rest*"`** — wouter 3 uses regexparam 3, which treats `:rest*` as a parameter literally named `rest*` (asterisk is part of the name, not a wildcard quantifier). That makes the pattern only match single-segment paths like `/dashboard`, breaking every multi-segment route (`/juz/1`, `/surah/2`, `/homework/7`) and producing a blank screen.
+- Sign-in/Sign-up routes use the `nest` modifier (`<Route path="/sign-in" nest component={SignInPage} />`) so Clerk's internal subpaths (verification, reset, etc.) match.
+- A regression test guards this: `pnpm --filter @workspace/scripts run test-routes` verifies the regexparam semantics. Run it before deploying any route changes.
+- An `ErrorBoundary` (`src/components/error-boundary.tsx`) wraps both the outer Switch (catches Layout/auth errors) and the inner Switch (catches per-page render errors). Stack details are gated to `import.meta.env.DEV` so production users see only a friendly recovery screen.
 - Orphan claim: on first authenticated request after server boot, any rows with `user_id IS NULL` (pre-auth dev data) are reassigned to that user. One-shot per process — see `requireAuth.ts` for the rationale.
 
 ## Key Commands

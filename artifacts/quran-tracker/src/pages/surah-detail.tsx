@@ -15,7 +15,6 @@ import { PageQualityButtons } from "@/components/page-quality-buttons";
 export default function SurahDetail() {
   const params = useParams<{ id: string }>();
   const surahNumber = parseInt(params.id || "1", 10);
-  console.log("[SurahDetail] render", { params, surahNumber, location: window.location.href });
   const { data: detail, isLoading } = useGetSurahDetail(surahNumber, {
     query: { enabled: !!surahNumber, queryKey: getGetSurahDetailQueryKey(surahNumber) },
   });

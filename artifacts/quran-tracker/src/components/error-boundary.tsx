@@ -30,6 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       const stack = this.state.error.stack ?? String(this.state.error);
       const componentStack = this.state.info?.componentStack ?? "(no component stack)";
+      const showDetails = import.meta.env.DEV;
       return (
         <div
           className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-rose-50 via-white to-slate-50"
@@ -42,18 +43,20 @@ export class ErrorBoundary extends Component<Props, State> {
                 The page failed to render. Try reloading or returning to the dashboard.
               </p>
             </div>
-            <details className="text-xs bg-slate-50 border border-slate-200 rounded p-3 overflow-auto max-h-80">
-              <summary className="font-medium cursor-pointer">Error details</summary>
-              <pre className="mt-2 whitespace-pre-wrap break-all" data-testid="error-boundary-message">
-                {String(this.state.error?.message ?? this.state.error)}
-              </pre>
-              <pre className="mt-2 whitespace-pre-wrap break-all text-slate-600" data-testid="error-boundary-stack">
-                {stack}
-              </pre>
-              <pre className="mt-2 whitespace-pre-wrap break-all text-slate-500" data-testid="error-boundary-component-stack">
-                {componentStack}
-              </pre>
-            </details>
+            {showDetails && (
+              <details className="text-xs bg-slate-50 border border-slate-200 rounded p-3 overflow-auto max-h-80">
+                <summary className="font-medium cursor-pointer">Error details</summary>
+                <pre className="mt-2 whitespace-pre-wrap break-all" data-testid="error-boundary-message">
+                  {String(this.state.error?.message ?? this.state.error)}
+                </pre>
+                <pre className="mt-2 whitespace-pre-wrap break-all text-slate-600" data-testid="error-boundary-stack">
+                  {stack}
+                </pre>
+                <pre className="mt-2 whitespace-pre-wrap break-all text-slate-500" data-testid="error-boundary-component-stack">
+                  {componentStack}
+                </pre>
+              </details>
+            )}
             <div className="flex gap-2">
               <button
                 type="button"

@@ -50,7 +50,6 @@ const rowStyle: Record<string, string> = {
 export default function HomeworkDetail() {
   const params = useParams<{ id: string }>();
   const homeworkId = parseInt(params.id || "0", 10);
-  console.log("[HomeworkDetail] render", { params, homeworkId, location: window.location.href });
   const { data: detail, isLoading } = useGetHomework(homeworkId, {
     query: { enabled: !!homeworkId, queryKey: getGetHomeworkQueryKey(homeworkId) },
   });

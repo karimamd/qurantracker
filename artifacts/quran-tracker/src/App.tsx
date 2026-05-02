@@ -168,7 +168,6 @@ function HomeRedirect() {
 
 function ProtectedApp() {
   const { isLoaded, isSignedIn } = useAuth();
-  console.log("[ProtectedApp] render", { isLoaded, isSignedIn, location: window.location.href });
   if (!isLoaded) return <AuthLoadingScreen />;
   if (!isSignedIn) return <Redirect to="/" />;
   return (
@@ -244,9 +243,9 @@ function ClerkProviderWithRoutes() {
           <ErrorBoundary>
             <Switch>
               <Route path="/" component={HomeRedirect} />
-              <Route path="/sign-in/*?" component={SignInPage} />
-              <Route path="/sign-up/*?" component={SignUpPage} />
-              <Route path="/:rest*" component={ProtectedApp} />
+              <Route path="/sign-in" nest component={SignInPage} />
+              <Route path="/sign-up" nest component={SignUpPage} />
+              <Route path="*" component={ProtectedApp} />
             </Switch>
           </ErrorBoundary>
           <Toaster />
