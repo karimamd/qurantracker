@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Check, X } from "lucide-react";
+import { ArrowLeft, Check, X, BookMarked } from "lucide-react";
 import { format } from "date-fns";
 import { PageLabel } from "@/components/page-label";
 
@@ -195,6 +195,18 @@ export default function HomeworkDetail() {
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0 ml-auto">
+                      <Link href={`/reader/${item.pageNumber}`}>
+                        <button
+                          type="button"
+                          className="mr-1 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border bg-background text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+                          title={`Open page ${item.pageNumber} in Reader`}
+                          aria-label={`Open page ${item.pageNumber} in Reader`}
+                          data-testid={`hw-open-reader-${item.id}`}
+                        >
+                          <BookMarked className="w-3 h-3" />
+                          <span className="hidden sm:inline">Read</span>
+                        </button>
+                      </Link>
                       {QUALITIES.map(({ value, label: ql }) => {
                         const isActive = q === value;
                         const style = qualityStyle[value];

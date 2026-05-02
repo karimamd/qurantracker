@@ -9,6 +9,7 @@ import {
   getGetRecentActivityQueryKey,
   getGetJuzDetailQueryKey,
   getGetSurahDetailQueryKey,
+  getListHomeworkQueryKey,
 } from "@workspace/api-client-react";
 import type { PageProgress } from "@workspace/api-client-react";
 import { useParams, useLocation } from "wouter";
@@ -221,6 +222,8 @@ export default function Reader() {
     for (const s of surahsOnPage) {
       queryClient.invalidateQueries({ queryKey: getGetSurahDetailQueryKey(s.number) });
     }
+    queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
+    queryClient.invalidateQueries({ predicate: q => String(q.queryKey[0]).startsWith("/api/homework/") });
   };
 
   const handleQuality = (quality: Quality) => {
