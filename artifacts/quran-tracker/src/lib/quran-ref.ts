@@ -219,7 +219,14 @@ export function getRob3Range(rob3Number: number): Rob3Range {
     };
   }
   const startPage = boundary.page;
-  const endPage = next ? Math.max(startPage, next.page - 1) : TOTAL_PAGES;
+  // Adjacent Rubs typically meet mid-page, so the boundary page belongs to
+  // BOTH this Rub and the next one. We model this by including next.page
+  // (rather than next.page - 1) in this Rub's endPage. The rare exception
+  // — where a Rub ends exactly at end-of-page and the next starts at the
+  // start of the following page — is treated as overlap by default; users
+  // can rely on the per-page recitation rather than the Rub aggregation
+  // when precision matters.
+  const endPage = next ? Math.max(startPage, next.page) : TOTAL_PAGES;
   return {
     rob3: rob3Number,
     rob3InJuz,

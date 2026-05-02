@@ -2,114 +2,75 @@
 
 ## Overview
 
-A personal Quran memorization progress tracker. Tracks revision across multiple grains (Juz, Rob3/Part, Surah, Page) with spaced repetition due dates based on quality ratings.
+This project is a personal Quran memorization progress tracker designed to help users manage their memorization and revision effectively. It tracks revision progress across multiple granularities (Juz, Rob3/Part, Surah, Page) and incorporates a spaced repetition system based on quality ratings to suggest optimal due dates for review.
 
-## Stack
+The primary purpose is to provide a comprehensive tool for individuals to monitor, plan, and practice their Quran memorization journey, ensuring retention through scientifically backed revision schedules. Key capabilities include multi-grain progress visualization, quality-based spaced repetition, scope management for memorization, and an interactive Quran Reader practice mode. The long-term vision is to become the leading digital companion for Quran memorization, leveraging technology to make the process more accessible and sustainable for learners worldwide.
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **Frontend**: React + Vite + Tailwind CSS + shadcn/ui
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
-- **Auth**: Clerk (`@clerk/react` on web, `@clerk/express` on server) — Replit-managed, multi-tenant; **guest mode** lets unauthenticated visitors use the app via an httpOnly `guest_id` cookie that auto-migrates to their Clerk userId on sign-up
+## User Preferences
 
-## Key Features
+I want iterative development.
+Ask before making major changes.
 
-- **Multi-grain progress tracking**: View progress at Juz (30), Rob3/Part (8 per Juz), Surah (114), and Page (604) level
-- **Quality-based spaced repetition**: Excellent (30d), Good (14d), Hard (7d), Relearn (3d) - all configurable
-- **Color-coded status**: Overdue (red), Due Soon (amber), On Track (green), Not Started (blue)
-- **Scope management**: Add/remove pages from memorization scope
-- **Batch recitation recording**: Record quality for page ranges
-- **Quran Reader practice mode**: A "Hide all ayahs" toggle in the Reader hides every ayah behind a placeholder bar. A prominent "Show next ayah" button reveals them one by one. Each visible ayah carries inline ✓ (clear) and ✗ (mistake) buttons; clicking ✗ turns that ayah's text red and bumps a session mistake counter. The latest revealed ayah is highlighted, and clicking either ✓ or ✗ on it auto-reveals the next one. The toolbar shows revealed-count, mistakes, and "clears" totals, plus a "Restart" button that re-hides everything and resets marks. When the user then taps a quality button (Excellent/Good/Hard/Relearn) for the page, the accumulated mistake count is sent to the server in the same `PATCH /progress/pages/:pageNumber` call (the endpoint already accepts a `mistakes` field), persisting it on the page's progress and reflecting in the homework Activity feed and recent stats. Practice state resets automatically when navigating to a different page.
-- **Quran Reader tab**: A single-page reader at `/reader` (and `/reader/:page`). Shows actual Quran ayahs for one page at a time (Uthmani text fetched from the public `api.alquran.cloud` service, cached for an hour and prefetched one page ahead for instant navigation). Surah names appear as inline headers when a new surah begins on the page; ayah numbers render as Arabic numerals inside circular markers. Navigation: Previous/Next buttons, a numeric "Go to" input, and arrow-key / PageUp/PageDown shortcuts. A "Jump to Surah" sheet lists all 114 surahs with search; tapping a surah jumps to its first page, or any individual page chip jumps directly there. Inline 4-button quality picker (Excellent/Good/Hard/Relearn) styled like the homework page; clicking calls `PATCH /progress/pages/:pageNumber` which logs the recitation, sets the quality, computes the next due date, and auto-adds the page to scope. The header card shows the page's Arabic page name, juz/part info, surahs on the page, current quality badge and status badge. If the external text API is unreachable the page falls back to a "Try again" message and navigation/marking still work.
-- **Rub' (Parts) tab**: Lists all 240 Rub' al-Hizb in a searchable grid (search by part #, juz, or surah name). Each card shows the part position in its juz (1-8), page range, the surah and ayah it begins at, scope/overdue stats, last-recited date, and an inline 4-button quality picker (Exc/Good/Hard/Re). Marking a part calls `POST /progress/recite-batch` with all pages in that part's range — pages are added to scope (if not already), get the chosen quality, are logged in `recitation_log`, and have their next due date computed per the user's spaced-repetition settings. Backed by `GET /progress/rob3` (`listRob3Progress`).
-- **Homework tracking**: Create bi-weekly sessions with memorize/revise pages. Create dialog includes Surah and Part dropdowns next to each input. Picking a Surah appends its page range AND filters the Parts dropdown to only Parts overlapping that Surah (with a "Show all Parts" affordance to clear). Each Part is grouped by Juz and labeled "Part N/8 · p. start–end" plus the surah(s) it spans plus its true start ayah ("starts at <Surah> <ayah> (p.X)"). Rub'-al-Hizb start positions come from authoritative data in `lib/rob3-boundaries.json` (240 entries, fetched from al-Quran Cloud's `hizbQuarter` endpoint and stored in repo). Both client (`lib/quran-ref.ts`) and server (`api-server/src/lib/quran-data.ts`) read from this same JSON so page→part and part→page math is consistent end-to-end.
-- **Activity feed**: Recent recitation history
-- **Streak counter**: Track consecutive days of revision
-- **Due pages dashboard section**: Pages requiring attention (overdue + due soon) sorted by due date, shown above the chart
-- **Daily recitation chart**: Bar chart of distinct pages recited per day over the last 30 days
-- **Progress over time chart**: Dual y-axis line chart showing per-day overdue count (state at end of day) and distinct pages recited that day (per-day, not cumulative) — surfaces daily momentum needed to reduce overdue
-- **Quick-rate quality buttons**: Reusable `PageQualityButtons` component (Excellent/Good/Hard/Relearn) used in the Pages list view, Juz detail tiles, and Surah detail tiles
-- **Surah drill-down**: `/surah/:id` route shows per-page tiles for the selected surah with quick-rate buttons
+## System Architecture
 
-## Database Tables
+The project is structured as a monorepo utilizing `pnpm workspaces`.
 
-All user-facing tables include a nullable `user_id` column scoped to either a Clerk session userId or a `guest_<32hex>` id. Every API route is protected by `requireAuth` which sets `req.userId` (and `req.isGuest`); when neither a Clerk session nor a guest cookie is present, the middleware **auto-issues** a guest cookie so the request still succeeds. All queries filter by `req.userId`.
+### UI/UX Decisions
 
-- `settings` - configurable review interval days per quality level (unique per `user_id`)
-- `page_progress` - per-page tracking (scope, quality, mistakes, last recited, due date) — composite unique on `(user_id, page_number)`
-- `recitation_log` - history of all recitations for activity feed
-- `homework_sessions` - homework assignments with due dates
-- `homework_items` - individual pages within homework sessions
+The frontend is built with `React`, `Vite`, `Tailwind CSS`, and `shadcn/ui`, ensuring a modern, responsive, and aesthetically pleasing user interface.
+- **Color-coded status**: Overdue (red), Due Soon (amber), On Track (green), Not Started (blue) for intuitive progress visualization.
+- **Quran Reader practice mode**: Features a "Hide all ayahs" toggle, "Show next ayah" button, and inline ✓/✗ buttons for interactive self-recitation practice.
+- **Unified PageRow Component**: Juz detail, Surah detail, and Homework detail all render a consistent rich page card (`components/page-row.tsx`) for a cohesive user experience. This component displays status, page label, quality badges, first ayah preview, last-recited timestamp, and quality buttons.
 
-## Auth Notes
+### Technical Implementations
 
-- Clerk publishable/secret keys are provisioned via Replit's `setupClerkWhitelabelAuth` — accessed in code through `VITE_CLERK_PUBLISHABLE_KEY` (client) and `CLERK_SECRET_KEY` / `CLERK_PUBLISHABLE_KEY` (server). Do not hardcode.
-- Server: `app.ts` mounts the Clerk proxy middleware before body parsers, then `clerkMiddleware`, then the API router (which uses `requireAuth`).
-- Client: `App.tsx` wraps the app in `<ClerkProvider>` (shadcn theme + brand variables). Routing uses wouter — `HomeRedirect` and `ProtectedApp` use `useAuth()` to gate signed-in vs signed-out (showing a small loading spinner during the auth-loading window). Sign-in/Sign-up rendered via `<SignIn />` / `<SignUp />` at `/sign-in` and `/sign-up` using wouter's `nest` modifier so Clerk's nested verification subpaths work.
+- **Backend**: `Express 5` serves as the API framework.
+- **Database**: `PostgreSQL` managed with `Drizzle ORM` for robust data persistence.
+- **Validation**: `Zod` and `drizzle-zod` are used for data validation across the stack.
+- **API Codegen**: `Orval` generates API hooks and Zod schemas from an OpenAPI specification, ensuring type safety and consistency between frontend and backend.
+- **Build System**: `esbuild` is used for efficient CJS bundle creation.
+- **Routing**: `wouter 3` with `regexparam 3` for client-side routing. An `ErrorBoundary` is implemented for graceful error handling.
 
-## Routing Notes (wouter 3 + regexparam 3)
+### Feature Specifications
 
-- The outer catch-all route in `App.tsx` MUST use `path="*"`. **Do not use `path="/:rest*"`** — wouter 3 uses regexparam 3, which treats `:rest*` as a parameter literally named `rest*` (asterisk is part of the name, not a wildcard quantifier). That makes the pattern only match single-segment paths like `/dashboard`, breaking every multi-segment route (`/juz/1`, `/surah/2`, `/homework/7`) and producing a blank screen.
-- Sign-in/Sign-up routes use the `nest` modifier (`<Route path="/sign-in" nest component={SignInPage} />`) so Clerk's internal subpaths (verification, reset, etc.) match.
-- A regression test guards this: `pnpm --filter @workspace/scripts run test-routes` verifies the regexparam semantics. Run it before deploying any route changes.
-- An `ErrorBoundary` (`src/components/error-boundary.tsx`) wraps both the outer Switch (catches Layout/auth errors) and the inner Switch (catches per-page render errors). Stack details are gated to `import.meta.env.DEV` so production users see only a friendly recovery screen.
-- Orphan claim: on first authenticated request after server boot, any rows with `user_id IS NULL` (pre-auth dev data) are reassigned to that user. One-shot per process — see `requireAuth.ts` for the rationale.
+- **Multi-grain Progress Tracking**: Users can view progress at Juz (30), Rob3/Part (8 per Juz), Surah (114), and Page (604) levels.
+- **Quality-based Spaced Repetition**: Configurable review intervals based on recitation quality: Excellent (30d), Good (14d), Hard (7d), Relearn (3d).
+- **Scope Management**: Users can add or remove specific pages from their memorization scope.
+- **Batch Recitation Recording**: Allows users to record recitation quality for a range of pages simultaneously.
+- **Quran Reader**: A dedicated reader at `/reader` (and `/reader/:page`) displays Uthmani text one page at a time, fetched from `api.alquran.cloud` with caching and prefetching. Includes navigation, surah jump functionality, and inline quality marking.
+- **Rub' (Parts) Tab**: Lists all 240 Rub' al-Hizb with search, progress stats, and inline quality pickers. Marking a part applies the quality to all its constituent pages.
+- **Rub Boundary Overlap**: Adjacent Rubs share their boundary page (since Rubs typically meet mid-page). `getRob3Range` sets `endPage = next.page` (not `next.page - 1`), so e.g. Rub 1 = pages 1–5, Rub 2 = pages 5–7. Backend Rub aggregations filter by page-range overlap so a boundary page is counted in both adjacent Rubs. `getRob3ForPage` keeps a single canonical Rub per page (the later one) for storage/labeling.
+- **First Ayah of Rub Display**: `<Rob3FirstAyahPreview rob3Number={n}/>` shows the Arabic ayah at the START of each Rub (not start of page) on the Rub list, Juz detail Parts cards, and Homework Part dropdown. Lazy-loaded via IntersectionObserver, reuses `usePageAyahs` cache.
 
-## Guest Mode
+### Deferred / Next Up
 
-The app is fully usable without signing up. This makes it easy for new visitors to try the product (and for tests to skip Clerk entirely).
+- **Telawa (read-only) feature** — answers gathered from user:
+  1. Recurring Telawa homework: round-robin sequential rotation across all 604 pages, default 5 pages/day (user-configurable). When the cycle reaches page 604, it loops back to page 1.
+  2. Telawa marking: a single "Read" button (no quality grading).
+  3. Telawa never adds the page to memorization scope and never updates memorization due dates.
+  4. Telawa stats are tracked SEPARATELY from memorization (own card/chart, not combined into the memorization daily activity chart or week badges).
+- **Homework Tracking**: Enables creation of bi-weekly sessions with memorization and revision pages, including intelligent dropdown filtering for Surah and Part selection.
+- **Activity Feed**: Displays recent recitation history.
+- **Streak Counter**: Tracks consecutive days of revision.
+- **Due Pages Dashboard**: Highlights pages requiring attention, sorted by due date.
+- **Daily Recitation Chart**: Visualizes distinct pages recited per day over the last 30 days.
+- **Progress over Time Chart**: A dual y-axis line chart showing overdue count and distinct pages recited daily to track momentum.
+- **Undo Recitation**: Allows users to undo a recorded recitation, which triggers a recomputation of page progress based on the remaining recitation log entries. This process is protected by database locks to prevent race conditions.
+- **Guest Mode**: The application is fully functional without user sign-up. Guest data is migrated to a Clerk user profile upon sign-up.
 
-- **Server (`requireAuth.ts`)**: signed-in Clerk users always win. Otherwise the middleware reads the `guest_id` cookie (httpOnly, sameSite=lax, 1-year, secure in prod). If absent, it mints a new `guest_<32hex>` id and sets the cookie. The middleware is **idempotent** — multiple sub-routers each mounting `requireAuth` won't issue duplicate cookies.
-- **Migration on sign-up**: when both a Clerk userId and a `guest_id` cookie are present (i.e. a guest just signed up), the middleware reassigns all rows in the 5 user tables (`page_progress`, `recitation_log`, `homework_sessions`, `homework_items`, `settings`) from the guest id to the Clerk id, then clears the cookie. If migration fails the request still proceeds and the next signed-in request retries.
-- **Client (`lib/guest-mode.ts`)**: a `qt_guest_mode` localStorage flag tells `App.tsx` to allow `ProtectedApp` access without a Clerk session. The Landing page has a "Try it now — no sign up" button that sets the flag and routes to `/dashboard`. The flag is a UI hint only — actual auth lives in the cookie.
-- **Layout banner**: when in guest mode, the Layout shows an amber banner ("progress is saved on this device only — sign up to keep it across devices"), replaces the user avatar / sign-out controls with "Sign up to save" and "Exit guest mode" buttons (sidebar + mobile drawer), and shows a compact "Sign up" CTA in the mobile header.
-- **Cookie transport**: `lib/api-client-react/src/custom-fetch.ts` adds `credentials: "include"` so the cookie travels on every API request (same-origin via the proxy, but explicit for safety).
+### System Design Choices
 
-## Undo Recitation
+- **Auth**: `Clerk` is integrated for authentication (`@clerk/react` on web, `@clerk/express` on server). Guest mode allows unauthenticated usage with an `httpOnly guest_id` cookie, which is auto-migrated upon user sign-up. All API queries are filtered by `req.userId`.
+- **Database Schema**: Tables include `settings`, `page_progress`, `recitation_log`, `homework_sessions`, and `homework_items`, all designed to support multi-tenancy via a `user_id` column.
+- **Quran Reference Data**: Static JSON mappings for Juz, Surah, and Rub' al-Hizb boundaries are used consistently on both client and server for accurate page-to-reference and reference-to-page calculations.
 
-- Each row in the dashboard's "Recent Activity" card has an undo icon (`undo-activity-{id}`). Clicking opens a confirmation dialog (`undo-confirm-dialog`).
-- Confirming calls `DELETE /api/progress/activity/{id}` (`useUndoRecitation`) which:
-  1. Acquires a `SELECT ... FOR UPDATE` lock on the affected `page_progress` row in a transaction (serializes concurrent undos / undo-vs-new-recitation races for the same page).
-  2. Deletes the `recitation_log` row.
-  3. Recomputes `last_recited`, `due_date`, `quality`, `mistakes` on `page_progress` from the most-recent remaining log for that page (or clears them if none remain). `in_scope` is preserved.
-  4. Recomputes `homework_items.completed` for that page across all active homework sessions (positive remaining log → completed; otherwise → not completed). Mirrors `/recite-batch`'s derivation.
-- Due-date policy: undo uses the user's *current* settings to recompute, so the restored due-date may differ from what it was when the prior log was first written. This matches how new recitations are dated.
-- Client invalidates: `getRecentActivity`, `getProgressOverview`, `listPageProgress`, `listJuzProgress`, `listSurahProgress`, daily/progress charts, plus a predicate-based invalidation matching any open juz/surah detail key.
+## External Dependencies
 
-## Shared UI: Unified PageRow
-
-Juz detail, Surah detail, and Homework detail all render the same rich page card via `components/page-row.tsx`. The row shows: status dot, `PageLabel` (with rename popover), badges (incl. quality + week-count + mistakes + caller-supplied `extraBadges`), `FirstAyahPreview` (lazy-loaded via IntersectionObserver from al-Quran cloud, cached by React Query), last-recited timestamp, Read button, and quality buttons. Quality buttons either:
-- (default) use shared `PageQualityButtons` (PATCH page progress) when no override is provided, or
-- call a caller-supplied `onQualitySelect(quality)` (used by Homework, which routes through `useUpdateHomeworkItem` so `homework_items.completed` stays accurate for session summaries).
-
-`rowId` prop overrides the test-id suffix (defaults to `pageNumber`); homework passes `rowId={item.id}` so the same page in memorize+revise lists doesn't collide. Test-id prefixes: `page-cell` (juz), `surah-page-cell` (surah), `hw-item` (homework).
-
-Shared modules backing this:
-- `lib/quality.ts` — `Quality` type, `QUALITIES`, `qualityStyle`, `dotStyle`, `rowStyle`, `getStatusBarColor`, `isCompletedQuality`.
-- `hooks/use-page-ayahs.ts` — `usePageAyahs(pageNumber)` + memoized `usePrefetchPageAyahs()` (al-Quran cloud, 24h staleTime).
-- `components/first-ayah-preview.tsx` — strips Bismillah, ~7-word preview, lazy-loaded.
-
-Reader (`pages/reader.tsx`) and `components/page-quality-buttons.tsx` consume the same shared modules.
-
-## Key Commands
-
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec; then rebuild declarations with `pnpm --filter @workspace/api-zod exec tsc -p tsconfig.json && pnpm --filter @workspace/api-client-react exec tsc -p tsconfig.json`
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
-
-## Quran Reference Data
-
-Static mapping in `artifacts/api-server/src/lib/quran-data.ts`:
-- Juz page ranges (30 juz)
-- Surah info (114 surahs with Arabic names, page ranges)
-- Helper functions for page-to-juz, page-to-rob3, page-to-surah mapping
-
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+- **API**: `api.alquran.cloud` for Quranic text data (Uthmani script) and `hizbQuarter` endpoint for Rub' al-Hizb boundaries.
+- **Authentication**: `Clerk` (`@clerk/react`, `@clerk/express`) for user authentication and management.
+- **Database**: `PostgreSQL`
+- **ORM**: `Drizzle ORM`
+- **Frontend Framework**: `React`
+- **Build Tool**: `Vite`
+- **Styling**: `Tailwind CSS`, `shadcn/ui`
+- **Validation Library**: `Zod`

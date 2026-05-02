@@ -22,6 +22,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronRight } from "lucide-react";
 import { SURAHS, ALL_ROB3S, ROB3S_PER_JUZ, JUZ_RANGES, getSurahsInPageRange } from "@/lib/quran-ref";
+import { Rob3FirstAyahPreview } from "@/components/rob3-first-ayah-preview";
 
 export default function HomeworkList() {
   const { data: sessions, isLoading } = useListHomework();
@@ -330,6 +331,11 @@ function RangePickers({ testIdPrefix, onPick }: RangePickersProps) {
                               starts at {startSurah.name} {r.startAyah} (p.{r.startPage})
                             </span>
                           ) : null}
+                          <Rob3FirstAyahPreview
+                            rob3Number={r.rob3}
+                            className="block text-[12px] mt-0.5 max-w-full"
+                            wordCount={6}
+                          />
                         </div>
                       </SelectItem>
                     );

@@ -11,6 +11,7 @@ import { QualityBadge, getQualityColor } from "@/components/quality-badge";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageRow } from "@/components/page-row";
+import { Rob3FirstAyahPreview } from "@/components/rob3-first-ayah-preview";
 
 export default function JuzDetail() {
   const params = useParams<{ id: string }>();
@@ -60,9 +61,14 @@ export default function JuzDetail() {
               <CardContent className="pt-4 pb-3 px-4">
                 <div className="flex items-center gap-2 mb-2">
                   <div className={`w-1.5 h-6 rounded-full ${getQualityColor(rob3.averageQuality)}`} />
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-sm font-medium">Part {((rob3.rob3Number - 1) % 8) + 1}</div>
                     <div className="text-xs text-muted-foreground">Pages {rob3.startPage}-{rob3.endPage}</div>
+                    <Rob3FirstAyahPreview
+                      rob3Number={rob3.rob3Number}
+                      className="block text-xs mt-1 max-w-full"
+                      wordCount={5}
+                    />
                   </div>
                 </div>
                 <div className="flex items-center justify-between mt-2">

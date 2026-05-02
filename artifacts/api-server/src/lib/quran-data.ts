@@ -199,7 +199,9 @@ export function getRob3Range(rob3Number: number): {
   const juzNumber = Math.floor((rob3Number - 1) / ROB3S_PER_JUZ) + 1;
   if (!boundary) return { startPage: 1, endPage: 1, juzNumber: 1, startSurah: 1, startAyah: 1 };
   const startPage = boundary.page;
-  const endPage = next ? Math.max(startPage, next.page - 1) : TOTAL_PAGES;
+  // Adjacent Rubs typically meet mid-page → the boundary page belongs to
+  // BOTH this Rub and the next. endPage = next.page (overlap).
+  const endPage = next ? Math.max(startPage, next.page) : TOTAL_PAGES;
   return { startPage, endPage, juzNumber, startSurah: boundary.surah, startAyah: boundary.ayah };
 }
 

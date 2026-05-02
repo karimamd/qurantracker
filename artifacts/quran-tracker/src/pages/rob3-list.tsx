@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { QualityBadge, getQualityColor } from "@/components/quality-badge";
+import { Rob3FirstAyahPreview } from "@/components/rob3-first-ayah-preview";
 import { useToast } from "@/hooks/use-toast";
 import { Search } from "lucide-react";
 
@@ -93,6 +94,7 @@ export default function Rob3List() {
         <h2 className="text-2xl font-semibold">Rub' (Parts) Overview</h2>
         <p className="text-sm text-muted-foreground mt-1">
           All 240 Rub' al-Hizb. Marking a Part applies that quality to every page in its range.
+          Boundary pages are shared with the adjacent Part (since Rubs typically meet mid-page).
         </p>
       </div>
 
@@ -130,6 +132,10 @@ export default function Rob3List() {
                       <div className="text-xs text-muted-foreground">
                         Pages {rob3.startPage}–{rob3.endPage} · starts at {rob3.startSurahName} {rob3.startAyah}
                       </div>
+                      <Rob3FirstAyahPreview
+                        rob3Number={rob3.rob3Number}
+                        className="block text-sm mt-1 max-w-full"
+                      />
                     </div>
                   </div>
                   <QualityBadge quality={rob3.averageQuality} />

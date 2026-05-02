@@ -161,7 +161,10 @@ router.get("/progress/juz/:juzNumber", async (req, res): Promise<void> => {
   for (let i = 0; i < ROB3S_PER_JUZ; i++) {
     const rob3Number = (juz.juz - 1) * ROB3S_PER_JUZ + i + 1;
     const range = getRob3Range(rob3Number);
-    const rob3Pages = enriched.filter(p => p.rob3Number === rob3Number);
+    // Filter by page-range overlap (not the page's primary rob3Number) so
+    // boundary pages — which belong to two adjacent Rubs — are counted in
+    // both. See getRob3Range comment.
+    const rob3Pages = enriched.filter(p => p.pageNumber >= range.startPage && p.pageNumber <= range.endPage);
     const inScope = rob3Pages.filter(p => p.inScope);
     const lastRecitedArr = inScope.filter(p => p.lastRecited).sort((a, b) => b.lastRecited!.getTime() - a.lastRecited!.getTime());
     const nextDueArr = inScope.filter(p => p.dueDate).sort((a, b) => a.dueDate!.getTime() - b.dueDate!.getTime());
@@ -231,7 +234,8 @@ router.get("/progress/rob3", async (req, res): Promise<void> => {
     const range = getRob3Range(n);
     const juzNumber = Math.floor((n - 1) / ROB3S_PER_JUZ) + 1;
     const partInJuz = ((n - 1) % ROB3S_PER_JUZ) + 1;
-    const rob3Pages = enriched.filter(p => p.rob3Number === n);
+    // See getRob3Range — boundary pages belong to two Rubs, so filter by range overlap.
+    const rob3Pages = enriched.filter(p => p.pageNumber >= range.startPage && p.pageNumber <= range.endPage);
     const inScope = rob3Pages.filter(p => p.inScope);
     const lastRecitedArr = inScope.filter(p => p.lastRecited).sort((a, b) => b.lastRecited!.getTime() - a.lastRecited!.getTime());
     const nextDueArr = inScope.filter(p => p.dueDate).sort((a, b) => a.dueDate!.getTime() - b.dueDate!.getTime());
