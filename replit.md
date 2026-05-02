@@ -16,7 +16,7 @@ A personal Quran memorization progress tracker. Tracks revision across multiple 
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
-- **Auth**: Clerk (`@clerk/react` on web, `@clerk/express` on server) — Replit-managed, multi-tenant
+- **Auth**: Clerk (`@clerk/react` on web, `@clerk/express` on server) — Replit-managed, multi-tenant; **guest mode** lets unauthenticated visitors use the app via an httpOnly `guest_id` cookie that auto-migrates to their Clerk userId on sign-up
 
 ## Key Features
 
@@ -36,7 +36,7 @@ A personal Quran memorization progress tracker. Tracks revision across multiple 
 
 ## Database Tables
 
-All user-facing tables include a nullable `user_id` column scoped to the Clerk session userId. Every API route is protected by `requireAuth` which sets `req.userId` and returns 401 to unauthenticated requests; all queries filter by `req.userId`.
+All user-facing tables include a nullable `user_id` column scoped to either a Clerk session userId or a `guest_<32hex>` id. Every API route is protected by `requireAuth` which sets `req.userId` (and `req.isGuest`); when neither a Clerk session nor a guest cookie is present, the middleware **auto-issues** a guest cookie so the request still succeeds. All queries filter by `req.userId`.
 
 - `settings` - configurable review interval days per quality level (unique per `user_id`)
 - `page_progress` - per-page tracking (scope, quality, mistakes, last recited, due date) — composite unique on `(user_id, page_number)`
@@ -57,6 +57,16 @@ All user-facing tables include a nullable `user_id` column scoped to the Clerk s
 - A regression test guards this: `pnpm --filter @workspace/scripts run test-routes` verifies the regexparam semantics. Run it before deploying any route changes.
 - An `ErrorBoundary` (`src/components/error-boundary.tsx`) wraps both the outer Switch (catches Layout/auth errors) and the inner Switch (catches per-page render errors). Stack details are gated to `import.meta.env.DEV` so production users see only a friendly recovery screen.
 - Orphan claim: on first authenticated request after server boot, any rows with `user_id IS NULL` (pre-auth dev data) are reassigned to that user. One-shot per process — see `requireAuth.ts` for the rationale.
+
+## Guest Mode
+
+The app is fully usable without signing up. This makes it easy for new visitors to try the product (and for tests to skip Clerk entirely).
+
+- **Server (`requireAuth.ts`)**: signed-in Clerk users always win. Otherwise the middleware reads the `guest_id` cookie (httpOnly, sameSite=lax, 1-year, secure in prod). If absent, it mints a new `guest_<32hex>` id and sets the cookie. The middleware is **idempotent** — multiple sub-routers each mounting `requireAuth` won't issue duplicate cookies.
+- **Migration on sign-up**: when both a Clerk userId and a `guest_id` cookie are present (i.e. a guest just signed up), the middleware reassigns all rows in the 5 user tables (`page_progress`, `recitation_log`, `homework_sessions`, `homework_items`, `settings`) from the guest id to the Clerk id, then clears the cookie. If migration fails the request still proceeds and the next signed-in request retries.
+- **Client (`lib/guest-mode.ts`)**: a `qt_guest_mode` localStorage flag tells `App.tsx` to allow `ProtectedApp` access without a Clerk session. The Landing page has a "Try it now — no sign up" button that sets the flag and routes to `/dashboard`. The flag is a UI hint only — actual auth lives in the cookie.
+- **Layout banner**: when in guest mode, the Layout shows an amber banner ("progress is saved on this device only — sign up to keep it across devices"), replaces the user avatar / sign-out controls with "Sign up to save" and "Exit guest mode" buttons (sidebar + mobile drawer), and shows a compact "Sign up" CTA in the mobile header.
+- **Cookie transport**: `lib/api-client-react/src/custom-fetch.ts` adds `credentials: "include"` so the cookie travels on every API request (same-origin via the proxy, but explicit for safety).
 
 ## Undo Recitation
 

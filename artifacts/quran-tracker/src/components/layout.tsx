@@ -1,8 +1,10 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, BookOpen, Layers, FileText, PenLine, ClipboardList, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, BookOpen, Layers, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info } from "lucide-react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
-import { UserButton, useUser, useClerk } from "@clerk/react";
+import { UserButton, useUser, useClerk, useAuth } from "@clerk/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { isGuestMode, exitGuestMode } from "@/lib/guest-mode";
 
 const navItems = [
   { href: "/homework", label: "Homework", icon: ClipboardList },
@@ -23,15 +25,25 @@ const bottomNavItems = [
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { user } = useUser();
+  const { isSignedIn } = useAuth();
   const { signOut } = useClerk();
+  const queryClient = useQueryClient();
+
+  const guestMode = !isSignedIn && isGuestMode();
 
   const isActive = (href: string) =>
     location === href || (href !== "/" && location.startsWith(href));
 
   const userLabel = user?.primaryEmailAddress?.emailAddress ?? user?.firstName ?? "Account";
+
+  const handleExitGuest = () => {
+    exitGuestMode();
+    queryClient.clear();
+    setLocation("/");
+  };
 
   return (
     <div className="min-h-screen flex" data-testid="app-layout">
@@ -58,18 +70,44 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="px-3 pt-3 mt-3 border-t border-sidebar-border space-y-2">
-          <div className="flex items-center gap-2 px-1" data-testid="user-info">
-            <UserButton />
-            <span className="text-xs text-sidebar-foreground/80 truncate flex-1" title={userLabel}>{userLabel}</span>
-          </div>
-          <button
-            onClick={() => signOut({ redirectUrl: "/" })}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
-            data-testid="button-sign-out"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign out
-          </button>
+          {guestMode ? (
+            <>
+              <div className="px-1 text-xs text-muted-foreground" data-testid="guest-info">
+                Signed in as <span className="font-medium text-sidebar-foreground">Guest</span>
+              </div>
+              <Link
+                href="/sign-up"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium bg-teal-700 text-white hover:bg-teal-800 transition-colors"
+                data-testid="button-guest-sign-up"
+              >
+                <UserPlus className="w-4 h-4" />
+                Sign up to save
+              </Link>
+              <button
+                onClick={handleExitGuest}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                data-testid="button-exit-guest"
+              >
+                <LogOut className="w-4 h-4" />
+                Exit guest mode
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 px-1" data-testid="user-info">
+                <UserButton />
+                <span className="text-xs text-sidebar-foreground/80 truncate flex-1" title={userLabel}>{userLabel}</span>
+              </div>
+              <button
+                onClick={() => signOut({ redirectUrl: "/" })}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                data-testid="button-sign-out"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign out
+              </button>
+            </>
+          )}
         </div>
       </aside>
 
@@ -79,7 +117,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <h1 className="text-base font-semibold leading-tight">Quran Tracker</h1>
           </div>
           <div className="flex items-center gap-2">
-            <UserButton />
+            {guestMode ? (
+              <Link
+                href="/sign-up"
+                className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-teal-700 text-white hover:bg-teal-800"
+                data-testid="mobile-guest-sign-up"
+              >
+                Sign up
+              </Link>
+            ) : (
+              <UserButton />
+            )}
             <button
               onClick={() => setDrawerOpen(true)}
               className="p-2 rounded-lg hover:bg-muted transition-colors"
@@ -129,21 +177,58 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Link>
                 ))}
               </nav>
-              <div className="px-3 pt-3 mt-3 border-t border-sidebar-border">
-                <button
-                  onClick={() => { setDrawerOpen(false); signOut({ redirectUrl: "/" }); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
-                  data-testid="mobile-button-sign-out"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sign out
-                </button>
+              <div className="px-3 pt-3 mt-3 border-t border-sidebar-border space-y-2">
+                {guestMode ? (
+                  <>
+                    <Link
+                      href="/sign-up"
+                      onClick={() => setDrawerOpen(false)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium bg-teal-700 text-white hover:bg-teal-800 transition-colors"
+                      data-testid="mobile-button-guest-sign-up"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      Sign up to save
+                    </Link>
+                    <button
+                      onClick={() => { setDrawerOpen(false); handleExitGuest(); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                      data-testid="mobile-button-exit-guest"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Exit guest mode
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => { setDrawerOpen(false); signOut({ redirectUrl: "/" }); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                    data-testid="mobile-button-sign-out"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign out
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
 
         <main className="flex-1 overflow-auto pb-20 md:pb-0">
+          {guestMode && (
+            <div
+              className="bg-amber-50 border-b border-amber-200 px-4 md:px-6 py-2.5 flex items-center gap-3"
+              data-testid="guest-mode-banner"
+            >
+              <Info className="w-4 h-4 text-amber-700 shrink-0" />
+              <p className="text-xs sm:text-sm text-amber-900 flex-1 min-w-0">
+                You're trying it as a guest — your progress is saved on this device only.{" "}
+                <Link href="/sign-up" className="underline font-medium hover:text-amber-950" data-testid="banner-sign-up-link">
+                  Sign up to keep it across devices
+                </Link>
+                .
+              </p>
+            </div>
+          )}
           <div className="max-w-6xl mx-auto p-4 md:p-6">
             {children}
           </div>

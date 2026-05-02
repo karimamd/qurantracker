@@ -11,6 +11,7 @@ Start here, then jump into the area you care about.
 | Doc | Read this if you want to… |
 | --- | --- |
 | [Architecture](./architecture.md) | Understand the monorepo layout, the runtime topology, and how the pieces fit together. |
+| [Business Logic & Domain](./business-logic.md) | Understand the *what* — Juz/Surah/Page/Ayah grains, the spaced-repetition formula, scope/streak/homework rules, and the path to ayah-level tracking. |
 | [Data Flow](./data-flow.md) | Trace a request end-to-end (UI → React Query hook → Express route → Drizzle → Postgres) and see how spaced repetition is computed. |
 | [Database](./database.md) | Browse the tables, columns, indexes, and how multi-tenant isolation works. |
 | [API Reference](./api.md) | Look up an endpoint, its request/response schema, and how to call it from the generated client. |

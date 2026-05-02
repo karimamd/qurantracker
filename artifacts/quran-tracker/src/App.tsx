@@ -21,6 +21,7 @@ import HomeworkDetail from "@/pages/homework-detail";
 import SettingsPage from "@/pages/settings-page";
 import NotFound from "@/pages/not-found";
 import { BookOpen, ArrowRight } from "lucide-react";
+import { enterGuestMode, isGuestMode } from "@/lib/guest-mode";
 
 const queryClient = new QueryClient();
 
@@ -109,6 +110,11 @@ function SignUpPage() {
 }
 
 function Landing() {
+  const [, setLocation] = useLocation();
+  const handleTryAsGuest = () => {
+    enterGuestMode();
+    setLocation("/dashboard");
+  };
   return (
     <div className="min-h-[100dvh] bg-gradient-to-br from-teal-50 via-white to-slate-50">
       <header className="px-6 py-5 flex items-center justify-between max-w-6xl mx-auto">
@@ -136,16 +142,28 @@ function Landing() {
         <p className="text-lg text-slate-600 mb-8 max-w-xl mx-auto">
           Quality-based spaced repetition across Juz, Surah, and Page. Homework sessions, progress charts, and per-page reviews — all in one calm space.
         </p>
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={handleTryAsGuest}
+            data-testid="cta-try-guest"
+            className="border-teal-700 text-teal-700 hover:bg-teal-50"
+          >
+            Try it now — no sign up <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
           <Link href="/sign-up">
             <Button size="lg" className="bg-teal-700 hover:bg-teal-800" data-testid="cta-sign-up">
-              Create your account <ArrowRight className="w-4 h-4 ml-2" />
+              Create your account
             </Button>
           </Link>
           <Link href="/sign-in">
-            <Button size="lg" variant="outline" data-testid="cta-sign-in">Sign in</Button>
+            <Button size="lg" variant="ghost" data-testid="cta-sign-in">Sign in</Button>
           </Link>
         </div>
+        <p className="text-xs text-slate-500 mt-6 max-w-md mx-auto">
+          Guest mode saves your progress on this device. Sign up any time to keep it across devices — your guest data carries over automatically.
+        </p>
       </main>
     </div>
   );
@@ -162,14 +180,14 @@ function AuthLoadingScreen() {
 function HomeRedirect() {
   const { isLoaded, isSignedIn } = useAuth();
   if (!isLoaded) return <AuthLoadingScreen />;
-  if (isSignedIn) return <Redirect to="/dashboard" />;
+  if (isSignedIn || isGuestMode()) return <Redirect to="/dashboard" />;
   return <Landing />;
 }
 
 function ProtectedApp() {
   const { isLoaded, isSignedIn } = useAuth();
   if (!isLoaded) return <AuthLoadingScreen />;
-  if (!isSignedIn) return <Redirect to="/" />;
+  if (!isSignedIn && !isGuestMode()) return <Redirect to="/" />;
   return (
     <Layout>
       <ErrorBoundary>
