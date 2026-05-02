@@ -6,7 +6,7 @@ import {
   getGetProgressOverviewQueryKey,
   getListPageProgressQueryKey,
 } from "@workspace/api-client-react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -56,6 +56,7 @@ export default function HomeworkDetail() {
   const updateItem = useUpdateHomeworkItem();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetHomeworkQueryKey(homeworkId) });
@@ -195,18 +196,17 @@ export default function HomeworkDetail() {
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0 ml-auto">
-                      <Link href={`/reader/${item.pageNumber}`}>
-                        <button
-                          type="button"
-                          className="mr-1 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border bg-background text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
-                          title={`Open page ${item.pageNumber} in Reader`}
-                          aria-label={`Open page ${item.pageNumber} in Reader`}
-                          data-testid={`hw-open-reader-${item.id}`}
-                        >
-                          <BookMarked className="w-3 h-3" />
-                          <span className="hidden sm:inline">Read</span>
-                        </button>
-                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setLocation(`/reader/${item.pageNumber}`)}
+                        className="mr-1 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border bg-background text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                        title={`Open page ${item.pageNumber} in Reader`}
+                        aria-label={`Open page ${item.pageNumber} in Reader`}
+                        data-testid={`hw-open-reader-${item.id}`}
+                      >
+                        <BookMarked className="w-3 h-3" />
+                        <span className="hidden sm:inline">Read</span>
+                      </button>
                       {QUALITIES.map(({ value, label: ql }) => {
                         const isActive = q === value;
                         const style = qualityStyle[value];

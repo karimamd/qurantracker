@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft } from "lucide-react";
 import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
@@ -101,6 +101,12 @@ export default function Reader() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [surahSearch, setSurahSearch] = useState("");
 
+  // Hide-and-reveal practice mode state (resets on every page change)
+  const [hideMode, setHideMode] = useState(false);
+  const [revealedCount, setRevealedCount] = useState(0);
+  const [mistakeAyahs, setMistakeAyahs] = useState<Set<number>>(new Set());
+  const [clearedAyahs, setClearedAyahs] = useState<Set<number>>(new Set());
+
   const { data: allPages, isLoading: pagesLoading } = useListPageProgress({});
   const updatePage = useUpdatePageProgress();
   const queryClient = useQueryClient();
@@ -126,9 +132,13 @@ export default function Reader() {
     setPageNumber(prev => (prev === n ? prev : n));
   }, [params.page]);
 
-  // Reset the input value whenever the page changes
+  // Reset the input value and practice-mode state whenever the page changes
   useEffect(() => {
     setPageInput(String(pageNumber));
+    setHideMode(false);
+    setRevealedCount(0);
+    setMistakeAyahs(new Set());
+    setClearedAyahs(new Set());
   }, [pageNumber]);
 
   const goToPage = (n: number) => {
@@ -191,6 +201,15 @@ export default function Reader() {
     );
   }, [surahSearch]);
 
+  const totalAyahs = ayahs?.length ?? 0;
+
+  // Map global ayah.number -> its 0-based position on this page (for hide-mode visibility check)
+  const ayahIndexMap = useMemo(() => {
+    const m = new Map<number, number>();
+    ayahs?.forEach((a, i) => m.set(a.number, i));
+    return m;
+  }, [ayahs]);
+
   // Group consecutive ayahs by surah for rendering
   const groupedAyahs = useMemo(() => {
     if (!ayahs) return [] as { surahNumber: number; surahName: string; ayahs: ApiAyah[]; isFirstAyah: boolean }[];
@@ -228,16 +247,80 @@ export default function Reader() {
 
   const handleQuality = (quality: Quality) => {
     const targetPage = pageNumber;
+    const mistakes = mistakeAyahs.size;
     updatePage.mutate(
-      { pageNumber: targetPage, data: { quality } },
+      { pageNumber: targetPage, data: mistakes > 0 ? { quality, mistakes } : { quality } },
       {
         onSuccess: () => {
-          toast({ title: `Page ${targetPage} marked as ${quality}` });
+          toast({
+            title: `Page ${targetPage} marked as ${quality}${mistakes > 0 ? ` (${mistakes} mistake${mistakes === 1 ? "" : "s"})` : ""}`,
+          });
           invalidateProgressData();
+          // Only clear practice-mode session state if the user is still on the same page.
+          // Otherwise (user navigated away mid-flight), the page-change effect already reset state and we'd risk wiping a fresh page's marks.
+          setPageNumber(currentPage => {
+            if (currentPage === targetPage) {
+              setMistakeAyahs(new Set());
+              setClearedAyahs(new Set());
+            }
+            return currentPage;
+          });
         },
         onError: () => toast({ title: "Failed to record recitation", variant: "destructive" }),
       }
     );
+  };
+
+  const startHideMode = () => {
+    setHideMode(true);
+    setRevealedCount(0);
+    setMistakeAyahs(new Set());
+    setClearedAyahs(new Set());
+  };
+
+  const showAllAyahs = () => {
+    setHideMode(false);
+  };
+
+  const showNextAyah = () => {
+    setRevealedCount(c => Math.min(c + 1, totalAyahs));
+  };
+
+  const resetPractice = () => {
+    setRevealedCount(0);
+    setMistakeAyahs(new Set());
+    setClearedAyahs(new Set());
+  };
+
+  const handleAyahMark = (ayahNumber: number, mark: "clear" | "mistake", isLatest: boolean) => {
+    if (mark === "clear") {
+      setClearedAyahs(prev => {
+        const next = new Set(prev);
+        next.add(ayahNumber);
+        return next;
+      });
+      setMistakeAyahs(prev => {
+        if (!prev.has(ayahNumber)) return prev;
+        const next = new Set(prev);
+        next.delete(ayahNumber);
+        return next;
+      });
+    } else {
+      setMistakeAyahs(prev => {
+        const next = new Set(prev);
+        next.add(ayahNumber);
+        return next;
+      });
+      setClearedAyahs(prev => {
+        if (!prev.has(ayahNumber)) return prev;
+        const next = new Set(prev);
+        next.delete(ayahNumber);
+        return next;
+      });
+    }
+    if (hideMode && isLatest && revealedCount < totalAyahs) {
+      setRevealedCount(c => c + 1);
+    }
   };
 
   const handleSubmitInput = (e: React.FormEvent) => {
@@ -395,6 +478,70 @@ export default function Reader() {
       </Card>
 
       <Card className="border shadow-sm overflow-hidden">
+        {ayahs && !ayahsError && (
+          <div className="border-b bg-background px-3 py-2 flex items-center justify-between gap-2 flex-wrap" data-testid="reader-practice-toolbar">
+            <div className="flex items-center gap-2 flex-wrap">
+              {!hideMode ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={startHideMode}
+                  data-testid="btn-hide-all"
+                >
+                  <EyeOff className="w-4 h-4 mr-1.5" />
+                  Hide all ayahs
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={showAllAyahs}
+                    data-testid="btn-show-all"
+                  >
+                    <Eye className="w-4 h-4 mr-1.5" />
+                    Show all
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={resetPractice}
+                    data-testid="btn-reset-practice"
+                    title="Re-hide all and clear marks"
+                  >
+                    <ChevronsLeft className="w-4 h-4 mr-1" />
+                    Restart
+                  </Button>
+                  <span className="text-xs text-muted-foreground tabular-nums" data-testid="reader-revealed-count">
+                    {revealedCount} / {totalAyahs} ayah{totalAyahs === 1 ? "" : "s"} revealed
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {mistakeAyahs.size > 0 && (
+                <span
+                  className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200"
+                  data-testid="reader-mistake-count"
+                  title="Mistakes will be recorded with your next quality rating"
+                >
+                  {mistakeAyahs.size} mistake{mistakeAyahs.size === 1 ? "" : "s"}
+                </span>
+              )}
+              {clearedAyahs.size > 0 && (
+                <span
+                  className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200"
+                  data-testid="reader-cleared-count"
+                >
+                  {clearedAyahs.size} clear
+                </span>
+              )}
+            </div>
+          </div>
+        )}
         <div className="bg-stone-50 dark:bg-stone-900/40 min-h-[60vh] p-4 sm:p-8">
           {ayahsLoading ? (
             <div className="space-y-3" data-testid="reader-loading">
@@ -435,21 +582,122 @@ export default function Reader() {
                     </div>
                   )}
                   <p className="font-serif text-2xl sm:text-3xl leading-loose text-justify" style={{ wordSpacing: "0.1em" }}>
-                    {group.ayahs.map((a, i) => (
-                      <span key={a.number}>
-                        {/* Strip the leading bismillah from Al-Fatiha:1 and other surah-opening bismillahs since the API includes them inline */}
-                        {a.text.replace(/^\ufeff?بِسْمِ\s+اللَّهِ\s+الرَّحْمَ?ٰ?نِ\s+الرَّحِيمِ\s*/u, group.isFirstAyah && i === 0 && group.surahNumber !== 1 ? "" : "$&")}
-                        <span className="inline-flex items-center justify-center mx-1 w-7 h-7 text-xs rounded-full border border-stone-400/60 text-stone-600 dark:text-stone-300 align-middle font-sans" aria-hidden="true">
-                          {arabicNumeral(a.numberInSurah)}
+                    {group.ayahs.map((a, i) => {
+                      const globalIndex = ayahIndexMap.get(a.number) ?? 0;
+                      const isVisible = !hideMode || globalIndex < revealedCount;
+                      const isLatest = hideMode && globalIndex === revealedCount - 1;
+                      const isMistake = mistakeAyahs.has(a.number);
+                      const isClear = clearedAyahs.has(a.number);
+                      const trailingSpace = i < group.ayahs.length - 1 ? " " : "";
+
+                      if (!isVisible) {
+                        return (
+                          <span key={a.number} className="inline-flex items-center align-middle mx-0.5" data-testid={`reader-ayah-hidden-${a.number}`}>
+                            <span className="inline-block h-1.5 w-16 sm:w-24 bg-stone-300/70 dark:bg-stone-700/70 rounded-full" />
+                            <span className="inline-flex items-center justify-center mx-1 w-7 h-7 text-xs rounded-full border border-dashed border-stone-400/50 text-stone-400 align-middle font-sans">
+                              {arabicNumeral(a.numberInSurah)}
+                            </span>
+                            <span className="inline-block h-1.5 w-8 bg-stone-300/70 dark:bg-stone-700/70 rounded-full" />
+                            {trailingSpace}
+                          </span>
+                        );
+                      }
+
+                      const cleanedText = a.text.replace(
+                        /^\ufeff?بِسْمِ\s+اللَّهِ\s+الرَّحْمَ?ٰ?نِ\s+الرَّحِيمِ\s*/u,
+                        group.isFirstAyah && i === 0 && group.surahNumber !== 1 ? "" : "$&",
+                      );
+
+                      return (
+                        <span
+                          key={a.number}
+                          className={
+                            isMistake
+                              ? "text-rose-600 dark:text-rose-400"
+                              : isLatest
+                              ? "bg-amber-100/40 dark:bg-amber-500/10 rounded px-0.5"
+                              : ""
+                          }
+                          data-testid={`reader-ayah-${a.number}`}
+                        >
+                          {cleanedText}
+                          <span
+                            className={`inline-flex items-center justify-center mx-1 w-7 h-7 text-xs rounded-full border align-middle font-sans ${
+                              isMistake
+                                ? "border-rose-400 bg-rose-100 text-rose-700"
+                                : isClear
+                                ? "border-emerald-400 bg-emerald-50 text-emerald-700"
+                                : "border-stone-400/60 text-stone-600 dark:text-stone-300"
+                            }`}
+                            aria-hidden="true"
+                          >
+                            {arabicNumeral(a.numberInSurah)}
+                          </span>
+                          {hideMode && (
+                            <span className="inline-flex items-center gap-0.5 mx-1 align-middle" dir="ltr">
+                              <button
+                                type="button"
+                                onClick={() => handleAyahMark(a.number, "clear", isLatest)}
+                                className={`w-6 h-6 inline-flex items-center justify-center rounded border text-xs transition-colors ${
+                                  isClear
+                                    ? "bg-emerald-500 border-emerald-500 text-white"
+                                    : "border-border bg-background text-muted-foreground hover:text-emerald-700 hover:border-emerald-300"
+                                }`}
+                                title={isLatest ? "Clear (reveals next)" : "Mark clear"}
+                                aria-label={`Mark ayah ${a.numberInSurah} as clear`}
+                                aria-pressed={isClear}
+                                data-testid={`reader-ayah-clear-${a.number}`}
+                              >
+                                <Check className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleAyahMark(a.number, "mistake", isLatest)}
+                                className={`w-6 h-6 inline-flex items-center justify-center rounded border text-xs transition-colors ${
+                                  isMistake
+                                    ? "bg-rose-500 border-rose-500 text-white"
+                                    : "border-border bg-background text-muted-foreground hover:text-rose-700 hover:border-rose-300"
+                                }`}
+                                title={isLatest ? "Mistake (reveals next)" : "Mark mistake"}
+                                aria-label={`Mark ayah ${a.numberInSurah} as mistake`}
+                                aria-pressed={isMistake}
+                                data-testid={`reader-ayah-mistake-${a.number}`}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          )}
+                          {trailingSpace}
                         </span>
-                        {i < group.ayahs.length - 1 ? " " : ""}
-                      </span>
-                    ))}
+                      );
+                    })}
                   </p>
                 </div>
               ))}
               {groupedAyahs.length === 0 && (
                 <p className="text-center text-sm text-muted-foreground" dir="ltr">No ayahs returned for this page.</p>
+              )}
+
+              {hideMode && revealedCount < totalAyahs && (
+                <div className="pt-4 flex justify-center" dir="ltr">
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={showNextAyah}
+                    data-testid="btn-show-next-ayah"
+                    className="shadow-md"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Show next ayah
+                    <span className="ml-2 text-xs font-normal opacity-80">({revealedCount + 1} / {totalAyahs})</span>
+                  </Button>
+                </div>
+              )}
+              {hideMode && revealedCount >= totalAyahs && totalAyahs > 0 && (
+                <div className="pt-4 text-center text-sm text-muted-foreground" dir="ltr" data-testid="reader-all-revealed">
+                  All ayahs revealed. Pick a quality rating below to record this recitation
+                  {mistakeAyahs.size > 0 ? ` along with ${mistakeAyahs.size} mistake${mistakeAyahs.size === 1 ? "" : "s"}.` : "."}
+                </div>
               )}
             </div>
           )}
