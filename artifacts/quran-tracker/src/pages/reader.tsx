@@ -60,7 +60,6 @@ export default function Reader() {
   const initialPage = clampPage(params.page ? parseInt(params.page, 10) : 1);
 
   const [pageNumber, setPageNumber] = useState<number>(initialPage);
-  const [pageInput, setPageInput] = useState<string>(String(initialPage));
   const [sheetOpen, setSheetOpen] = useState(false);
   const [surahSearch, setSurahSearch] = useState("");
 
@@ -90,9 +89,8 @@ export default function Reader() {
     setPageNumber(prev => (prev === n ? prev : n));
   }, [params.page]);
 
-  // Reset the input value and practice-mode state whenever the page changes
+  // Reset practice-mode state whenever the page changes
   useEffect(() => {
-    setPageInput(String(pageNumber));
     setHideMode(false);
     setRevealedCount(0);
     setMistakeAyahs(new Set());
@@ -276,12 +274,6 @@ export default function Reader() {
     }
   };
 
-  const handleSubmitInput = (e: React.FormEvent) => {
-    e.preventDefault();
-    const n = parseInt(pageInput, 10);
-    if (!Number.isNaN(n)) goToPage(n);
-  };
-
   const closeSheetAndGo = (page: number) => {
     setSheetOpen(false);
     setSurahSearch("");
@@ -389,39 +381,33 @@ export default function Reader() {
       </div>
 
       <Card className="border shadow-sm">
-        <CardContent className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="text-2xl font-bold tabular-nums shrink-0" data-testid="reader-current-page">
+        <CardContent className="px-3 py-2 flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="text-base font-semibold tabular-nums shrink-0" data-testid="reader-current-page">
               {pageNumber}
-              <span className="text-sm font-normal text-muted-foreground"> / {TOTAL_PAGES}</span>
+              <span className="text-xs font-normal text-muted-foreground"> / {TOTAL_PAGES}</span>
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap text-sm">
-                {arabicName && (
-                  <span className="font-serif" dir="rtl" lang="ar" data-testid="reader-page-name">
-                    {arabicName}
-                  </span>
-                )}
-                <span className="text-muted-foreground text-xs">
-                  Juz {juzNumber} · Part {rob3} ({partInJuz}/8)
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {surahsOnPage.map(s => (
-                  <span
-                    key={s.number}
-                    className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground"
-                    data-testid={`reader-surah-tag-${s.number}`}
-                  >
-                    {s.name}
-                  </span>
-                ))}
-              </div>
-            </div>
+            {arabicName && (
+              <span className="font-serif text-sm" dir="rtl" lang="ar" data-testid="reader-page-name">
+                {arabicName}
+              </span>
+            )}
+            <span className="text-muted-foreground text-[11px]">
+              Juz {juzNumber} · Part {rob3} ({partInJuz}/8)
+            </span>
+            {surahsOnPage.map(s => (
+              <span
+                key={s.number}
+                className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground"
+                data-testid={`reader-surah-tag-${s.number}`}
+              >
+                {s.name}
+              </span>
+            ))}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {pagesLoading ? (
-              <Skeleton className="h-6 w-20 rounded" />
+              <Skeleton className="h-5 w-16 rounded" />
             ) : currentPage?.quality ? (
               <QualityBadge quality={currentPage.quality} />
             ) : null}
@@ -660,36 +646,7 @@ export default function Reader() {
       <Card className="border shadow-sm">
         <CardContent className="px-4 py-3 space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(pageNumber - 1)}
-              disabled={pageNumber <= 1}
-              data-testid="btn-prev-page"
-            >
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Previous
-            </Button>
-
-            <form onSubmit={handleSubmitInput} className="flex items-center gap-2">
-              <label htmlFor="reader-page-input" className="text-xs text-muted-foreground">
-                Go to
-              </label>
-              <Input
-                id="reader-page-input"
-                type="number"
-                min={1}
-                max={TOTAL_PAGES}
-                value={pageInput}
-                onChange={e => setPageInput(e.target.value)}
-                className="w-20 h-8 text-sm text-center"
-                data-testid="reader-page-input"
-              />
-              <Button type="submit" size="sm" variant="secondary" data-testid="btn-go-page">
-                Go
-              </Button>
-            </form>
-
+            {/* Arabic reads right-to-left, so Next is on the left and Previous is on the right. */}
             <Button
               variant="outline"
               size="sm"
@@ -697,7 +654,18 @@ export default function Reader() {
               disabled={pageNumber >= TOTAL_PAGES}
               data-testid="btn-next-page"
             >
+              <ChevronLeft className="w-4 h-4 mr-1" />
               Next
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(pageNumber - 1)}
+              disabled={pageNumber <= 1}
+              data-testid="btn-prev-page"
+            >
+              Previous
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
