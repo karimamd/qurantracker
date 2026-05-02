@@ -52,11 +52,83 @@ import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import GuestSavePrompt from "@/components/guest-save-prompt";
+import { OnboardingScopeSetup } from "@/components/onboarding-scope-setup";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { Sparkles } from "lucide-react";
 
 type Quality = "excellent" | "good" | "hard" | "relearn";
 
 const QUALITY_VALUES: Quality[] = ["excellent", "good", "hard", "relearn"];
+
+function OnboardingTrigger({ variant = "default" }: { variant?: "default" | "link" }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  if (variant === "link") {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="text-sm font-medium text-primary hover:underline"
+          data-testid="onboarding-open-link"
+        >
+          {t("onboarding.openCta")}
+        </button>
+        <OnboardingScopeSetup open={open} onOpenChange={setOpen} />
+      </>
+    );
+  }
+  return (
+    <>
+      <Button
+        type="button"
+        onClick={() => setOpen(true)}
+        size="sm"
+        className="gap-1.5"
+        data-testid="onboarding-open-button"
+      >
+        <Sparkles className="w-4 h-4" />
+        {t("onboarding.openCta")}
+      </Button>
+      <OnboardingScopeSetup open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+function OnboardingScopeAuto({ open: shouldShow }: { open: boolean }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  if (!shouldShow || dismissed) return null;
+  return (
+    <Card className="border-2 border-dashed border-primary/30 bg-primary/5 shadow-none" data-testid="onboarding-banner">
+      <CardContent className="py-4 px-5 flex flex-wrap items-center gap-3 justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            {t("onboarding.bannerTitle")}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">{t("onboarding.bannerBody")}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setDismissed(true)}
+            className="text-xs text-muted-foreground hover:text-foreground"
+            data-testid="onboarding-banner-dismiss"
+          >
+            {t("onboarding.skip")}
+          </button>
+          <Button type="button" size="sm" onClick={() => setOpen(true)} className="gap-1.5" data-testid="onboarding-banner-cta">
+            {t("onboarding.openCta")}
+          </Button>
+        </div>
+        <OnboardingScopeSetup open={open} onOpenChange={setOpen} />
+      </CardContent>
+    </Card>
+  );
+}
 
 const qualityStyle: Record<Quality, { active: string; hover: string }> = {
   excellent: { active: "bg-emerald-500 border-emerald-500 text-white", hover: "hover:border-emerald-300 hover:text-emerald-700" },
@@ -599,6 +671,8 @@ export default function Dashboard() {
 
   if (!overview) return null;
 
+  const showOnboardingCta = overview.pagesInScope === 0;
+
   const pct = (value: number, denom: number) =>
     denom > 0 ? Math.round((value / denom) * 100) : 0;
 
@@ -645,6 +719,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-5" data-testid="dashboard-page">
       <GuestSavePrompt />
+      <OnboardingScopeAuto open={showOnboardingCta} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold">{t("dashboard.title")}</h2>
@@ -717,7 +792,10 @@ export default function Dashboard() {
               })}
             </div>
             {overview.pagesInScope === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">{t("dashboard.noPagesScope")}</p>
+              <div className="text-center py-4 space-y-2">
+                <p className="text-sm text-muted-foreground">{t("dashboard.noPagesScope")}</p>
+                <OnboardingTrigger variant="link" />
+              </div>
             )}
           </CardContent>
         </Card>

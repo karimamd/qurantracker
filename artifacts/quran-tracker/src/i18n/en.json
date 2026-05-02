@@ -129,6 +129,7 @@
     "pagesRecitedToday": "Pages recited that day",
     "qualityBreakdown": "Quality Breakdown",
     "noPagesScope": "No pages in scope yet.",
+    "onboardingCta": "Set up your memorization scope",
     "recentActivity": "Recent Activity",
     "noRecitations": "No recitations yet.",
     "undoTitle": "Undo this recitation?",
@@ -424,5 +425,46 @@
   "errors": {
     "failedRecord": "Failed to record recitation",
     "failedSave": "Failed to save"
+  },
+  "onboarding": {
+    "title": "Set up your memorization scope",
+    "subtitle": "Tell us what you've already memorized so we can plan your reviews.",
+    "scopeMeaningTitle": "What does \"In Scope\" mean?",
+    "scopeMeaning": "Pages you've memorized — even imperfectly — and want to revise. Pages in scope are reviewed on a spaced schedule. Pages out of scope are simply ignored until you add them.",
+    "openCta": "Set up scope",
+    "bannerTitle": "Welcome — let's set up your scope",
+    "bannerBody": "Pick the surahs, juz, or page ranges you've already memorized. We'll add them to your review schedule.",
+    "tabs": {
+      "surah": "By Surah",
+      "juz": "By Juz",
+      "pages": "By Pages"
+    },
+    "searchSurah": "Search surah by name or number…",
+    "pagesRange": "p. {{start}}–{{end}}",
+    "fromPage": "From page",
+    "toPage": "To page",
+    "addRange": "Add range",
+    "pagesHint": "Enter a page range (1–604) and press Add. You can add several ranges.",
+    "addedPages_one": "{{count}} page added",
+    "addedPages_other": "{{count}} pages added",
+    "invalidRange": "Please enter a valid page range between 1 and 604.",
+    "selectAtLeastOne": "Please select at least one item to add to your scope.",
+    "totalSelected_one": "{{count}} page selected",
+    "totalSelected_other": "{{count}} pages selected",
+    "resetSelection": "Reset selection",
+    "statusTitle": "Starting status",
+    "statusHint": "How well do you know these pages right now? This sets the first review interval — you can change it any time.",
+    "qualityDesc": {
+      "excellent": "Solid — long review interval",
+      "good": "Comfortable — normal interval",
+      "hard": "Shaky — short interval",
+      "relearn": "Needs serious work — review tomorrow"
+    },
+    "skip": "Skip for now",
+    "submit_one": "Add {{count}} page to scope",
+    "submit_other": "Add {{count}} pages to scope",
+    "submitting": "Adding…",
+    "addedToast_one": "Added {{count}} page to scope as {{quality}}",
+    "addedToast_other": "Added {{count}} pages to scope as {{quality}}"
   }
 }
