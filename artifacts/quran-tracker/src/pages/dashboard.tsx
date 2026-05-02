@@ -50,6 +50,7 @@ import { PageLabel } from "@/components/page-label";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import GuestSavePrompt from "@/components/guest-save-prompt";
 
 type Quality = "excellent" | "good" | "hard" | "relearn";
 
@@ -585,6 +586,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5" data-testid="dashboard-page">
+      <GuestSavePrompt />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold">Dashboard</h2>

@@ -221,12 +221,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               <Info className="w-4 h-4 text-amber-700 shrink-0" />
               <p className="text-xs sm:text-sm text-amber-900 flex-1 min-w-0">
-                You're trying it as a guest — your progress is saved on this device only.{" "}
-                <Link href="/sign-up" className="underline font-medium hover:text-amber-950" data-testid="banner-sign-up-link">
-                  Sign up to keep it across devices
-                </Link>
-                .
+                You're a guest — progress is on this device only.
+                <span className="hidden sm:inline"> Sign up and we'll move it to your account automatically.</span>
               </p>
+              <Link
+                href="/sign-up"
+                className="shrink-0 inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-md transition-colors"
+                data-testid="banner-sign-up-button"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                Save my progress
+              </Link>
             </div>
           )}
           <div className="max-w-6xl mx-auto p-4 md:p-6">
