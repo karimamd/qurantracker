@@ -7,11 +7,13 @@ import {
   getListSurahProgressQueryKey,
   getListRob3ProgressQueryKey,
   getGetRecentActivityQueryKey,
+  getGetJuzDetailQueryKey,
+  getGetSurahDetailQueryKey,
 } from "@workspace/api-client-react";
 import type { PageProgress } from "@workspace/api-client-react";
 import { useParams, useLocation } from "wouter";
 import { useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, BookMarked, Search, X, ImageOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
@@ -40,14 +42,27 @@ const qualityStyle: Record<Quality, { active: string; hover: string }> = {
   relearn:   { active: "bg-rose-500 border-rose-500 text-white",       hover: "hover:border-rose-300 hover:text-rose-700" },
 };
 
-const PAGE_IMAGE_BASE = "https://everyayah.com/data/images_png_75ppi/page";
-
-function pad3(n: number): string {
-  return String(n).padStart(3, "0");
+interface ApiAyah {
+  number: number;
+  text: string;
+  numberInSurah: number;
+  surah: { number: number; englishName: string; englishNameTranslation: string };
+}
+interface ApiPageResponse {
+  code: number;
+  status: string;
+  data: { number: number; ayahs: ApiAyah[] };
 }
 
-function pageImageUrl(pageNumber: number): string {
-  return `${PAGE_IMAGE_BASE}${pad3(pageNumber)}.png`;
+async function fetchPageAyahs(pageNumber: number, signal?: AbortSignal): Promise<ApiAyah[]> {
+  const res = await fetch(
+    `https://api.alquran.cloud/v1/page/${pageNumber}/quran-uthmani`,
+    { signal },
+  );
+  if (!res.ok) throw new Error(`Failed to load page ${pageNumber}: ${res.status}`);
+  const json = (await res.json()) as ApiPageResponse;
+  if (json.code !== 200 || !json.data?.ayahs) throw new Error(`Invalid response for page ${pageNumber}`);
+  return json.data.ayahs;
 }
 
 function clampPage(n: number): number {
@@ -71,46 +86,67 @@ function getRob3ForPage(pageNumber: number): { rob3: number; partInJuz: number }
   return { rob3: result.rob3, partInJuz: result.rob3InJuz + 1 };
 }
 
+function arabicNumeral(n: number): string {
+  return String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[parseInt(d, 10)]);
+}
+
 export default function Reader() {
   const params = useParams<{ page?: string }>();
   const [, setLocation] = useLocation();
-  const urlPage = params.page ? parseInt(params.page, 10) : NaN;
-  const initialPage = clampPage(Number.isNaN(urlPage) ? 1 : urlPage);
+  const initialPage = clampPage(params.page ? parseInt(params.page, 10) : 1);
 
   const [pageNumber, setPageNumber] = useState<number>(initialPage);
   const [pageInput, setPageInput] = useState<string>(String(initialPage));
-  const [imageError, setImageError] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [surahSearch, setSurahSearch] = useState("");
 
-  const { data: allPages, isLoading } = useListPageProgress({});
+  const { data: allPages, isLoading: pagesLoading } = useListPageProgress({});
   const updatePage = useUpdatePageProgress();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const {
+    data: ayahs,
+    isLoading: ayahsLoading,
+    isError: ayahsError,
+    refetch: refetchAyahs,
+  } = useQuery({
+    queryKey: ["alquran-cloud-page", pageNumber],
+    queryFn: ({ signal }) => fetchPageAyahs(pageNumber, signal),
+    staleTime: 1000 * 60 * 60,
+    gcTime: 1000 * 60 * 60,
+    retry: 1,
+  });
+
+  // URL -> state sync (only when user navigates browser back/forward)
   useEffect(() => {
     if (!params.page) return;
     const n = clampPage(parseInt(params.page, 10));
-    if (n !== pageNumber) {
-      setPageNumber(n);
-      setPageInput(String(n));
-    }
+    setPageNumber(prev => (prev === n ? prev : n));
   }, [params.page]);
 
+  // Reset the input value whenever the page changes
   useEffect(() => {
-    setImageError(false);
     setPageInput(String(pageNumber));
   }, [pageNumber]);
 
+  const goToPage = (n: number) => {
+    const clamped = clampPage(n);
+    if (clamped === pageNumber) return;
+    setPageNumber(clamped);
+    setLocation(`/reader/${clamped}`);
+  };
+
+  // Keyboard navigation
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       if (sheetOpen) return;
-      if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === "PageDown") {
+      if (e.key === "ArrowRight" || e.key === "PageDown") {
         e.preventDefault();
         goToPage(pageNumber + 1);
-      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp" || e.key === "PageUp") {
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
         e.preventDefault();
         goToPage(pageNumber - 1);
       }
@@ -120,12 +156,16 @@ export default function Reader() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageNumber, sheetOpen]);
 
-  const goToPage = (n: number) => {
-    const clamped = clampPage(n);
-    if (clamped === pageNumber) return;
-    setLocation(`/reader/${clamped}`);
-    setPageNumber(clamped);
-  };
+  // Prefetch the next page's ayahs for instant nav
+  useEffect(() => {
+    if (pageNumber >= TOTAL_PAGES) return;
+    const next = pageNumber + 1;
+    queryClient.prefetchQuery({
+      queryKey: ["alquran-cloud-page", next],
+      queryFn: ({ signal }) => fetchPageAyahs(next, signal),
+      staleTime: 1000 * 60 * 60,
+    });
+  }, [pageNumber, queryClient]);
 
   const currentPage: PageProgress | null = useMemo(() => {
     if (!allPages) return null;
@@ -150,22 +190,47 @@ export default function Reader() {
     );
   }, [surahSearch]);
 
-  const invalidate = () => {
+  // Group consecutive ayahs by surah for rendering
+  const groupedAyahs = useMemo(() => {
+    if (!ayahs) return [] as { surahNumber: number; surahName: string; ayahs: ApiAyah[]; isFirstAyah: boolean }[];
+    const groups: { surahNumber: number; surahName: string; ayahs: ApiAyah[]; isFirstAyah: boolean }[] = [];
+    for (const a of ayahs) {
+      const last = groups[groups.length - 1];
+      if (last && last.surahNumber === a.surah.number) {
+        last.ayahs.push(a);
+      } else {
+        groups.push({
+          surahNumber: a.surah.number,
+          surahName: a.surah.englishName,
+          ayahs: [a],
+          isFirstAyah: a.numberInSurah === 1,
+        });
+      }
+    }
+    return groups;
+  }, [ayahs]);
+
+  const invalidateProgressData = () => {
     queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
     queryClient.invalidateQueries({ queryKey: getListJuzProgressQueryKey() });
     queryClient.invalidateQueries({ queryKey: getListSurahProgressQueryKey() });
     queryClient.invalidateQueries({ queryKey: getListRob3ProgressQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetJuzDetailQueryKey(juzNumber) });
+    for (const s of surahsOnPage) {
+      queryClient.invalidateQueries({ queryKey: getGetSurahDetailQueryKey(s.number) });
+    }
   };
 
   const handleQuality = (quality: Quality) => {
+    const targetPage = pageNumber;
     updatePage.mutate(
-      { pageNumber, data: { quality } },
+      { pageNumber: targetPage, data: { quality } },
       {
         onSuccess: () => {
-          toast({ title: `Page ${pageNumber} marked as ${quality}` });
-          invalidate();
+          toast({ title: `Page ${targetPage} marked as ${quality}` });
+          invalidateProgressData();
         },
         onError: () => toast({ title: "Failed to record recitation", variant: "destructive" }),
       }
@@ -178,10 +243,10 @@ export default function Reader() {
     if (!Number.isNaN(n)) goToPage(n);
   };
 
-  const jumpToSurahStart = (startPage: number) => {
+  const closeSheetAndGo = (page: number) => {
     setSheetOpen(false);
     setSurahSearch("");
-    goToPage(startPage);
+    goToPage(page);
   };
 
   const currentQuality = (currentPage?.quality ?? null) as Quality | null;
@@ -221,7 +286,7 @@ export default function Reader() {
                 />
               </div>
               <p className="text-xs text-muted-foreground text-left mt-1">
-                Tap a surah to jump to its first page, or tap any page chip below it.
+                Tap a surah name to jump to its first page, or tap any page chip to jump there directly.
               </p>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto divide-y" data-testid="reader-surah-list">
@@ -229,10 +294,11 @@ export default function Reader() {
                 const surahPages: number[] = [];
                 for (let p = s.startPage; p <= s.endPage; p++) surahPages.push(p);
                 return (
-                  <div key={s.number} className="px-4 py-3 hover:bg-muted/40 transition-colors">
+                  <div key={s.number} className="px-4 py-3">
                     <button
-                      onClick={() => jumpToSurahStart(s.startPage)}
-                      className="w-full flex items-start justify-between gap-2 text-left"
+                      type="button"
+                      onClick={() => closeSheetAndGo(s.startPage)}
+                      className="w-full flex items-start justify-between gap-2 text-left rounded-md hover:bg-muted/50 -mx-2 px-2 py-1 transition-colors"
                       data-testid={`reader-surah-${s.number}`}
                     >
                       <div className="flex items-start gap-2 min-w-0">
@@ -255,13 +321,15 @@ export default function Reader() {
                         {surahPages.map(p => (
                           <button
                             key={p}
-                            onClick={() => jumpToSurahStart(p)}
+                            type="button"
+                            onClick={() => closeSheetAndGo(p)}
                             className={`text-[11px] px-2 py-0.5 rounded border font-medium transition-colors ${
                               p === pageNumber
                                 ? "bg-primary text-primary-foreground border-primary"
                                 : "bg-background border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
                             }`}
                             data-testid={`reader-surah-${s.number}-page-${p}`}
+                            aria-label={`Jump to page ${p}`}
                           >
                             {p}
                           </button>
@@ -313,7 +381,7 @@ export default function Reader() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {isLoading ? (
+            {pagesLoading ? (
               <Skeleton className="h-6 w-20 rounded" />
             ) : currentPage?.quality ? (
               <QualityBadge quality={currentPage.quality} />
@@ -324,28 +392,63 @@ export default function Reader() {
       </Card>
 
       <Card className="border shadow-sm overflow-hidden">
-        <div className="bg-stone-50 dark:bg-stone-900 flex items-center justify-center min-h-[60vh] p-2 sm:p-4">
-          {imageError ? (
-            <div className="flex flex-col items-center justify-center text-muted-foreground py-12 text-center px-4">
-              <ImageOff className="w-10 h-10 mb-3 opacity-50" />
-              <p className="text-sm font-medium">Mushaf image not available</p>
+        <div className="bg-stone-50 dark:bg-stone-900/40 min-h-[60vh] p-4 sm:p-8">
+          {ayahsLoading ? (
+            <div className="space-y-3" data-testid="reader-loading">
+              <Skeleton className="h-6 w-1/2 mx-auto" />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-11/12" />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-10/12" />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-9/12" />
+            </div>
+          ) : ayahsError ? (
+            <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-12 px-4" data-testid="reader-load-error">
+              <AlertCircle className="w-10 h-10 mb-3 opacity-50" />
+              <p className="text-sm font-medium text-foreground">Couldn't load page text</p>
               <p className="text-xs mt-1">
-                The page image could not be loaded right now. Navigation and marking still work below.
+                The Quran text service is unreachable right now. Navigation and marking still work.
               </p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => void refetchAyahs()}>
+                Try again
+              </Button>
               {arabicName && (
                 <p className="text-xl font-serif mt-6" dir="rtl" lang="ar">{arabicName}</p>
               )}
             </div>
           ) : (
-            <img
-              key={pageNumber}
-              src={pageImageUrl(pageNumber)}
-              alt={`Quran page ${pageNumber}`}
-              loading="eager"
-              onError={() => setImageError(true)}
-              className="max-w-full max-h-[80vh] h-auto bg-white shadow-md rounded"
-              data-testid="reader-page-image"
-            />
+            <div dir="rtl" lang="ar" className="space-y-6" data-testid="reader-page-text">
+              {groupedAyahs.map((group, idx) => (
+                <div key={`${group.surahNumber}-${idx}`} className="space-y-3">
+                  {group.isFirstAyah && (
+                    <div className="text-center py-2 border-y border-stone-300/60 dark:border-stone-700/60 bg-stone-100/60 dark:bg-stone-800/30 rounded">
+                      <div className="font-serif text-lg" dir="rtl" lang="ar">
+                        سورة {SURAHS.find(s => s.number === group.surahNumber)?.arabic ?? group.surahName}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5" dir="ltr">
+                        {group.surahName} · Surah {group.surahNumber}
+                      </div>
+                    </div>
+                  )}
+                  <p className="font-serif text-2xl sm:text-3xl leading-loose text-justify" style={{ wordSpacing: "0.1em" }}>
+                    {group.ayahs.map((a, i) => (
+                      <span key={a.number}>
+                        {/* Strip the leading bismillah from Al-Fatiha:1 and other surah-opening bismillahs since the API includes them inline */}
+                        {a.text.replace(/^\ufeff?بِسْمِ\s+اللَّهِ\s+الرَّحْمَ?ٰ?نِ\s+الرَّحِيمِ\s*/u, group.isFirstAyah && i === 0 && group.surahNumber !== 1 ? "" : "$&")}
+                        <span className="inline-flex items-center justify-center mx-1 w-7 h-7 text-xs rounded-full border border-stone-400/60 text-stone-600 dark:text-stone-300 align-middle font-sans" aria-hidden="true">
+                          {arabicNumeral(a.numberInSurah)}
+                        </span>
+                        {i < group.ayahs.length - 1 ? " " : ""}
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              ))}
+              {groupedAyahs.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground" dir="ltr">No ayahs returned for this page.</p>
+              )}
+            </div>
           )}
         </div>
       </Card>
@@ -411,13 +514,15 @@ export default function Reader() {
                 return (
                   <button
                     key={value}
+                    type="button"
                     onClick={() => handleQuality(value)}
                     disabled={updatePage.isPending}
-                    className={`flex-1 min-w-[72px] px-3 py-2 rounded-md border text-sm font-medium transition-all ${
+                    className={`flex-1 min-w-[72px] px-3 py-2 rounded-md border text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
                       isActive ? style.active : `border-border bg-background text-muted-foreground ${style.hover}`
                     } disabled:opacity-50`}
                     data-testid={`reader-quality-${value}`}
                     aria-label={`Mark page ${pageNumber} as ${label}`}
+                    aria-pressed={isActive}
                   >
                     {label}
                   </button>
@@ -426,7 +531,6 @@ export default function Reader() {
             </div>
             {currentPage && !currentPage.inScope && currentQuality === null && (
               <p className="text-[11px] text-muted-foreground mt-2">
-                <X className="w-3 h-3 inline mr-1" />
                 Not in your memorization scope yet — marking a quality will add it automatically.
               </p>
             )}
