@@ -144,7 +144,7 @@ export function PageRow({
               )}
               {weekCount != null && weekCount > 0 && (
                 <span
-                  className="text-xs font-semibold bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full border border-sky-200"
+                  className="text-xs font-semibold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full border border-teal-200"
                   data-testid={`${testIdPrefix}-week-count-${tid}`}
                 >
                   {t("pageRow.thisWeek", { count: weekCount })}

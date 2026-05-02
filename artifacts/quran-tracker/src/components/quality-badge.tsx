@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 
 const qualityClassName: Record<string, string> = {
   excellent: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  good: "bg-sky-100 text-sky-800 border-sky-200",
+  good: "bg-teal-100 text-teal-800 border-teal-200",
   hard: "bg-amber-100 text-amber-800 border-amber-200",
   relearn: "bg-rose-100 text-rose-800 border-rose-200",
 };
@@ -13,7 +13,7 @@ const qualityClassName: Record<string, string> = {
 // reads as "computed/temporary" instead of the user's recorded rating.
 const downgradedClassName: Record<string, string> = {
   excellent: "bg-emerald-50 text-emerald-700 border-emerald-200 border-dashed",
-  good: "bg-sky-50 text-sky-700 border-sky-200 border-dashed",
+  good: "bg-teal-50 text-teal-700 border-teal-200 border-dashed",
   hard: "bg-amber-50 text-amber-700 border-amber-200 border-dashed",
   relearn: "bg-rose-50 text-rose-700 border-rose-200 border-dashed",
 };
@@ -22,8 +22,8 @@ const statusClassName: Record<string, string> = {
   overdue: "bg-rose-100 text-rose-800 border-rose-200",
   due_soon: "bg-amber-100 text-amber-800 border-amber-200",
   on_track: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  not_started: "bg-gray-100 text-gray-600 border-gray-200",
-  out_of_scope: "bg-gray-50 text-gray-400 border-gray-100",
+  not_started: "bg-stone-100 text-stone-700 border-stone-200",
+  out_of_scope: "bg-muted text-muted-foreground border-border",
 };
 
 interface QualityBadgeProps {
@@ -92,10 +92,10 @@ export function StatusBadge({ status }: { status: string }) {
 export function getQualityColor(quality: string | null): string {
   switch (quality) {
     case "excellent": return "bg-emerald-500";
-    case "good": return "bg-sky-500";
+    case "good": return "bg-teal-600";
     case "hard": return "bg-amber-500";
     case "relearn": return "bg-rose-500";
-    default: return "bg-gray-200";
+    default: return "bg-muted";
   }
 }
 
@@ -104,7 +104,7 @@ export function getStatusColor(status: string): string {
     case "overdue": return "bg-rose-500";
     case "due_soon": return "bg-amber-500";
     case "on_track": return "bg-emerald-500";
-    case "not_started": return "bg-gray-300";
-    default: return "bg-gray-200";
+    case "not_started": return "bg-stone-400";
+    default: return "bg-muted";
   }
 }

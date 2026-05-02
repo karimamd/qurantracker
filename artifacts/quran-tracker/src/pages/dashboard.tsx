@@ -132,7 +132,7 @@ function OnboardingScopeAuto({ open: shouldShow }: { open: boolean }) {
 
 const qualityStyle: Record<Quality, { active: string; hover: string }> = {
   excellent: { active: "bg-emerald-500 border-emerald-500 text-white", hover: "hover:border-emerald-300 hover:text-emerald-700" },
-  good:      { active: "bg-sky-500 border-sky-500 text-white",         hover: "hover:border-sky-300 hover:text-sky-700" },
+  good:      { active: "bg-teal-600 border-teal-600 text-white",       hover: "hover:border-teal-300 hover:text-teal-700" },
   hard:      { active: "bg-amber-500 border-amber-500 text-white",     hover: "hover:border-amber-300 hover:text-amber-700" },
   relearn:   { active: "bg-rose-500 border-rose-500 text-white",       hover: "hover:border-rose-300 hover:text-rose-700" },
 };
@@ -774,7 +774,7 @@ export default function Dashboard() {
             <div className="space-y-3">
               {[
                 { key: "excellent" as Quality, count: overview.excellentCount, color: "bg-emerald-500" },
-                { key: "good" as Quality, count: overview.goodCount, color: "bg-sky-500" },
+                { key: "good" as Quality, count: overview.goodCount, color: "bg-teal-600" },
                 { key: "hard" as Quality, count: overview.hardCount, color: "bg-amber-500" },
                 { key: "relearn" as Quality, count: overview.relearnCount, color: "bg-rose-500" },
               ].map(item => {

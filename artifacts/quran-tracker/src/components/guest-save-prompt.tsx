@@ -32,26 +32,26 @@ export default function GuestSavePrompt() {
 
   return (
     <Card
-      className="border-teal-200 bg-gradient-to-br from-teal-50 to-white shadow-sm"
+      className="border-primary/20 bg-gradient-to-br from-primary/5 to-card shadow-sm"
       data-testid="guest-save-prompt"
     >
       <CardContent className="py-4 px-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-        <div className="shrink-0 w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
-          <CloudUpload className="w-5 h-5 text-teal-700" />
+        <div className="shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <CloudUpload className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm sm:text-base font-semibold text-slate-900" data-testid="guest-save-prompt-headline">
+          <div className="text-sm sm:text-base font-semibold text-foreground" data-testid="guest-save-prompt-headline">
             {hasProgress ? t("guestPrompt.savedTitle") : t("guestPrompt.intro")}
           </div>
-          <div className="text-xs sm:text-sm text-slate-600 mt-0.5">
+          <div className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             {hasProgress ? (
               <>
                 {t("guestPrompt.haveStored")}{" "}
-                <span className="font-medium text-teal-700">{t("guestPrompt.pages", { count: pagesTracked })}</span>
+                <span className="font-medium text-primary">{t("guestPrompt.pages", { count: pagesTracked })}</span>
                 {recitations > 0 && (
                   <>
                     {" "}{t("guestPrompt.andLine")}{" "}
-                    <span className="font-medium text-teal-700">{t("guestPrompt.recitations", { count: recitations })}</span>
+                    <span className="font-medium text-primary">{t("guestPrompt.recitations", { count: recitations })}</span>
                   </>
                 )}{" "}
                 {t("guestPrompt.storedTail")}
@@ -63,7 +63,7 @@ export default function GuestSavePrompt() {
         </div>
         <Link
           href="/sign-up"
-          className="shrink-0 inline-flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold px-4 py-2 rounded-md transition-colors"
+          className="shrink-0 inline-flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold px-4 py-2 rounded-md transition-colors"
           data-testid="guest-save-prompt-button"
         >
           {t("guestPrompt.signUp")}

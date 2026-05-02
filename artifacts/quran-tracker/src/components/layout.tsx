@@ -76,7 +76,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <Link
                 href="/sign-up"
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium bg-teal-700 text-white hover:bg-teal-800 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                 data-testid="button-guest-sign-up"
               >
                 <UserPlus className="w-4 h-4" />
@@ -111,7 +111,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-background sticky top-0 z-30">
+        <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 sticky top-0 z-30">
           <div>
             <h1 className="text-base font-semibold leading-tight">{t("app.name")}</h1>
           </div>
@@ -119,7 +119,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {guestMode ? (
               <Link
                 href="/sign-up"
-                className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-teal-700 text-white hover:bg-teal-800"
+                className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
                 data-testid="mobile-guest-sign-up"
               >
                 {t("auth.signUp")}
@@ -182,7 +182,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <Link
                       href="/sign-up"
                       onClick={() => setDrawerOpen(false)}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium bg-teal-700 text-white hover:bg-teal-800 transition-colors"
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                       data-testid="mobile-button-guest-sign-up"
                     >
                       <UserPlus className="w-4 h-4" />
@@ -212,7 +212,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <main className="flex-1 overflow-auto pb-20 md:pb-0">
+        <main className="flex-1 overflow-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
           {guestMode && (
             <div
               className="bg-amber-50 border-b border-amber-200 px-4 md:px-6 py-2.5 flex items-center gap-3"
@@ -238,15 +238,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </main>
 
-        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-background border-t z-30 flex" data-testid="bottom-nav">
+        <nav
+          className="md:hidden fixed bottom-0 inset-x-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t z-30 flex pb-safe"
+          data-testid="bottom-nav"
+        >
           {bottomNavItems.map(item => (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-[10px] font-medium transition-colors ${
+              className={`flex-1 flex flex-col items-center justify-center min-h-[3.25rem] py-2 gap-0.5 text-[10px] font-medium transition-colors ${
                 isActive(item.href)
                   ? "text-primary"
-                  : "text-muted-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
               data-testid={`bottom-nav-${item.testId}`}
             >

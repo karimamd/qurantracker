@@ -80,16 +80,16 @@ const clerkAppearance = {
     socialButtonsBlockButtonText: "text-slate-700 font-medium",
     formFieldLabel: "text-slate-700 font-medium",
     formFieldInput: "bg-white border-slate-200 text-slate-900",
-    footerActionLink: "text-teal-700 hover:text-teal-800 font-medium",
+    footerActionLink: "text-primary hover:opacity-90 font-medium",
     footerActionText: "text-slate-500",
     dividerText: "text-slate-400",
-    identityPreviewEditButton: "text-teal-700",
+    identityPreviewEditButton: "text-primary",
     formFieldSuccessText: "text-emerald-600",
     alertText: "text-slate-700",
     logoBox: "h-10",
     logoImage: "h-10 w-auto",
     socialButtonsBlockButton: "border-slate-200 hover:bg-slate-50",
-    formButtonPrimary: "bg-teal-700 hover:bg-teal-800 text-white",
+    formButtonPrimary: "bg-primary hover:bg-primary/90 text-primary-foreground",
     footerAction: "text-slate-500",
     dividerLine: "bg-slate-200",
     alert: "bg-amber-50 border-amber-200",
@@ -101,7 +101,7 @@ const clerkAppearance = {
 
 function SignInPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-teal-50 via-white to-slate-50 px-4 py-8">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-[hsl(40_38%_96%)] via-card to-[hsl(168_25%_94%)] px-4 py-8">
       <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
     </div>
   );
@@ -109,7 +109,7 @@ function SignInPage() {
 
 function SignUpPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-teal-50 via-white to-slate-50 px-4 py-8">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-[hsl(40_38%_96%)] via-card to-[hsl(168_25%_94%)] px-4 py-8">
       <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
     </div>
   );
@@ -123,44 +123,44 @@ function Landing() {
     setLocation("/dashboard");
   };
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-teal-50 via-white to-slate-50">
-      <header className="px-6 py-5 flex items-center justify-between max-w-6xl mx-auto">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-background via-card to-[hsl(168_25%_94%)]">
+      <header className="px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between max-w-6xl mx-auto">
         <div className="flex items-center gap-2">
           <img src={`${basePath}/logo.svg`} alt="Logo" className="h-9 w-9" />
-          <span className="font-semibold text-slate-900 text-lg">{t("app.name")}</span>
+          <span className="font-semibold text-foreground text-lg">{t("app.name")}</span>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/sign-in">
             <Button variant="ghost" size="sm" data-testid="link-sign-in">{t("auth.signIn")}</Button>
           </Link>
           <Link href="/sign-up">
-            <Button size="sm" className="bg-teal-700 hover:bg-teal-800" data-testid="link-sign-up">{t("auth.getStarted")}</Button>
+            <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="link-sign-up">{t("auth.getStarted")}</Button>
           </Link>
         </div>
       </header>
-      <main className="max-w-3xl mx-auto px-6 pt-16 pb-24 text-center">
-        <div className="inline-flex items-center gap-2 bg-teal-100 text-teal-800 text-xs font-medium px-3 py-1 rounded-full mb-6">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-20 sm:pb-24 text-center">
+        <div className="inline-flex items-center gap-2 bg-primary/10 text-primary text-xs font-medium px-3 py-1 rounded-full mb-6">
           <BookOpen className="w-3.5 h-3.5" />
           {t("landing.badge")}
         </div>
-        <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 tracking-tight mb-4">
+        <h1 className="text-3xl sm:text-5xl font-bold text-foreground tracking-tight mb-4">
           {t("landing.title")}
         </h1>
-        <p className="text-lg text-slate-600 mb-8 max-w-xl mx-auto">
+        <p className="text-base sm:text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
           {t("landing.subtitle")}
         </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
           <Button
             size="lg"
             variant="outline"
             onClick={handleTryAsGuest}
             data-testid="cta-try-guest"
-            className="border-teal-700 text-teal-700 hover:bg-teal-50"
+            className="border-primary text-primary hover:bg-primary/10"
           >
             {t("landing.tryGuest")} <ArrowRight className="w-4 h-4 ml-2 rtl:rotate-180" />
           </Button>
           <Link href="/sign-up">
-            <Button size="lg" className="bg-teal-700 hover:bg-teal-800" data-testid="cta-sign-up">
+            <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto" data-testid="cta-sign-up">
               {t("landing.createAccount")}
             </Button>
           </Link>
@@ -168,7 +168,7 @@ function Landing() {
             <Button size="lg" variant="ghost" data-testid="cta-sign-in">{t("auth.signIn")}</Button>
           </Link>
         </div>
-        <p className="text-xs text-slate-500 mt-6 max-w-md mx-auto">
+        <p className="text-xs text-muted-foreground mt-6 max-w-md mx-auto">
           {t("landing.guestNote")}
         </p>
       </main>
@@ -192,8 +192,8 @@ function LanguageSync() {
 
 function AuthLoadingScreen() {
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-slate-50">
-      <div className="h-8 w-8 rounded-full border-2 border-teal-700 border-t-transparent animate-spin" />
+    <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-background via-card to-[hsl(168_25%_94%)]">
+      <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
     </div>
   );
 }

@@ -80,7 +80,7 @@ export default function SettingsPage() {
 
   const fields = [
     { key: "excellent", value: excellentDays, setter: setExcellentDays, color: "border-l-emerald-500" },
-    { key: "good", value: goodDays, setter: setGoodDays, color: "border-l-sky-500" },
+    { key: "good", value: goodDays, setter: setGoodDays, color: "border-l-teal-500" },
     { key: "hard", value: hardDays, setter: setHardDays, color: "border-l-amber-500" },
     { key: "relearn", value: relearnDays, setter: setRelearnDays, color: "border-l-rose-500" },
   ] as const;

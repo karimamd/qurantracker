@@ -225,8 +225,8 @@ export default function PageList() {
                     : page.status === "on_track"
                     ? "bg-emerald-50 border-emerald-200"
                     : page.status === "not_started"
-                    ? "bg-blue-50 border-blue-200"
-                    : "bg-gray-50 border-gray-100"
+                    ? "bg-stone-50 border-stone-200"
+                    : "bg-muted/40 border-border"
                 }`}
                 data-testid={`page-tile-${page.pageNumber}`}
               >

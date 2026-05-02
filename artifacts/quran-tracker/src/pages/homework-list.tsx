@@ -108,7 +108,7 @@ export default function HomeworkList() {
   };
 
   const statusColors: Record<string, string> = {
-    active: "bg-sky-100 text-sky-800 border-sky-200",
+    active: "bg-teal-100 text-teal-800 border-teal-200",
     completed: "bg-emerald-100 text-emerald-800 border-emerald-200",
     overdue: "bg-rose-100 text-rose-800 border-rose-200",
   };

@@ -34,7 +34,7 @@ const QUALITY_VALUES: Quality[] = ["excellent", "good", "hard", "relearn"];
 
 const qualityStyle: Record<Quality, string> = {
   excellent: "border-emerald-500 bg-emerald-50 text-emerald-700",
-  good: "border-sky-500 bg-sky-50 text-sky-700",
+  good: "border-teal-500 bg-teal-50 text-teal-700",
   hard: "border-amber-500 bg-amber-50 text-amber-700",
   relearn: "border-rose-500 bg-rose-50 text-rose-700",
 };

@@ -104,7 +104,7 @@ export default function Recite() {
 
   const qualityOptions: { value: BatchRecitationBodyQuality; ring: string }[] = [
     { value: "excellent", ring: "border-emerald-400 bg-emerald-50" },
-    { value: "good", ring: "border-sky-400 bg-sky-50" },
+    { value: "good", ring: "border-teal-400 bg-teal-50" },
     { value: "hard", ring: "border-amber-400 bg-amber-50" },
     { value: "relearn", ring: "border-rose-400 bg-rose-50" },
   ];
