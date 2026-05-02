@@ -544,11 +544,43 @@ export default function Dashboard() {
 
   if (!overview) return null;
 
+  const pct = (value: number, denom: number) =>
+    denom > 0 ? Math.round((value / denom) * 100) : 0;
+
   const statCards = [
-    { label: "In Scope", value: overview.pagesInScope, total: overview.totalPages, icon: BookOpen, color: "text-primary" },
-    { label: "Overdue", value: overview.pagesOverdue, icon: AlertTriangle, color: "text-rose-500" },
-    { label: "Due Soon", value: overview.pagesDueSoon, icon: Clock, color: "text-amber-500" },
-    { label: "On Track", value: overview.pagesOnTrack, icon: CheckCircle, color: "text-emerald-500" },
+    {
+      label: "In Scope",
+      value: overview.pagesInScope,
+      total: overview.totalPages,
+      percent: pct(overview.pagesInScope, overview.totalPages),
+      percentLabel: "of Quran",
+      icon: BookOpen,
+      color: "text-primary",
+    },
+    {
+      label: "Overdue",
+      value: overview.pagesOverdue,
+      percent: pct(overview.pagesOverdue, overview.pagesInScope),
+      percentLabel: "of in scope",
+      icon: AlertTriangle,
+      color: "text-rose-500",
+    },
+    {
+      label: "Due Soon",
+      value: overview.pagesDueSoon,
+      percent: pct(overview.pagesDueSoon, overview.pagesInScope),
+      percentLabel: "of in scope",
+      icon: Clock,
+      color: "text-amber-500",
+    },
+    {
+      label: "On Track",
+      value: overview.pagesOnTrack,
+      percent: pct(overview.pagesOnTrack, overview.pagesInScope),
+      percentLabel: "of in scope",
+      icon: CheckCircle,
+      color: "text-emerald-500",
+    },
   ];
 
   return (
@@ -576,8 +608,15 @@ export default function Dashboard() {
                   <span className="text-xs text-muted-foreground">/ {stat.total}</span>
                 )}
               </div>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
+              <div className="flex items-baseline gap-1.5">
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <div className={`text-xs font-medium ${stat.color}`} data-testid={`stat-${stat.label.toLowerCase().replace(/\s/g, "-")}-percent`}>
+                  {stat.percent}%
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {stat.label} <span className="opacity-60">· {stat.percentLabel}</span>
+              </div>
             </CardContent>
           </Card>
         ))}
