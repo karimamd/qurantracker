@@ -22,6 +22,7 @@ import type {
   CreateHomeworkBody,
   DailyChartEntry,
   GetDailyChartParams,
+  GetMistakesParams,
   GetProgressChartParams,
   GetRecentActivityParams,
   HealthStatus,
@@ -31,6 +32,7 @@ import type {
   JuzDetail,
   JuzProgress,
   ListPageProgressParams,
+  MistakesResponse,
   PageProgress,
   ProgressChartEntry,
   ProgressOverview,
@@ -2010,6 +2012,100 @@ export function useGetProgressChart<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetProgressChartQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List per-ayah mistakes with summary analytics
+ */
+export const getGetMistakesUrl = (params?: GetMistakesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/progress/mistakes?${stringifiedParams}`
+    : `/api/progress/mistakes`;
+};
+
+export const getMistakes = async (
+  params?: GetMistakesParams,
+  options?: RequestInit,
+): Promise<MistakesResponse> => {
+  return customFetch<MistakesResponse>(getGetMistakesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMistakesQueryKey = (params?: GetMistakesParams) => {
+  return [`/api/progress/mistakes`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetMistakesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMistakes>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetMistakesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMistakes>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMistakesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMistakes>>> = ({
+    signal,
+  }) => getMistakes(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMistakes>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMistakesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMistakes>>
+>;
+export type GetMistakesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List per-ayah mistakes with summary analytics
+ */
+
+export function useGetMistakes<
+  TData = Awaited<ReturnType<typeof getMistakes>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetMistakesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMistakes>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMistakesQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

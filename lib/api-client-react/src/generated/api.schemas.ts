@@ -199,10 +199,64 @@ export const RecordRecitationBodyQuality = {
   relearn: "relearn",
 } as const;
 
+/**
+ * memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one
+ */
+export type AyahMistakeInputMistakeType =
+  (typeof AyahMistakeInputMistakeType)[keyof typeof AyahMistakeInputMistakeType];
+
+export const AyahMistakeInputMistakeType = {
+  memorization: "memorization",
+  link: "link",
+} as const;
+
+export interface AyahMistakeInput {
+  surahNumber: number;
+  ayahNumberInSurah: number;
+  /** Quran-wide ayah ordinal (1..6236) */
+  globalAyahNumber: number;
+  /** memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one */
+  mistakeType: AyahMistakeInputMistakeType;
+}
+
 export interface RecordRecitationBody {
   quality: RecordRecitationBodyQuality;
   mistakes?: number;
   recitedAt?: string;
+  /** Per-ayah mistakes captured during this recitation. Each entry is a single mistake of a given type on a single ayah; multiple types on the same ayah are independent rows. */
+  ayahMistakes?: AyahMistakeInput[];
+}
+
+export type MistakeMistakeType =
+  (typeof MistakeMistakeType)[keyof typeof MistakeMistakeType];
+
+export const MistakeMistakeType = {
+  memorization: "memorization",
+  link: "link",
+} as const;
+
+export interface Mistake {
+  id: number;
+  pageNumber: number;
+  surahNumber: number;
+  surahName: string;
+  ayahNumberInSurah: number;
+  globalAyahNumber: number;
+  mistakeType: MistakeMistakeType;
+  recitedAt: string;
+}
+
+export interface MistakesSummary {
+  total: number;
+  memorizationCount: number;
+  linkCount: number;
+  uniqueAyahs: number;
+  uniquePages: number;
+}
+
+export interface MistakesResponse {
+  summary: MistakesSummary;
+  mistakes: Mistake[];
 }
 
 export interface DailyChartEntry {
@@ -392,6 +446,19 @@ export type GetDailyChartParams = {
 export type GetProgressChartParams = {
   days?: number;
 };
+
+export type GetMistakesParams = {
+  limit?: number;
+  type?: GetMistakesType;
+};
+
+export type GetMistakesType =
+  (typeof GetMistakesType)[keyof typeof GetMistakesType];
+
+export const GetMistakesType = {
+  memorization: "memorization",
+  link: "link",
+} as const;
 
 export type GetRecentActivityParams = {
   limit?: number;

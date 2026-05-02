@@ -472,6 +472,32 @@ paths:
                 items:
                   $ref: "#/components/schemas/ProgressChartEntry"
 
+  /progress/mistakes:
+    get:
+      operationId: getMistakes
+      tags: [progress]
+      summary: List per-ayah mistakes with summary analytics
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 200
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [memorization, link]
+      responses:
+        "200":
+          description: Mistakes summary and list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MistakesResponse"
+
   /progress/activity:
     get:
       operationId: getRecentActivity
@@ -880,8 +906,97 @@ components:
         recitedAt:
           type: string
           format: date-time
+        ayahMistakes:
+          type: array
+          description: Per-ayah mistakes captured during this recitation. Each entry is a single mistake of a given type on a single ayah; multiple types on the same ayah are independent rows.
+          items:
+            $ref: "#/components/schemas/AyahMistakeInput"
       required:
         - quality
+
+    AyahMistakeInput:
+      type: object
+      properties:
+        surahNumber:
+          type: integer
+        ayahNumberInSurah:
+          type: integer
+        globalAyahNumber:
+          type: integer
+          description: Quran-wide ayah ordinal (1..6236)
+        mistakeType:
+          type: string
+          enum: [memorization, link]
+          description: "memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one"
+      required:
+        - surahNumber
+        - ayahNumberInSurah
+        - globalAyahNumber
+        - mistakeType
+
+    Mistake:
+      type: object
+      properties:
+        id:
+          type: integer
+        pageNumber:
+          type: integer
+        surahNumber:
+          type: integer
+        surahName:
+          type: string
+        ayahNumberInSurah:
+          type: integer
+        globalAyahNumber:
+          type: integer
+        mistakeType:
+          type: string
+          enum: [memorization, link]
+        recitedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - pageNumber
+        - surahNumber
+        - surahName
+        - ayahNumberInSurah
+        - globalAyahNumber
+        - mistakeType
+        - recitedAt
+
+    MistakesSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        memorizationCount:
+          type: integer
+        linkCount:
+          type: integer
+        uniqueAyahs:
+          type: integer
+        uniquePages:
+          type: integer
+      required:
+        - total
+        - memorizationCount
+        - linkCount
+        - uniqueAyahs
+        - uniquePages
+
+    MistakesResponse:
+      type: object
+      properties:
+        summary:
+          $ref: "#/components/schemas/MistakesSummary"
+        mistakes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mistake"
+      required:
+        - summary
+        - mistakes
 
     DailyChartEntry:
       type: object

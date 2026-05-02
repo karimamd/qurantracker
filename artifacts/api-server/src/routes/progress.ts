@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, pageProgressTable, recitationLogTable, homeworkItemsTable, homeworkSessionsTable } from "@workspace/db";
+import { db, pageProgressTable, recitationLogTable, homeworkItemsTable, homeworkSessionsTable, ayahMistakesTable } from "@workspace/db";
 import { eq, and, inArray, desc, sql, gte } from "drizzle-orm";
 import {
   GetProgressOverviewResponse,
@@ -32,6 +32,8 @@ import {
   GetSurahDetailParams,
   GetSurahDetailResponse,
   ListRob3ProgressResponse,
+  GetMistakesQueryParams,
+  GetMistakesResponse,
 } from "@workspace/api-zod";
 import {
   TOTAL_PAGES,
@@ -453,8 +455,88 @@ router.patch("/progress/pages/:pageNumber", async (req, res): Promise<void> => {
     recitedAt,
   });
 
+  const ayahMistakes = parsed.data.ayahMistakes ?? [];
+  if (ayahMistakes.length > 0) {
+    await db.insert(ayahMistakesTable).values(
+      ayahMistakes.map(m => ({
+        userId,
+        pageNumber,
+        surahNumber: m.surahNumber,
+        ayahNumberInSurah: m.ayahNumberInSurah,
+        globalAyahNumber: m.globalAyahNumber,
+        mistakeType: m.mistakeType,
+        recitedAt,
+      }))
+    );
+  }
+
   const enrichedResult = enrichPageProgress(updated);
   res.json(UpdatePageProgressResponse.parse(enrichedResult));
+});
+
+router.get("/progress/mistakes", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const parsedQuery = GetMistakesQueryParams.safeParse(req.query);
+  if (!parsedQuery.success) {
+    res.status(400).json({ error: parsedQuery.error.message });
+    return;
+  }
+  const limit = parsedQuery.data.limit ?? 200;
+  const typeFilter = parsedQuery.data.type;
+
+  const whereClauses = [eq(ayahMistakesTable.userId, userId)];
+  if (typeFilter) whereClauses.push(eq(ayahMistakesTable.mistakeType, typeFilter));
+
+  const rows = await db
+    .select()
+    .from(ayahMistakesTable)
+    .where(and(...whereClauses))
+    .orderBy(desc(ayahMistakesTable.recitedAt))
+    .limit(limit);
+
+  // Summary aggregates across the user's full history (independent of limit/filter on list).
+  const allRows = await db
+    .select({
+      mistakeType: ayahMistakesTable.mistakeType,
+      pageNumber: ayahMistakesTable.pageNumber,
+      globalAyahNumber: ayahMistakesTable.globalAyahNumber,
+    })
+    .from(ayahMistakesTable)
+    .where(eq(ayahMistakesTable.userId, userId));
+
+  let memorizationCount = 0;
+  let linkCount = 0;
+  const uniqueAyahs = new Set<number>();
+  const uniquePages = new Set<number>();
+  for (const r of allRows) {
+    if (r.mistakeType === "link") linkCount++;
+    else memorizationCount++;
+    uniqueAyahs.add(r.globalAyahNumber);
+    uniquePages.add(r.pageNumber);
+  }
+
+  const surahNameByNumber = new Map(SURAHS.map(s => [s.number, s.name]));
+  const list = rows.map(r => ({
+    id: r.id,
+    pageNumber: r.pageNumber,
+    surahNumber: r.surahNumber,
+    surahName: surahNameByNumber.get(r.surahNumber) ?? `Surah ${r.surahNumber}`,
+    ayahNumberInSurah: r.ayahNumberInSurah,
+    globalAyahNumber: r.globalAyahNumber,
+    mistakeType: r.mistakeType as "memorization" | "link",
+    recitedAt: r.recitedAt,
+  }));
+
+  res.json(GetMistakesResponse.parse({
+    summary: {
+      total: allRows.length,
+      memorizationCount,
+      linkCount,
+      uniqueAyahs: uniqueAyahs.size,
+      uniquePages: uniquePages.size,
+    },
+    mistakes: list,
+  }));
 });
 
 router.put("/progress/pages/:pageNumber/name", async (req, res): Promise<void> => {

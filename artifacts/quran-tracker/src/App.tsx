@@ -20,6 +20,7 @@ import PageList from "@/pages/page-list";
 import Recite from "@/pages/recite";
 import HomeworkList from "@/pages/homework-list";
 import HomeworkDetail from "@/pages/homework-detail";
+import MistakesPage from "@/pages/mistakes";
 import SettingsPage from "@/pages/settings-page";
 import NotFound from "@/pages/not-found";
 import { BookOpen, ArrowRight } from "lucide-react";
@@ -206,6 +207,7 @@ function ProtectedApp() {
           <Route path="/recite" component={Recite} />
           <Route path="/homework" component={HomeworkList} />
           <Route path="/homework/:id" component={HomeworkDetail} />
+          <Route path="/mistakes" component={MistakesPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route component={NotFound} />
         </Switch>

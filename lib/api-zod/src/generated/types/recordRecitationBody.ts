@@ -5,10 +5,13 @@
  * Quran Memorization Tracker API
  * OpenAPI spec version: 0.1.0
  */
+import type { AyahMistakeInput } from "./ayahMistakeInput";
 import type { RecordRecitationBodyQuality } from "./recordRecitationBodyQuality";
 
 export interface RecordRecitationBody {
   quality: RecordRecitationBodyQuality;
   mistakes?: number;
   recitedAt?: Date;
+  /** Per-ayah mistakes captured during this recitation. Each entry is a single mistake of a given type on a single ayah; multiple types on the same ayah are independent rows. */
+  ayahMistakes?: AyahMistakeInput[];
 }

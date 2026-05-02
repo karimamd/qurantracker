@@ -8,11 +8,15 @@
 
 export * from "./activityEntry";
 export * from "./activityEntryQuality";
+export * from "./ayahMistakeInput";
+export * from "./ayahMistakeInputMistakeType";
 export * from "./batchRecitationBody";
 export * from "./batchRecitationBodyQuality";
 export * from "./createHomeworkBody";
 export * from "./dailyChartEntry";
 export * from "./getDailyChartParams";
+export * from "./getMistakesParams";
+export * from "./getMistakesType";
 export * from "./getProgressChartParams";
 export * from "./getRecentActivityParams";
 export * from "./healthStatus";
@@ -26,6 +30,10 @@ export * from "./juzDetail";
 export * from "./juzProgress";
 export * from "./listPageProgressParams";
 export * from "./listPageProgressStatus";
+export * from "./mistake";
+export * from "./mistakeMistakeType";
+export * from "./mistakesResponse";
+export * from "./mistakesSummary";
 export * from "./pageProgress";
 export * from "./pageProgressQuality";
 export * from "./pageProgressStatus";

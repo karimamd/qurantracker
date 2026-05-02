@@ -314,6 +314,25 @@ export const UpdatePageProgressBody = zod.object({
   quality: zod.enum(["excellent", "good", "hard", "relearn"]),
   mistakes: zod.number().optional(),
   recitedAt: zod.coerce.date().optional(),
+  ayahMistakes: zod
+    .array(
+      zod.object({
+        surahNumber: zod.number(),
+        ayahNumberInSurah: zod.number(),
+        globalAyahNumber: zod
+          .number()
+          .describe("Quran-wide ayah ordinal (1..6236)"),
+        mistakeType: zod
+          .enum(["memorization", "link"])
+          .describe(
+            "memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one",
+          ),
+      }),
+    )
+    .optional()
+    .describe(
+      "Per-ayah mistakes captured during this recitation. Each entry is a single mistake of a given type on a single ayah; multiple types on the same ayah are independent rows.",
+    ),
 });
 
 export const UpdatePageProgressResponse = zod.object({
@@ -721,6 +740,38 @@ export const GetProgressChartResponseItem = zod.object({
     .describe("Number of distinct pages recited on this day"),
 });
 export const GetProgressChartResponse = zod.array(GetProgressChartResponseItem);
+
+/**
+ * @summary List per-ayah mistakes with summary analytics
+ */
+export const getMistakesQueryLimitDefault = 200;
+
+export const GetMistakesQueryParams = zod.object({
+  limit: zod.coerce.number().default(getMistakesQueryLimitDefault),
+  type: zod.enum(["memorization", "link"]).optional(),
+});
+
+export const GetMistakesResponse = zod.object({
+  summary: zod.object({
+    total: zod.number(),
+    memorizationCount: zod.number(),
+    linkCount: zod.number(),
+    uniqueAyahs: zod.number(),
+    uniquePages: zod.number(),
+  }),
+  mistakes: zod.array(
+    zod.object({
+      id: zod.number(),
+      pageNumber: zod.number(),
+      surahNumber: zod.number(),
+      surahName: zod.string(),
+      ayahNumberInSurah: zod.number(),
+      globalAyahNumber: zod.number(),
+      mistakeType: zod.enum(["memorization", "link"]),
+      recitedAt: zod.coerce.date(),
+    }),
+  ),
+});
 
 /**
  * @summary Recent recitation activity feed

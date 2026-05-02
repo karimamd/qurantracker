@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info } from "lucide-react";
+import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { UserButton, useUser, useClerk, useAuth } from "@clerk/react";
@@ -15,6 +15,7 @@ const navItems = [
   { href: "/surah", label: "Surah", icon: BookOpen },
   { href: "/pages", label: "Pages", icon: FileText },
   { href: "/recite", label: "Recite", icon: PenLine },
+  { href: "/mistakes", label: "Mistakes", icon: AlertTriangle },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

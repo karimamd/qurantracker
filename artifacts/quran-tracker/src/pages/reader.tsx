@@ -10,10 +10,11 @@ import {
   getGetJuzDetailQueryKey,
   getGetSurahDetailQueryKey,
   getListHomeworkQueryKey,
+  getGetMistakesQueryKey,
 } from "@workspace/api-client-react";
 import type { PageProgress } from "@workspace/api-client-react";
-import { useParams, useLocation } from "wouter";
-import { useEffect, useMemo, useState } from "react";
+import { useParams, useLocation, useSearch } from "wouter";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
@@ -57,6 +58,15 @@ function arabicNumeral(n: number): string {
 export default function Reader() {
   const params = useParams<{ page?: string }>();
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const practiceTargetGlobal = useMemo(() => {
+    const sp = new URLSearchParams(search);
+    const v = sp.get("practice");
+    if (!v) return null;
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [search]);
+  const practiceAppliedRef = useRef<string | null>(null);
   const initialPage = clampPage(params.page ? parseInt(params.page, 10) : 1);
 
   const [pageNumber, setPageNumber] = useState<number>(initialPage);
@@ -68,6 +78,7 @@ export default function Reader() {
   const [revealedCount, setRevealedCount] = useState(0);
   const [mistakeAyahs, setMistakeAyahs] = useState<Set<number>>(new Set());
   const [clearedAyahs, setClearedAyahs] = useState<Set<number>>(new Set());
+  const [linkAyahs, setLinkAyahs] = useState<Set<number>>(new Set());
 
   const { data: allPages, isLoading: pagesLoading } = useListPageProgress({});
   const updatePage = useUpdatePageProgress();
@@ -95,7 +106,32 @@ export default function Reader() {
     setRevealedCount(0);
     setMistakeAyahs(new Set());
     setClearedAyahs(new Set());
+    setLinkAyahs(new Set());
   }, [pageNumber]);
+
+  // Apply ?practice=<globalAyahNumber> — auto-enter hide-mode at the target ayah and scroll to it.
+  useEffect(() => {
+    if (practiceTargetGlobal == null || !ayahs || ayahs.length === 0) return;
+    const key = `${pageNumber}|${practiceTargetGlobal}`;
+    if (practiceAppliedRef.current === key) return;
+    const idx = ayahs.findIndex(a => a.number === practiceTargetGlobal);
+    if (idx === -1) return;
+    practiceAppliedRef.current = key;
+    setHideMode(true);
+    setRevealedCount(idx); // hide the target so the user can practice predicting it
+    setMistakeAyahs(new Set());
+    setClearedAyahs(new Set());
+    setLinkAyahs(new Set());
+    // Scroll the target placeholder/highlight into view shortly after render
+    setTimeout(() => {
+      const el = document.querySelector(
+        `[data-testid="reader-ayah-hidden-${practiceTargetGlobal}"], [data-testid="reader-ayah-${practiceTargetGlobal}"]`
+      );
+      if (el && "scrollIntoView" in el) {
+        (el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 50);
+  }, [practiceTargetGlobal, ayahs, pageNumber]);
 
   const goToPage = (n: number) => {
     const clamped = clampPage(n);
@@ -199,20 +235,54 @@ export default function Reader() {
   const handleQuality = (quality: Quality) => {
     const targetPage = pageNumber;
     const mistakes = mistakeAyahs.size;
+    const ayahsArr = ayahs ?? [];
+    const ayahMistakesPayload: {
+      surahNumber: number;
+      ayahNumberInSurah: number;
+      globalAyahNumber: number;
+      mistakeType: "memorization" | "link";
+    }[] = [];
+    for (const a of ayahsArr) {
+      if (mistakeAyahs.has(a.number)) {
+        ayahMistakesPayload.push({
+          surahNumber: a.surah.number,
+          ayahNumberInSurah: a.numberInSurah,
+          globalAyahNumber: a.number,
+          mistakeType: "memorization",
+        });
+      }
+      if (linkAyahs.has(a.number)) {
+        ayahMistakesPayload.push({
+          surahNumber: a.surah.number,
+          ayahNumberInSurah: a.numberInSurah,
+          globalAyahNumber: a.number,
+          mistakeType: "link",
+        });
+      }
+    }
+    const data: { quality: Quality; mistakes?: number; ayahMistakes?: typeof ayahMistakesPayload } = { quality };
+    if (mistakes > 0) data.mistakes = mistakes;
+    if (ayahMistakesPayload.length > 0) data.ayahMistakes = ayahMistakesPayload;
+    const linkCount = linkAyahs.size;
     updatePage.mutate(
-      { pageNumber: targetPage, data: mistakes > 0 ? { quality, mistakes } : { quality } },
+      { pageNumber: targetPage, data },
       {
         onSuccess: () => {
+          const parts: string[] = [];
+          if (mistakes > 0) parts.push(`${mistakes} mistake${mistakes === 1 ? "" : "s"}`);
+          if (linkCount > 0) parts.push(`${linkCount} link issue${linkCount === 1 ? "" : "s"}`);
           toast({
-            title: `Page ${targetPage} marked as ${quality}${mistakes > 0 ? ` (${mistakes} mistake${mistakes === 1 ? "" : "s"})` : ""}`,
+            title: `Page ${targetPage} marked as ${quality}${parts.length ? ` (${parts.join(", ")})` : ""}`,
           });
           invalidateProgressData();
+          queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
           // Only clear practice-mode session state if the user is still on the same page.
           // Otherwise (user navigated away mid-flight), the page-change effect already reset state and we'd risk wiping a fresh page's marks.
           setPageNumber(currentPage => {
             if (currentPage === targetPage) {
               setMistakeAyahs(new Set());
               setClearedAyahs(new Set());
+              setLinkAyahs(new Set());
             }
             return currentPage;
           });
@@ -227,6 +297,7 @@ export default function Reader() {
     setRevealedCount(0);
     setMistakeAyahs(new Set());
     setClearedAyahs(new Set());
+    setLinkAyahs(new Set());
   };
 
   const showAllAyahs = () => {
@@ -241,6 +312,16 @@ export default function Reader() {
     setRevealedCount(0);
     setMistakeAyahs(new Set());
     setClearedAyahs(new Set());
+    setLinkAyahs(new Set());
+  };
+
+  const handleAyahLink = (ayahNumber: number) => {
+    setLinkAyahs(prev => {
+      const next = new Set(prev);
+      if (next.has(ayahNumber)) next.delete(ayahNumber);
+      else next.add(ayahNumber);
+      return next;
+    });
   };
 
   const handleAyahMark = (ayahNumber: number, mark: "clear" | "mistake", isLatest: boolean) => {
@@ -470,6 +551,16 @@ export default function Reader() {
                   {mistakeAyahs.size} mistake{mistakeAyahs.size === 1 ? "" : "s"}
                 </span>
               )}
+              {linkAyahs.size > 0 && (
+                <span
+                  className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1"
+                  data-testid="reader-link-count"
+                  title="Link issues will be recorded with your next quality rating"
+                >
+                  <Link2 className="w-3 h-3" />
+                  {linkAyahs.size} link
+                </span>
+              )}
               {clearedAyahs.size > 0 && (
                 <span
                   className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200"
@@ -527,6 +618,8 @@ export default function Reader() {
                       const isLatest = hideMode && globalIndex === revealedCount - 1;
                       const isMistake = mistakeAyahs.has(a.number);
                       const isClear = clearedAyahs.has(a.number);
+                      const isLink = linkAyahs.has(a.number);
+                      const canLink = a.number > 1; // no "previous ayah" exists for global ayah 1
                       const trailingSpace = i < group.ayahs.length - 1 ? " " : "";
 
                       if (!isVisible) {
@@ -558,7 +651,26 @@ export default function Reader() {
                               : ""
                           }
                           data-testid={`reader-ayah-${a.number}`}
+                          style={isLink ? { textDecoration: "underline wavy", textDecorationColor: "#d97706", textDecorationThickness: "2px" } : undefined}
                         >
+                          {hideMode && canLink && (
+                            <button
+                              type="button"
+                              onClick={() => handleAyahLink(a.number)}
+                              dir="ltr"
+                              className={`inline-flex items-center justify-center mx-1 w-6 h-6 rounded border align-middle font-sans transition-colors ${
+                                isLink
+                                  ? "bg-amber-500 border-amber-500 text-white"
+                                  : "border-amber-300/70 bg-background text-amber-700 hover:bg-amber-100"
+                              }`}
+                              title="Link mistake — failed to predict this ayah from the previous one"
+                              aria-label={`Mark link mistake before ayah ${a.numberInSurah}`}
+                              aria-pressed={isLink}
+                              data-testid={`reader-ayah-link-${a.number}`}
+                            >
+                              <Link2 className="w-3 h-3" />
+                            </button>
+                          )}
                           {cleanedText}
                           <span
                             className={`inline-flex items-center justify-center mx-1 w-7 h-7 text-xs rounded-full border align-middle font-sans ${
