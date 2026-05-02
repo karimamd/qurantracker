@@ -564,12 +564,16 @@ components:
           type: integer
         relearnDays:
           type: integer
+        language:
+          type: string
+          enum: [en, ar]
       required:
         - id
         - excellentDays
         - goodDays
         - hardDays
         - relearnDays
+        - language
 
     UpdateSettingsBody:
       type: object
@@ -582,6 +586,9 @@ components:
           type: integer
         relearnDays:
           type: integer
+        language:
+          type: string
+          enum: [en, ar]
 
     ProgressOverview:
       type: object

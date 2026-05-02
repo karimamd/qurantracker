@@ -23,8 +23,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronRight } from "lucide-react";
 import { SURAHS, ALL_ROB3S, ROB3S_PER_JUZ, JUZ_RANGES, getSurahsInPageRange } from "@/lib/quran-ref";
 import { Rob3FirstAyahPreview } from "@/components/rob3-first-ayah-preview";
+import { useTranslation } from "react-i18next";
 
 export default function HomeworkList() {
+  const { t } = useTranslation();
   const { data: sessions, isLoading } = useListHomework();
   const createHomework = useCreateHomework();
   const deleteHomework = useDeleteHomework();
@@ -66,7 +68,7 @@ export default function HomeworkList() {
 
   const handleCreate = () => {
     if (!title || !dueDate) {
-      toast({ title: "Title and due date are required", variant: "destructive" });
+      toast({ title: t("homework.requiredFields"), variant: "destructive" });
       return;
     }
 
@@ -81,7 +83,7 @@ export default function HomeworkList() {
       },
       {
         onSuccess: () => {
-          toast({ title: "Homework session created" });
+          toast({ title: t("homework.created") });
           setDialogOpen(false);
           setTitle("");
           setDueDate("");
@@ -98,7 +100,7 @@ export default function HomeworkList() {
       { id },
       {
         onSuccess: () => {
-          toast({ title: "Homework deleted" });
+          toast({ title: t("homework.deleted") });
           queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
         },
       }
@@ -110,52 +112,57 @@ export default function HomeworkList() {
     completed: "bg-emerald-100 text-emerald-800 border-emerald-200",
     overdue: "bg-rose-100 text-rose-800 border-rose-200",
   };
+  const statusLabels: Record<string, string> = {
+    active: t("status.active"),
+    completed: t("status.completed"),
+    overdue: t("status.overdue"),
+  };
 
   return (
     <div className="space-y-4" data-testid="homework-list-page">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Homework</h2>
-          <p className="text-sm text-muted-foreground mt-1">Track your bi-weekly assignments</p>
+          <h2 className="text-2xl font-semibold">{t("homework.title")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("homework.subtitle")}</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="btn-create-homework">
-              <Plus className="w-4 h-4 mr-1" /> New Session
+              <Plus className="w-4 h-4 me-1" /> {t("homework.newSession")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Homework Session</DialogTitle>
+              <DialogTitle>{t("homework.createSession")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div>
-                <Label>Title</Label>
-                <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Week 12 Assignment" data-testid="input-hw-title" />
+                <Label>{t("homework.form.title")}</Label>
+                <Input value={title} onChange={e => setTitle(e.target.value)} placeholder={t("homework.form.titlePlaceholder")} data-testid="input-hw-title" />
               </div>
               <div>
-                <Label>Due Date</Label>
+                <Label>{t("homework.form.dueDate")}</Label>
                 <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} data-testid="input-hw-due" />
               </div>
               <div>
-                <Label>Pages to Memorize</Label>
-                <Input value={memorizeRange} onChange={e => setMemorizeRange(e.target.value)} placeholder="e.g. 100-105, 110" data-testid="input-hw-memorize" />
+                <Label>{t("homework.form.memorize")}</Label>
+                <Input value={memorizeRange} onChange={e => setMemorizeRange(e.target.value)} placeholder={t("homework.form.memorizePlaceholder")} data-testid="input-hw-memorize" />
                 <RangePickers
                   testIdPrefix="memorize"
                   onPick={(start, end) => setMemorizeRange(appendRange(memorizeRange, start, end))}
                 />
-                <p className="text-xs text-muted-foreground mt-1">Type ranges (100-105 or 100, 101, 105) or pick a Surah / Part above to append.</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("homework.form.rangeHint")}</p>
               </div>
               <div>
-                <Label>Pages to Revise</Label>
-                <Input value={reviseRange} onChange={e => setReviseRange(e.target.value)} placeholder="e.g. 1-20" data-testid="input-hw-revise" />
+                <Label>{t("homework.form.revise")}</Label>
+                <Input value={reviseRange} onChange={e => setReviseRange(e.target.value)} placeholder={t("homework.form.revisePlaceholder")} data-testid="input-hw-revise" />
                 <RangePickers
                   testIdPrefix="revise"
                   onPick={(start, end) => setReviseRange(appendRange(reviseRange, start, end))}
                 />
               </div>
               <Button onClick={handleCreate} disabled={createHomework.isPending} className="w-full" data-testid="btn-submit-homework">
-                {createHomework.isPending ? "Creating..." : "Create Session"}
+                {createHomework.isPending ? t("common.creating") : t("homework.form.submit")}
               </Button>
             </div>
           </DialogContent>
@@ -179,12 +186,12 @@ export default function HomeworkList() {
                         {session.title}
                       </Link>
                       <Badge variant="outline" className={statusColors[session.status] || ""}>
-                        {session.status}
+                        {statusLabels[session.status] ?? session.status}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">
-                        Due: {new Date(session.dueDate).toLocaleDateString()}
+                        {t("common.due")}: {new Date(session.dueDate).toLocaleDateString()}
                       </span>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete(session.id)} data-testid={`btn-delete-hw-${session.id}`}>
                         <Trash2 className="w-3 h-3 text-muted-foreground" />
@@ -210,7 +217,7 @@ export default function HomeworkList() {
       ) : (
         <Card className="border shadow-sm">
           <CardContent className="py-8 text-center">
-            <p className="text-sm text-muted-foreground">No homework sessions yet. Create one to start tracking your assignments.</p>
+            <p className="text-sm text-muted-foreground">{t("homework.noSessions")}</p>
           </CardContent>
         </Card>
       )}

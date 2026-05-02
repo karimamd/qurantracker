@@ -17,6 +17,7 @@ import {
   getStatusBarColor,
   isCompletedQuality,
 } from "@/lib/quality";
+import { useTranslation } from "react-i18next";
 
 export interface PageRowProps {
   pageNumber: number;
@@ -75,13 +76,14 @@ export function PageRow({
 }: PageRowProps) {
   const tid = rowId ?? pageNumber;
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
   const q = quality as Quality | null | undefined;
   const hasQuality = !!q;
   const completed = isCompletedQuality(quality);
   const lastRecitedAt = lastRecited ? format(new Date(lastRecited), "MMM d, h:mm a") : null;
 
   const bgClass = highlight
-    ? "bg-violet-50/70 border-l-4 border-l-violet-400"
+    ? "bg-violet-50/70 border-s-4 border-s-violet-400"
     : hasQuality
     ? rowStyle[q!]
     : "hover:bg-muted/30";
@@ -98,7 +100,7 @@ export function PageRow({
             className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
               hasQuality ? dotStyle[q!] : "border-muted-foreground/30 bg-transparent"
             }`}
-            title={hasQuality ? `Quality: ${q}` : `Status: ${status.replace("_", " ")}`}
+            title={hasQuality ? `${t("common.quality")}: ${t(`quality.${q}`)}` : `${t("common.status")}: ${t(`status.${status}`)}`}
           >
             {hasQuality ? (
               <Check className="w-3 h-3 text-white" strokeWidth={3} />
@@ -133,19 +135,17 @@ export function PageRow({
               {weekCount != null && weekCount > 0 && (
                 <span
                   className="text-xs font-semibold bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full border border-sky-200"
-                  title={`Recited ${weekCount}× in the past 7 days`}
                   data-testid={`${testIdPrefix}-week-count-${tid}`}
                 >
-                  {weekCount}× this week
+                  {t("pageRow.thisWeek", { count: weekCount })}
                 </span>
               )}
               {mistakes != null && mistakes > 0 && (
                 <span
                   className="text-xs font-semibold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full border border-rose-200"
-                  title={`${mistakes} recorded mistake${mistakes === 1 ? "" : "s"}`}
                   data-testid={`${testIdPrefix}-mistakes-${tid}`}
                 >
-                  {mistakes} mistake{mistakes === 1 ? "" : "s"}
+                  {t("reader.mistakes", { count: mistakes })}
                 </span>
               )}
             </div>
@@ -160,26 +160,26 @@ export function PageRow({
               {surahLabel && <span className="truncate">{surahLabel}</span>}
               {lastRecitedAt && (
                 <span data-testid={`${testIdPrefix}-last-recited-${tid}`}>
-                  Last recited: {lastRecitedAt}
+                  {t("common.lastRecited")}: {lastRecitedAt}
                 </span>
               )}
-              {!inScope && <span className="italic">Not in memorization scope</span>}
+              {!inScope && <span className="italic">{t("status.out_of_scope")}</span>}
             </div>
           </div>
         </div>
 
         {/* Actions: Read button, Quality picker, extras */}
-        <div className="flex items-center gap-1 shrink-0 ml-auto flex-wrap justify-end">
+        <div className="flex items-center gap-1 shrink-0 ms-auto flex-wrap justify-end">
           <button
             type="button"
             onClick={() => setLocation(`/reader/${pageNumber}`)}
-            className="mr-1 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border bg-background text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-            title={`Open page ${pageNumber} in Reader`}
-            aria-label={`Open page ${pageNumber} in Reader`}
+            className="me-1 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border bg-background text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            title={t("reader.openReader")}
+            aria-label={t("reader.openReader")}
             data-testid={`${testIdPrefix}-open-reader-${tid}`}
           >
             <BookMarked className="w-3 h-3" />
-            <span className="hidden sm:inline">Read</span>
+            <span className="hidden sm:inline">{t("common.open")}</span>
           </button>
 
           {inScope ? (
@@ -198,10 +198,9 @@ export function PageRow({
                         isActive ? style.active : `border-border bg-background text-muted-foreground ${style.hover}`
                       } disabled:opacity-50`}
                       data-testid={`${testIdPrefix}-quality-btn-${tid}-${value}`}
-                      aria-label={`Mark page ${pageNumber} as ${label}`}
                       aria-pressed={isActive}
                     >
-                      {label}
+                      {t(`quality.${value}`)}
                     </button>
                   );
                 })}

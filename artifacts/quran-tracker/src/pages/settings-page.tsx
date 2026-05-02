@@ -2,23 +2,27 @@ import { useGetSettings, useUpdateSettings, getGetSettingsQueryKey } from "@work
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 import { Save } from "lucide-react";
+import { setLanguage, type SupportedLanguage } from "@/i18n";
 
 export default function SettingsPage() {
   const { data: settings, isLoading } = useGetSettings();
   const updateSettings = useUpdateSettings();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [excellentDays, setExcellentDays] = useState("");
   const [goodDays, setGoodDays] = useState("");
   const [hardDays, setHardDays] = useState("");
   const [relearnDays, setRelearnDays] = useState("");
+  const [language, setLanguageState] = useState<SupportedLanguage>("en");
 
   useEffect(() => {
     if (settings) {
@@ -26,8 +30,25 @@ export default function SettingsPage() {
       setGoodDays(String(settings.goodDays));
       setHardDays(String(settings.hardDays));
       setRelearnDays(String(settings.relearnDays));
+      const lang = settings.language === "ar" ? "ar" : "en";
+      setLanguageState(lang);
     }
   }, [settings]);
+
+  const handleLanguageChange = (value: string) => {
+    const lang: SupportedLanguage = value === "ar" ? "ar" : "en";
+    setLanguageState(lang);
+    // Apply immediately for snappy UX, then persist.
+    setLanguage(lang);
+    updateSettings.mutate(
+      { data: { language: lang } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+        },
+      }
+    );
+  };
 
   const handleSave = () => {
     updateSettings.mutate(
@@ -41,7 +62,7 @@ export default function SettingsPage() {
       },
       {
         onSuccess: () => {
-          toast({ title: "Settings saved" });
+          toast({ title: t("settings.intervals.saved") });
           queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
         },
       }
@@ -51,39 +72,58 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="space-y-4 max-w-2xl">
-        <h2 className="text-2xl font-semibold">Settings</h2>
+        <h2 className="text-2xl font-semibold">{t("settings.title")}</h2>
         <Skeleton className="h-64 rounded-xl" />
       </div>
     );
   }
 
   const fields = [
-    { label: "Excellent", desc: "Perfect recitation - days until next review", value: excellentDays, setter: setExcellentDays, color: "border-l-emerald-500" },
-    { label: "Good", desc: "2 or fewer mistakes per page", value: goodDays, setter: setGoodDays, color: "border-l-sky-500" },
-    { label: "Hard", desc: "Up to 3 mistakes per page average", value: hardDays, setter: setHardDays, color: "border-l-amber-500" },
-    { label: "Relearn", desc: "Needs significant rework", value: relearnDays, setter: setRelearnDays, color: "border-l-rose-500" },
-  ];
+    { key: "excellent", value: excellentDays, setter: setExcellentDays, color: "border-l-emerald-500" },
+    { key: "good", value: goodDays, setter: setGoodDays, color: "border-l-sky-500" },
+    { key: "hard", value: hardDays, setter: setHardDays, color: "border-l-amber-500" },
+    { key: "relearn", value: relearnDays, setter: setRelearnDays, color: "border-l-rose-500" },
+  ] as const;
 
   return (
     <div className="space-y-6 max-w-2xl" data-testid="settings-page">
       <div>
-        <h2 className="text-2xl font-semibold">Settings</h2>
-        <p className="text-sm text-muted-foreground mt-1">Configure your revision intervals</p>
+        <h2 className="text-2xl font-semibold">{t("settings.title")}</h2>
+        <p className="text-sm text-muted-foreground mt-1">{t("settings.subtitle")}</p>
       </div>
+
+      <Card className="border shadow-sm" data-testid="settings-language-card">
+        <CardHeader>
+          <CardTitle className="text-base">{t("settings.language.title")}</CardTitle>
+          <CardDescription>{t("settings.language.description")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-medium">{t("settings.language.label")}</div>
+            <Select value={language} onValueChange={handleLanguageChange}>
+              <SelectTrigger className="w-44" data-testid="select-language">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en" data-testid="lang-option-en">{t("settings.language.english")}</SelectItem>
+                <SelectItem value="ar" data-testid="lang-option-ar">{t("settings.language.arabic")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">Review Intervals</CardTitle>
-          <CardDescription>
-            Set how many days to wait before a page is due for review based on its quality rating.
-          </CardDescription>
+          <CardTitle className="text-base">{t("settings.intervals.title")}</CardTitle>
+          <CardDescription>{t("settings.intervals.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {fields.map(field => (
-            <div key={field.label} className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${field.color} bg-muted/30`} data-testid={`setting-${field.label.toLowerCase()}`}>
+            <div key={field.key} className={`flex items-center justify-between p-3 rounded-lg border-s-4 ${field.color} bg-muted/30`} data-testid={`setting-${field.key}`}>
               <div>
-                <div className="font-medium text-sm">{field.label}</div>
-                <div className="text-xs text-muted-foreground">{field.desc}</div>
+                <div className="font-medium text-sm">{t(`quality.${field.key}`)}</div>
+                <div className="text-xs text-muted-foreground">{t(`settings.intervals.${field.key}Desc`)}</div>
               </div>
               <div className="flex items-center gap-2">
                 <Input
@@ -92,16 +132,16 @@ export default function SettingsPage() {
                   className="w-20 text-center"
                   value={field.value}
                   onChange={e => field.setter(e.target.value)}
-                  data-testid={`input-${field.label.toLowerCase()}-days`}
+                  data-testid={`input-${field.key}-days`}
                 />
-                <span className="text-sm text-muted-foreground">days</span>
+                <span className="text-sm text-muted-foreground">{t("settings.intervals.days")}</span>
               </div>
             </div>
           ))}
 
           <Button onClick={handleSave} disabled={updateSettings.isPending} className="w-full" data-testid="btn-save-settings">
-            <Save className="w-4 h-4 mr-2" />
-            {updateSettings.isPending ? "Saving..." : "Save Settings"}
+            <Save className="w-4 h-4 me-2" />
+            {updateSettings.isPending ? t("common.saving") : t("settings.intervals.save")}
           </Button>
         </CardContent>
       </Card>

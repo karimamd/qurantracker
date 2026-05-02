@@ -52,15 +52,11 @@ import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import GuestSavePrompt from "@/components/guest-save-prompt";
+import { useTranslation } from "react-i18next";
 
 type Quality = "excellent" | "good" | "hard" | "relearn";
 
-const QUALITIES: { value: Quality; label: string }[] = [
-  { value: "excellent", label: "Excellent" },
-  { value: "good",      label: "Good" },
-  { value: "hard",      label: "Hard" },
-  { value: "relearn",   label: "Relearn" },
-];
+const QUALITY_VALUES: Quality[] = ["excellent", "good", "hard", "relearn"];
 
 const qualityStyle: Record<Quality, { active: string; hover: string }> = {
   excellent: { active: "bg-emerald-500 border-emerald-500 text-white", hover: "hover:border-emerald-300 hover:text-emerald-700" },
@@ -70,6 +66,7 @@ const qualityStyle: Record<Quality, { active: string; hover: string }> = {
 };
 
 function ActiveHomeworkSection() {
+  const { t } = useTranslation();
   const { data: sessions, isLoading } = useListHomework();
 
   if (isLoading) {
@@ -91,19 +88,19 @@ function ActiveHomeworkSection() {
         <CardContent className="py-4 px-5">
           <div className="flex items-center justify-between mb-2">
             <div className="min-w-0">
-              <p className="text-xs font-medium text-primary uppercase tracking-wide mb-0.5">Active Homework</p>
+              <p className="text-xs font-medium text-primary uppercase tracking-wide mb-0.5">{t("dashboard.activeHomework")}</p>
               <p className="font-semibold text-sm truncate">{active.title}</p>
             </div>
-            <div className="flex items-center gap-2 shrink-0 ml-3">
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Due {new Date(active.dueDate).toLocaleDateString()}</p>
-                <p className="text-xs font-medium">{remaining > 0 ? `${remaining} left` : "All done!"}</p>
+            <div className="flex items-center gap-2 shrink-0 ms-3">
+              <div className="text-end">
+                <p className="text-xs text-muted-foreground">{t("dashboard.due", { date: new Date(active.dueDate).toLocaleDateString() })}</p>
+                <p className="text-xs font-medium">{remaining > 0 ? t("dashboard.remaining", { count: remaining }) : t("dashboard.allDone")}</p>
               </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              <ChevronRight className="w-5 h-5 text-muted-foreground rtl:rotate-180" />
             </div>
           </div>
           <Progress value={pct} className="h-2" />
-          <p className="text-xs text-muted-foreground mt-1.5">{active.completedItems}/{active.totalItems} pages completed</p>
+          <p className="text-xs text-muted-foreground mt-1.5">{t("dashboard.pagesCompleted", { done: active.completedItems, total: active.totalItems })}</p>
         </CardContent>
       </Card>
     </Link>
@@ -111,6 +108,7 @@ function ActiveHomeworkSection() {
 }
 
 function DuePagesSection() {
+  const { t } = useTranslation();
   const { data: overdue, isLoading: loadingOverdue } = useListPageProgress({ status: "overdue", inScope: true });
   const { data: dueSoon, isLoading: loadingDueSoon } = useListPageProgress({ status: "due_soon", inScope: true });
   const updatePage = useUpdatePageProgress();
@@ -136,7 +134,7 @@ function DuePagesSection() {
           queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
         },
-        onError: () => toast({ title: "Failed to record recitation", variant: "destructive" }),
+        onError: () => toast({ title: t("errors.failedRecord"), variant: "destructive" }),
       }
     );
   };
@@ -150,8 +148,8 @@ function DuePagesSection() {
       <Card className="border shadow-sm" data-testid="due-pages-empty">
         <CardContent className="py-6 text-center">
           <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-          <p className="text-sm font-medium">All caught up!</p>
-          <p className="text-xs text-muted-foreground mt-0.5">No pages overdue or due soon.</p>
+          <p className="text-sm font-medium">{t("dashboard.allCaughtUp")}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("dashboard.noPagesDue")}</p>
         </CardContent>
       </Card>
     );
@@ -162,8 +160,8 @@ function DuePagesSection() {
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-rose-500" />
-          Pages Requiring Attention
-          <span className="ml-auto text-xs font-normal text-muted-foreground">{allPages.length} pages</span>
+          {t("dashboard.pagesAttention")}
+          <span className="ms-auto text-xs font-normal text-muted-foreground">{t("dashboard.pagesCount", { count: allPages.length })}</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
@@ -172,8 +170,8 @@ function DuePagesSection() {
             const isOverdue = page.urgency === "overdue";
             const daysLabel = page.daysUntilDue !== null
               ? isOverdue
-                ? `${Math.abs(page.daysUntilDue)}d overdue`
-                : `due in ${page.daysUntilDue}d`
+                ? t("dashboard.daysOverdue", { count: Math.abs(page.daysUntilDue) })
+                : t("dashboard.dueInDays", { count: page.daysUntilDue })
               : null;
             const q = page.quality as Quality | null;
 
@@ -203,8 +201,8 @@ function DuePagesSection() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 pl-4">
-                  {QUALITIES.map(({ value, label }) => {
+                <div className="flex items-center gap-1 ps-4">
+                  {QUALITY_VALUES.map((value) => {
                     const isActive = q === value;
                     const style = qualityStyle[value];
                     return (
@@ -217,7 +215,7 @@ function DuePagesSection() {
                         }`}
                         data-testid={`due-page-quality-${page.pageNumber}-${value}`}
                       >
-                        {label}
+                        {t(`quality.${value}`)}
                       </button>
                     );
                   })}
@@ -232,6 +230,7 @@ function DuePagesSection() {
 }
 
 function DailyChartSection() {
+  const { t } = useTranslation();
   const { data: chartData, isLoading } = useGetDailyChart({ days: 30 });
 
   if (isLoading) {
@@ -250,14 +249,14 @@ function DailyChartSection() {
     <Card className="border shadow-sm" data-testid="daily-chart-section">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Daily Recitation</CardTitle>
-          <span className="text-xs text-muted-foreground">Last 30 days</span>
+          <CardTitle className="text-base">{t("dashboard.dailyRecitation")}</CardTitle>
+          <span className="text-xs text-muted-foreground">{t("dashboard.last30Days")}</span>
         </div>
       </CardHeader>
       <CardContent className="pt-2 pb-4 px-2">
         {!hasAny ? (
           <div className="h-40 flex items-center justify-center">
-            <p className="text-sm text-muted-foreground">No recitations recorded in the last 30 days.</p>
+            <p className="text-sm text-muted-foreground">{t("dashboard.noRecitations30")}</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={160}>
@@ -283,7 +282,7 @@ function DailyChartSection() {
                   return (
                     <div className="bg-background border rounded-lg shadow-md px-3 py-2 text-sm">
                       <div className="font-medium">{d.label}</div>
-                      <div className="text-muted-foreground">{d.pages} page{d.pages !== 1 ? "s" : ""}</div>
+                      <div className="text-muted-foreground">{t("dashboard.pagesCount", { count: d.pages })}</div>
                     </div>
                   );
                 }}
@@ -337,6 +336,7 @@ function makeSparseLabel(totalPoints: number, fill: string) {
 }
 
 function ProgressChartSection() {
+  const { t } = useTranslation();
   const { data: chartData, isLoading } = useGetProgressChart({ days: 30 });
 
   if (isLoading) {
@@ -355,14 +355,14 @@ function ProgressChartSection() {
     <Card className="border shadow-sm" data-testid="progress-chart-section">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Progress Over Time</CardTitle>
-          <span className="text-xs text-muted-foreground">Last 30 days</span>
+          <CardTitle className="text-base">{t("dashboard.progressOverTime")}</CardTitle>
+          <span className="text-xs text-muted-foreground">{t("dashboard.last30Days")}</span>
         </div>
       </CardHeader>
       <CardContent className="pt-2 pb-4 px-2">
         {!hasAny ? (
           <div className="h-44 flex items-center justify-center">
-            <p className="text-sm text-muted-foreground">No progress data yet.</p>
+            <p className="text-sm text-muted-foreground">{t("dashboard.noProgressYet")}</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
@@ -401,12 +401,12 @@ function ProgressChartSection() {
                       <div className="font-medium text-sm mb-1">{d.label}</div>
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-rose-500" />
-                        <span className="text-muted-foreground">Overdue:</span>
+                        <span className="text-muted-foreground">{t("status.overdue")}:</span>
                         <span className="font-medium">{d.overdueCount}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-primary" />
-                        <span className="text-muted-foreground">Recited that day:</span>
+                        <span className="text-muted-foreground">{t("dashboard.pagesRecitedToday")}:</span>
                         <span className="font-medium">{d.dailyRecitedCount}</span>
                       </div>
                     </div>
@@ -422,7 +422,7 @@ function ProgressChartSection() {
                 yAxisId="left"
                 type="monotone"
                 dataKey="overdueCount"
-                name="Overdue pages"
+                name={t("dashboard.overduePages")}
                 stroke="#f43f5e"
                 strokeWidth={2}
                 dot={{ r: 2.5, fill: "#f43f5e", strokeWidth: 0 }}
@@ -438,7 +438,7 @@ function ProgressChartSection() {
                 yAxisId="right"
                 type="monotone"
                 dataKey="dailyRecitedCount"
-                name="Pages recited that day"
+                name={t("dashboard.pagesRecitedToday")}
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 dot={{ r: 2.5, fill: "hsl(var(--primary))", strokeWidth: 0 }}
@@ -459,6 +459,7 @@ function ProgressChartSection() {
 }
 
 function RecentActivitySection() {
+  const { t } = useTranslation();
   const { data: activity, isLoading: activityLoading } = useGetRecentActivity({ limit: 10 });
   const undo = useUndoRecitation();
   const queryClient = useQueryClient();
@@ -473,7 +474,7 @@ function RecentActivitySection() {
       {
         onSuccess: () => {
           setPendingUndo(null);
-          toast({ title: "Recitation undone", description: `Page ${pageNumber} progress restored.` });
+          toast({ title: t("dashboard.undoSuccess"), description: t("dashboard.undoSuccessDesc", { page: pageNumber }) });
           queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
@@ -492,7 +493,7 @@ function RecentActivitySection() {
           });
         },
         onError: () => {
-          toast({ title: "Failed to undo", variant: "destructive" });
+          toast({ title: t("dashboard.undoFailed"), variant: "destructive" });
           setPendingUndo(null);
         },
       },
@@ -502,7 +503,7 @@ function RecentActivitySection() {
   return (
     <Card className="border shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Recent Activity</CardTitle>
+        <CardTitle className="text-base">{t("dashboard.recentActivity")}</CardTitle>
       </CardHeader>
       <CardContent>
         {activityLoading ? (
@@ -537,8 +538,8 @@ function RecentActivitySection() {
                     onClick={() => setPendingUndo({ id: entry.id, pageNumber: entry.pageNumber, quality: entry.quality })}
                     disabled={undo.isPending}
                     className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                    aria-label={`Undo recitation of page ${entry.pageNumber}`}
-                    title="Undo this recitation"
+                    aria-label={t("dashboard.undoTitle")}
+                    title={t("dashboard.undoTitle")}
                     data-testid={`undo-activity-${entry.id}`}
                   >
                     <Undo2 className="w-4 h-4" />
@@ -548,28 +549,28 @@ function RecentActivitySection() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">No recitations yet.</p>
+          <p className="text-sm text-muted-foreground text-center py-4">{t("dashboard.noRecitations")}</p>
         )}
 
         <AlertDialog open={pendingUndo !== null} onOpenChange={(open) => { if (!open) setPendingUndo(null); }}>
           <AlertDialogContent data-testid="undo-confirm-dialog">
             <AlertDialogHeader>
-              <AlertDialogTitle>Undo this recitation?</AlertDialogTitle>
+              <AlertDialogTitle>{t("dashboard.undoTitle")}</AlertDialogTitle>
               <AlertDialogDescription>
                 {pendingUndo
-                  ? `This removes the "${pendingUndo.quality}" rating logged for page ${pendingUndo.pageNumber} and recomputes the page's last-recited date and due date from your remaining history. This cannot be undone.`
+                  ? t("dashboard.undoDescription", { quality: t(`quality.${pendingUndo.quality}`), page: pendingUndo.pageNumber })
                   : ""}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel data-testid="undo-cancel">Cancel</AlertDialogCancel>
+              <AlertDialogCancel data-testid="undo-cancel">{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirm}
                 disabled={undo.isPending}
                 data-testid="undo-confirm"
                 className="bg-rose-600 hover:bg-rose-700 focus:ring-rose-600"
               >
-                {undo.isPending ? "Undoing..." : "Undo"}
+                {undo.isPending ? t("dashboard.undoing") : t("dashboard.undo")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -580,12 +581,13 @@ function RecentActivitySection() {
 }
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { data: overview, isLoading: overviewLoading } = useGetProgressOverview();
 
   if (overviewLoading) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-semibold">Dashboard</h2>
+        <h2 className="text-2xl font-semibold">{t("dashboard.title")}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-xl" />
@@ -602,35 +604,39 @@ export default function Dashboard() {
 
   const statCards = [
     {
-      label: "In Scope",
+      key: "in-scope",
+      label: t("dashboard.stats.inScope"),
       value: overview.pagesInScope,
       total: overview.totalPages,
       percent: pct(overview.pagesInScope, overview.totalPages),
-      percentLabel: "of Quran",
+      percentLabel: t("dashboard.stats.ofQuran"),
       icon: BookOpen,
       color: "text-primary",
     },
     {
-      label: "Overdue",
+      key: "overdue",
+      label: t("dashboard.stats.overdue"),
       value: overview.pagesOverdue,
       percent: pct(overview.pagesOverdue, overview.pagesInScope),
-      percentLabel: "of in scope",
+      percentLabel: t("dashboard.stats.ofInScope"),
       icon: AlertTriangle,
       color: "text-rose-500",
     },
     {
-      label: "Due Soon",
+      key: "due-soon",
+      label: t("dashboard.stats.dueSoon"),
       value: overview.pagesDueSoon,
       percent: pct(overview.pagesDueSoon, overview.pagesInScope),
-      percentLabel: "of in scope",
+      percentLabel: t("dashboard.stats.ofInScope"),
       icon: Clock,
       color: "text-amber-500",
     },
     {
-      label: "On Track",
+      key: "on-track",
+      label: t("dashboard.stats.onTrack"),
       value: overview.pagesOnTrack,
       percent: pct(overview.pagesOnTrack, overview.pagesInScope),
-      percentLabel: "of in scope",
+      percentLabel: t("dashboard.stats.ofInScope"),
       icon: CheckCircle,
       color: "text-emerald-500",
     },
@@ -641,20 +647,20 @@ export default function Dashboard() {
       <GuestSavePrompt />
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Dashboard</h2>
-          <p className="text-sm text-muted-foreground mt-1">Your Quran memorization overview</p>
+          <h2 className="text-2xl font-semibold">{t("dashboard.title")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("dashboard.subtitle")}</p>
         </div>
         {overview.streakDays > 0 && (
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl" data-testid="streak-counter">
             <Flame className="w-5 h-5 text-amber-500" />
-            <span className="text-sm font-semibold text-amber-700">{overview.streakDays} day streak</span>
+            <span className="text-sm font-semibold text-amber-700">{t("dashboard.streak", { count: overview.streakDays })}</span>
           </div>
         )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {statCards.map(stat => (
-          <Card key={stat.label} className="border shadow-sm" data-testid={`stat-${stat.label.toLowerCase().replace(/\s/g, "-")}`}>
+          <Card key={stat.key} className="border shadow-sm" data-testid={`stat-${stat.key}`}>
             <CardContent className="pt-5 pb-4 px-5">
               <div className="flex items-center justify-between mb-2">
                 <stat.icon className={`w-5 h-5 ${stat.color}`} />
@@ -664,7 +670,7 @@ export default function Dashboard() {
               </div>
               <div className="flex items-baseline gap-1.5">
                 <div className="text-2xl font-bold">{stat.value}</div>
-                <div className={`text-xs font-medium ${stat.color}`} data-testid={`stat-${stat.label.toLowerCase().replace(/\s/g, "-")}-percent`}>
+                <div className={`text-xs font-medium ${stat.color}`} data-testid={`stat-${stat.key}-percent`}>
                   {stat.percent}%
                 </div>
               </div>
@@ -687,31 +693,31 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <Card className="border shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Quality Breakdown</CardTitle>
+            <CardTitle className="text-base">{t("dashboard.qualityBreakdown")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {[
-                { label: "Excellent", count: overview.excellentCount, color: "bg-emerald-500" },
-                { label: "Good", count: overview.goodCount, color: "bg-sky-500" },
-                { label: "Hard", count: overview.hardCount, color: "bg-amber-500" },
-                { label: "Relearn", count: overview.relearnCount, color: "bg-rose-500" },
+                { key: "excellent" as Quality, count: overview.excellentCount, color: "bg-emerald-500" },
+                { key: "good" as Quality, count: overview.goodCount, color: "bg-sky-500" },
+                { key: "hard" as Quality, count: overview.hardCount, color: "bg-amber-500" },
+                { key: "relearn" as Quality, count: overview.relearnCount, color: "bg-rose-500" },
               ].map(item => {
                 const total = overview.pagesInScope || 1;
                 const pct = Math.round((item.count / total) * 100);
                 return (
-                  <div key={item.label} className="flex items-center gap-3" data-testid={`quality-bar-${item.label.toLowerCase()}`}>
-                    <span className="text-sm w-20 text-muted-foreground">{item.label}</span>
+                  <div key={item.key} className="flex items-center gap-3" data-testid={`quality-bar-${item.key}`}>
+                    <span className="text-sm w-20 text-muted-foreground">{t(`quality.${item.key}`)}</span>
                     <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
                       <div className={`h-full ${item.color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-sm font-medium w-10 text-right">{item.count}</span>
+                    <span className="text-sm font-medium w-10 text-end">{item.count}</span>
                   </div>
                 );
               })}
             </div>
             {overview.pagesInScope === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">No pages in scope yet.</p>
+              <p className="text-sm text-muted-foreground text-center py-4">{t("dashboard.noPagesScope")}</p>
             )}
           </CardContent>
         </Card>

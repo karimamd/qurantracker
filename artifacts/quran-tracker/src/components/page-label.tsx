@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useRenamePage, getListPageProgressQueryKey, getGetJuzDetailQueryKey, getGetHomeworkQueryKey, getGetProgressOverviewQueryKey, getGetRecentActivityQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getPageDisplayName, getDefaultPageName } from "@/lib/page-names";
+import { useTranslation } from "react-i18next";
 
 interface PageLabelProps {
   pageNumber: number;
@@ -29,9 +30,10 @@ export function PageLabel({
   juzNumber,
 }: PageLabelProps) {
   const name = getPageDisplayName(pageNumber, customName);
+  const { t } = useTranslation();
   return (
     <span className={`inline-flex items-center gap-1.5 min-w-0 ${className ?? ""}`} data-testid={`page-label-${pageNumber}`}>
-      <span className={prefixClassName}>Page {pageNumber}:</span>
+      <span className={prefixClassName}>{t("pageLabel.pageColon", { n: pageNumber })}</span>
       {name && (
         <span
           className={`font-serif ${nameClassName ?? "text-sm"}`}
@@ -64,6 +66,7 @@ function RenameButton({
   const [value, setValue] = useState(customName ?? "");
   const rename = useRenamePage();
   const qc = useQueryClient();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (open) setValue(customName ?? "");
@@ -97,7 +100,7 @@ function RenameButton({
           type="button"
           onClick={(e) => e.stopPropagation()}
           className="text-muted-foreground/60 hover:text-primary p-0.5 rounded"
-          aria-label={`Rename page ${pageNumber}`}
+          aria-label={t("pageLabel.ariaRename", { n: pageNumber })}
           data-testid={`page-rename-${pageNumber}`}
         >
           <Pencil className="w-3 h-3" />
@@ -109,14 +112,14 @@ function RenameButton({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-3">
-          <div className="text-sm font-medium">Rename Page {pageNumber}</div>
+          <div className="text-sm font-medium">{t("pageLabel.renamePage", { n: pageNumber })}</div>
           <div className="text-xs text-muted-foreground">
-            Default: <span dir="rtl" lang="ar" className="font-serif">{getDefaultPageName(pageNumber)}</span>
+            {t("common.default")}: <span dir="rtl" lang="ar" className="font-serif">{getDefaultPageName(pageNumber)}</span>
           </div>
           <Input
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="Custom name"
+            placeholder={t("pageLabel.customName")}
             dir="auto"
             data-testid={`page-rename-input-${pageNumber}`}
             onKeyDown={(e) => {
@@ -133,8 +136,8 @@ function RenameButton({
               disabled={rename.isPending}
               data-testid={`page-rename-reset-${pageNumber}`}
             >
-              <RotateCcw className="w-3.5 h-3.5 mr-1" />
-              Default
+              <RotateCcw className="w-3.5 h-3.5 me-1" />
+              {t("common.default")}
             </Button>
             <div className="flex gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
@@ -147,8 +150,8 @@ function RenameButton({
                 disabled={rename.isPending}
                 data-testid={`page-rename-save-${pageNumber}`}
               >
-                <Check className="w-3.5 h-3.5 mr-1" />
-                Save
+                <Check className="w-3.5 h-3.5 me-1" />
+                {t("common.save")}
               </Button>
             </div>
           </div>

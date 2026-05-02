@@ -4,28 +4,23 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { UserButton, useUser, useClerk, useAuth } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { isGuestMode, exitGuestMode } from "@/lib/guest-mode";
 
 const navItems = [
-  { href: "/homework", label: "Homework", icon: ClipboardList },
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/reader", label: "Reader", icon: BookMarked },
-  { href: "/juz", label: "Juz", icon: Layers },
-  { href: "/rub", label: "Rub'", icon: Grid3x3 },
-  { href: "/surah", label: "Surah", icon: BookOpen },
-  { href: "/pages", label: "Pages", icon: FileText },
-  { href: "/recite", label: "Recite", icon: PenLine },
-  { href: "/mistakes", label: "Mistakes", icon: AlertTriangle },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
+  { href: "/homework", key: "homework", testId: "homework", icon: ClipboardList },
+  { href: "/", key: "dashboard", testId: "dashboard", icon: LayoutDashboard },
+  { href: "/reader", key: "reader", testId: "reader", icon: BookMarked },
+  { href: "/juz", key: "juz", testId: "juz", icon: Layers },
+  { href: "/rub", key: "rub", testId: "rub'", icon: Grid3x3 },
+  { href: "/surah", key: "surah", testId: "surah", icon: BookOpen },
+  { href: "/pages", key: "pages", testId: "pages", icon: FileText },
+  { href: "/recite", key: "recite", testId: "recite", icon: PenLine },
+  { href: "/mistakes", key: "mistakes", testId: "mistakes", icon: AlertTriangle },
+  { href: "/settings", key: "settings", testId: "settings", icon: Settings },
+] as const;
 
-const bottomNavItems = [
-  { href: "/homework", label: "Homework", icon: ClipboardList },
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/reader", label: "Reader", icon: BookMarked },
-  { href: "/juz", label: "Juz", icon: Layers },
-  { href: "/rub", label: "Rub'", icon: Grid3x3 },
-];
+const bottomNavItems = navItems.slice(0, 5);
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -34,13 +29,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const guestMode = !isSignedIn && isGuestMode();
 
   const isActive = (href: string) =>
     location === href || (href !== "/" && location.startsWith(href));
 
-  const userLabel = user?.primaryEmailAddress?.emailAddress ?? user?.firstName ?? "Account";
+  const userLabel = user?.primaryEmailAddress?.emailAddress ?? user?.firstName ?? t("auth.account");
 
   const handleExitGuest = () => {
     exitGuestMode();
@@ -50,10 +46,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex" data-testid="app-layout">
-      <aside className="hidden md:flex w-56 bg-sidebar border-r border-sidebar-border flex-col py-4 shrink-0" data-testid="sidebar">
+      <aside className="hidden md:flex w-56 bg-sidebar border-e border-sidebar-border flex-col py-4 shrink-0" data-testid="sidebar">
         <div className="px-5 mb-6">
-          <h1 className="text-lg font-semibold text-sidebar-foreground tracking-tight">Quran Tracker</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Memorization Progress</p>
+          <h1 className="text-lg font-semibold text-sidebar-foreground tracking-tight">{t("app.name")}</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("app.tagline")}</p>
         </div>
         <nav className="flex-1 px-3 space-y-0.5">
           {navItems.map(item => (
@@ -65,10 +61,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent"
               }`}
-              data-testid={`nav-${item.label.toLowerCase()}`}
+              data-testid={`nav-${item.testId}`}
             >
               <item.icon className="w-4 h-4" />
-              {item.label}
+              {t(`nav.${item.key}`)}
             </Link>
           ))}
         </nav>
@@ -76,7 +72,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {guestMode ? (
             <>
               <div className="px-1 text-xs text-muted-foreground" data-testid="guest-info">
-                Signed in as <span className="font-medium text-sidebar-foreground">Guest</span>
+                {t("auth.signedInAs")} <span className="font-medium text-sidebar-foreground">{t("auth.guest")}</span>
               </div>
               <Link
                 href="/sign-up"
@@ -84,7 +80,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 data-testid="button-guest-sign-up"
               >
                 <UserPlus className="w-4 h-4" />
-                Sign up to save
+                {t("auth.signUpToSave")}
               </Link>
               <button
                 onClick={handleExitGuest}
@@ -92,7 +88,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 data-testid="button-exit-guest"
               >
                 <LogOut className="w-4 h-4" />
-                Exit guest mode
+                {t("auth.exitGuest")}
               </button>
             </>
           ) : (
@@ -107,7 +103,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 data-testid="button-sign-out"
               >
                 <LogOut className="w-4 h-4" />
-                Sign out
+                {t("auth.signOut")}
               </button>
             </>
           )}
@@ -117,7 +113,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-background sticky top-0 z-30">
           <div>
-            <h1 className="text-base font-semibold leading-tight">Quran Tracker</h1>
+            <h1 className="text-base font-semibold leading-tight">{t("app.name")}</h1>
           </div>
           <div className="flex items-center gap-2">
             {guestMode ? (
@@ -126,7 +122,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-teal-700 text-white hover:bg-teal-800"
                 data-testid="mobile-guest-sign-up"
               >
-                Sign up
+                {t("auth.signUp")}
               </Link>
             ) : (
               <UserButton />
@@ -134,7 +130,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => setDrawerOpen(true)}
               className="p-2 rounded-lg hover:bg-muted transition-colors"
-              aria-label="Open menu"
+              aria-label={t("nav.openMenu")}
               data-testid="mobile-menu-btn"
             >
               <Menu className="w-5 h-5" />
@@ -151,13 +147,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div className="relative w-64 bg-sidebar h-full flex flex-col py-4 shadow-xl z-10">
               <div className="flex items-center justify-between px-5 mb-6">
                 <div>
-                  <h1 className="text-lg font-semibold text-sidebar-foreground">Quran Tracker</h1>
-                  <p className="text-xs text-muted-foreground mt-0.5">Memorization Progress</p>
+                  <h1 className="text-lg font-semibold text-sidebar-foreground">{t("app.name")}</h1>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("app.tagline")}</p>
                 </div>
                 <button
                   onClick={() => setDrawerOpen(false)}
                   className="p-1.5 rounded-lg hover:bg-sidebar-accent transition-colors"
-                  aria-label="Close menu"
+                  aria-label={t("nav.closeMenu")}
                 >
                   <X className="w-5 h-5 text-sidebar-foreground" />
                 </button>
@@ -173,10 +169,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         ? "bg-sidebar-primary text-sidebar-primary-foreground"
                         : "text-sidebar-foreground hover:bg-sidebar-accent"
                     }`}
-                    data-testid={`mobile-nav-${item.label.toLowerCase()}`}
+                    data-testid={`mobile-nav-${item.testId}`}
                   >
                     <item.icon className="w-4 h-4" />
-                    {item.label}
+                    {t(`nav.${item.key}`)}
                   </Link>
                 ))}
               </nav>
@@ -190,7 +186,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       data-testid="mobile-button-guest-sign-up"
                     >
                       <UserPlus className="w-4 h-4" />
-                      Sign up to save
+                      {t("auth.signUpToSave")}
                     </Link>
                     <button
                       onClick={() => { setDrawerOpen(false); handleExitGuest(); }}
@@ -198,7 +194,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       data-testid="mobile-button-exit-guest"
                     >
                       <LogOut className="w-4 h-4" />
-                      Exit guest mode
+                      {t("auth.exitGuest")}
                     </button>
                   </>
                 ) : (
@@ -208,7 +204,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     data-testid="mobile-button-sign-out"
                   >
                     <LogOut className="w-4 h-4" />
-                    Sign out
+                    {t("auth.signOut")}
                   </button>
                 )}
               </div>
@@ -224,8 +220,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               <Info className="w-4 h-4 text-amber-700 shrink-0" />
               <p className="text-xs sm:text-sm text-amber-900 flex-1 min-w-0">
-                You're a guest — progress is on this device only.
-                <span className="hidden sm:inline"> Sign up and we'll move it to your account automatically.</span>
+                {t("auth.guestBanner")}
+                <span className="hidden sm:inline"> {t("auth.guestBannerExtra")}</span>
               </p>
               <Link
                 href="/sign-up"
@@ -233,7 +229,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 data-testid="banner-sign-up-button"
               >
                 <UserPlus className="w-3.5 h-3.5" />
-                Save my progress
+                {t("auth.saveMyProgress")}
               </Link>
             </div>
           )}
@@ -252,10 +248,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   ? "text-primary"
                   : "text-muted-foreground"
               }`}
-              data-testid={`bottom-nav-${item.label.toLowerCase()}`}
+              data-testid={`bottom-nav-${item.testId}`}
             >
               <item.icon className={`w-5 h-5 ${isActive(item.href) ? "text-primary" : "text-muted-foreground"}`} />
-              {item.label}
+              {t(`nav.${item.key}`)}
             </Link>
           ))}
         </nav>

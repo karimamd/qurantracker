@@ -11,10 +11,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageRow } from "@/components/page-row";
+import { useTranslation } from "react-i18next";
 
 export default function SurahDetail() {
   const params = useParams<{ id: string }>();
   const surahNumber = parseInt(params.id || "1", 10);
+  const { t } = useTranslation();
   const { data: detail, isLoading } = useGetSurahDetail(surahNumber, {
     query: { enabled: !!surahNumber, queryKey: getGetSurahDetailQueryKey(surahNumber) },
   });
@@ -30,7 +32,7 @@ export default function SurahDetail() {
     );
   }
 
-  if (!detail) return <div>Surah not found</div>;
+  if (!detail) return <div>{t("surahDetail.notFound")}</div>;
 
   const invalidateKeys = [
     getGetSurahDetailQueryKey(surahNumber),
@@ -44,7 +46,7 @@ export default function SurahDetail() {
       <div className="flex items-center gap-3">
         <Link href="/surah">
           <Button variant="ghost" size="sm" data-testid="back-to-surah">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Back
+            <ArrowLeft className="w-4 h-4 me-1 rtl:rotate-180" /> {t("common.back")}
           </Button>
         </Link>
         <div className="min-w-0">
@@ -53,15 +55,15 @@ export default function SurahDetail() {
             <span className="text-lg font-serif text-muted-foreground">{detail.arabicName}</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            Pages {detail.startPage} - {detail.endPage} ({detail.totalPages} pages)
-            {detail.pagesInScope > 0 && <> · {detail.pagesInScope} in scope</>}
-            {detail.pagesOverdue > 0 && <span className="text-rose-600 font-medium"> · {detail.pagesOverdue} overdue</span>}
+            {t("surahDetail.pagesRange", { start: detail.startPage, end: detail.endPage, total: detail.totalPages })}
+            {detail.pagesInScope > 0 && <> · {t("surahDetail.inScope", { count: detail.pagesInScope })}</>}
+            {detail.pagesOverdue > 0 && <span className="text-rose-600 font-medium"> · {t("surahDetail.overdue", { count: detail.pagesOverdue })}</span>}
           </p>
         </div>
       </div>
 
       <div>
-        <h3 className="text-lg font-medium mb-3">Pages</h3>
+        <h3 className="text-lg font-medium mb-3">{t("surahDetail.pages")}</h3>
         <Card className="border shadow-sm overflow-hidden">
           <div className="divide-y">
             {detail.pages.map(page => (

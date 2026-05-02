@@ -16,8 +16,10 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, X } from "lucide-react";
 import { PageRow } from "@/components/page-row";
 import { type Quality, QUALITIES } from "@/lib/quality";
+import { useTranslation } from "react-i18next";
 
 export default function HomeworkDetail() {
+  const { t } = useTranslation();
   const params = useParams<{ id: string }>();
   const homeworkId = parseInt(params.id || "0", 10);
   const { data: detail, isLoading } = useGetHomework(homeworkId, {
@@ -40,7 +42,7 @@ export default function HomeworkDetail() {
       { homeworkId, itemId, data: { completed: isCompleted, quality } },
       {
         onSuccess: invalidate,
-        onError: () => toast({ title: "Failed to update page", variant: "destructive" }),
+        onError: () => toast({ title: t("homework.updateFailed"), variant: "destructive" }),
       }
     );
   };
@@ -50,7 +52,7 @@ export default function HomeworkDetail() {
       { homeworkId, itemId, data: { completed: false } },
       {
         onSuccess: invalidate,
-        onError: () => toast({ title: "Failed to clear page", variant: "destructive" }),
+        onError: () => toast({ title: t("homework.clearFailed"), variant: "destructive" }),
       }
     );
   };
@@ -66,7 +68,7 @@ export default function HomeworkDetail() {
     );
   }
 
-  if (!detail) return <div>Not found</div>;
+  if (!detail) return <div>{t("common.notFound")}</div>;
 
   const memorizeItems = detail.items.filter(i => i.type === "memorize");
   const reviseItems   = detail.items.filter(i => i.type === "revise");
@@ -93,7 +95,7 @@ export default function HomeworkDetail() {
             <span className="font-normal text-sm text-muted-foreground">
               {doneCount}/{items.length}
               {needsWorkCount > 0 && (
-                <span className="ml-1 text-amber-600">· {needsWorkCount} needs work</span>
+                <span className="ms-1 text-amber-600">· {t("homework.needsWork", { count: needsWorkCount })}</span>
               )}
             </span>
           </CardTitle>
@@ -115,13 +117,13 @@ export default function HomeworkDetail() {
                   weekCount={item.weekCount ?? 0}
                   homeworkId={homeworkId}
                   highlight={isLastStopped}
-                  highlightLabel={isLastStopped ? "Last stopped" : undefined}
+                  highlightLabel={isLastStopped ? t("homework.lastStopped") : undefined}
                   onQualitySelect={(q) => handleQualitySelect(item.id, q)}
                   qualityPending={updateItem.isPending}
                   testIdPrefix="hw-item"
                   rowId={item.id}
                   extraBadges={
-                    <Badge variant="outline" className="text-xs py-0">{item.type}</Badge>
+                    <Badge variant="outline" className="text-xs py-0">{item.type === "memorize" ? t("homework.memorize") : t("homework.revise")}</Badge>
                   }
                   extraActions={
                     hasQuality ? (
@@ -129,7 +131,7 @@ export default function HomeworkDetail() {
                         onClick={() => handleClear(item.id)}
                         disabled={updateItem.isPending}
                         className="ml-1 w-6 h-6 flex items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
-                        aria-label="Clear quality"
+                        aria-label={t("homework.clearQuality")}
                         data-testid={`hw-clear-btn-${item.id}`}
                       >
                         <X className="w-3 h-3" />
@@ -150,24 +152,24 @@ export default function HomeworkDetail() {
       <div className="flex items-center gap-3">
         <Link href="/homework">
           <Button variant="ghost" size="sm" data-testid="back-to-homework">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Back
+            <ArrowLeft className="w-4 h-4 me-1 rtl:rotate-180" /> {t("common.back")}
           </Button>
         </Link>
         <div>
           <h2 className="text-2xl font-semibold">{detail.title}</h2>
           <p className="text-sm text-muted-foreground">
-            Due: {new Date(detail.dueDate).toLocaleDateString()}
+            {t("common.due")}: {new Date(detail.dueDate).toLocaleDateString()}
           </p>
         </div>
       </div>
 
-      {renderItems(memorizeItems, "Pages to Memorize")}
-      {renderItems(reviseItems, "Pages to Revise")}
+      {renderItems(memorizeItems, t("homework.pagesToMemorize"))}
+      {renderItems(reviseItems, t("homework.pagesToRevise"))}
 
       {detail.items.length === 0 && (
         <Card className="border shadow-sm">
           <CardContent className="py-8 text-center">
-            <p className="text-sm text-muted-foreground">No items in this homework session.</p>
+            <p className="text-sm text-muted-foreground">{t("homework.noItems")}</p>
           </CardContent>
         </Card>
       )}

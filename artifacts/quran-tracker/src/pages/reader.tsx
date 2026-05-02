@@ -29,6 +29,7 @@ import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
 import { type Quality, QUALITIES, qualityStyle } from "@/lib/quality";
 import { usePageAyahs, usePrefetchPageAyahs, type ApiAyah } from "@/hooks/use-page-ayahs";
+import { useTranslation } from "react-i18next";
 
 function clampPage(n: number): number {
   if (Number.isNaN(n)) return 1;
@@ -56,6 +57,7 @@ function arabicNumeral(n: number): string {
 }
 
 export default function Reader() {
+  const { t } = useTranslation();
   const params = useParams<{ page?: string }>();
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -270,10 +272,12 @@ export default function Reader() {
       {
         onSuccess: () => {
           const parts: string[] = [];
-          if (mistakes > 0) parts.push(`${mistakes} mistake${mistakes === 1 ? "" : "s"}`);
-          if (linkCount > 0) parts.push(`${linkCount} link issue${linkCount === 1 ? "" : "s"}`);
+          if (mistakes > 0) parts.push(t("reader.mistakes", { count: mistakes }));
+          if (linkCount > 0) parts.push(t("reader.linkIssuesShort", { count: linkCount }));
           toast({
-            title: `Page ${targetPage} marked as ${quality}${parts.length ? ` (${parts.join(", ")})` : ""}`,
+            title: parts.length
+              ? t("reader.markedToastWith", { page: targetPage, quality: t(`quality.${quality}`), detail: parts.join(", ") })
+              : t("reader.markedToast", { page: targetPage, quality: t(`quality.${quality}`) }),
           });
           invalidateProgressData();
           queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
@@ -288,7 +292,7 @@ export default function Reader() {
             return currentPage;
           });
         },
-        onError: () => toast({ title: "Failed to record recitation", variant: "destructive" }),
+        onError: () => toast({ title: t("reader.recordFailed"), variant: "destructive" }),
       }
     );
   };
@@ -371,36 +375,32 @@ export default function Reader() {
     <div className="space-y-4 max-w-4xl mx-auto" data-testid="reader-page">
       <div className="flex items-end justify-between gap-3 flex-wrap">
         <div className="min-w-0">
-          <h2 className="text-2xl font-semibold">Quran Reader</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            One page at a time. Use arrow keys, the buttons below, or jump to any surah.
-          </p>
+          <h2 className="text-2xl font-semibold">{t("reader.title")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("reader.subtitle")}</p>
         </div>
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" size="sm" data-testid="btn-open-jump">
-              <BookMarked className="w-4 h-4 mr-1.5" />
-              Jump to Surah
+              <BookMarked className="w-4 h-4 me-1.5" />
+              {t("reader.jumpToSurah")}
             </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-full sm:max-w-md flex flex-col gap-0 p-0">
             <SheetHeader className="p-4 border-b shrink-0">
-              <SheetTitle>Jump to Surah</SheetTitle>
+              <SheetTitle>{t("reader.jumpToSurah")}</SheetTitle>
               <div className="relative mt-2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search by name, Arabic, or number..."
+                  placeholder={t("reader.searchSurah")}
                   value={surahSearch}
                   onChange={e => setSurahSearch(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                   data-testid="reader-surah-search"
                   autoFocus
                 />
               </div>
-              <p className="text-xs text-muted-foreground text-left mt-1">
-                Tap a surah name to jump to its first page, or tap any page chip to jump there directly.
-              </p>
+              <p className="text-xs text-muted-foreground text-start mt-1">{t("reader.jumpToSurahHint")}</p>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto divide-y" data-testid="reader-surah-list">
               {filteredSurahs.map(s => {
@@ -411,7 +411,7 @@ export default function Reader() {
                     <button
                       type="button"
                       onClick={() => closeSheetAndGo(s.startPage)}
-                      className="w-full flex items-start justify-between gap-2 text-left rounded-md hover:bg-muted/50 -mx-2 px-2 py-1 transition-colors"
+                      className="w-full flex items-start justify-between gap-2 text-start rounded-md hover:bg-muted/50 -mx-2 px-2 py-1 transition-colors"
                       data-testid={`reader-surah-${s.number}`}
                     >
                       <div className="flex items-start gap-2 min-w-0">
@@ -424,13 +424,15 @@ export default function Reader() {
                             <span className="text-sm font-serif text-muted-foreground" dir="rtl" lang="ar">{s.arabic}</span>
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {surahPages.length === 1 ? `Page ${s.startPage}` : `Pages ${s.startPage}–${s.endPage} (${surahPages.length})`}
+                            {surahPages.length === 1
+                              ? t("reader.pageSinglePage", { n: s.startPage })
+                              : t("reader.pageRangeShort", { start: s.startPage, end: s.endPage, count: surahPages.length })}
                           </div>
                         </div>
                       </div>
                     </button>
                     {surahPages.length > 1 && (
-                      <div className="flex flex-wrap gap-1 mt-2 ml-9">
+                      <div className="flex flex-wrap gap-1 mt-2 ms-9">
                         {surahPages.map(p => (
                           <button
                             key={p}
@@ -442,7 +444,7 @@ export default function Reader() {
                                 : "bg-background border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
                             }`}
                             data-testid={`reader-surah-${s.number}-page-${p}`}
-                            aria-label={`Jump to page ${p}`}
+                            aria-label={t("reader.ariaJumpPage", { n: p })}
                           >
                             {p}
                           </button>
@@ -454,7 +456,7 @@ export default function Reader() {
               })}
               {filteredSurahs.length === 0 && (
                 <div className="py-12 text-center text-sm text-muted-foreground">
-                  No surahs match "{surahSearch}".
+                  {t("reader.noSurahMatch", { q: surahSearch })}
                 </div>
               )}
             </div>
@@ -475,7 +477,7 @@ export default function Reader() {
               </span>
             )}
             <span className="text-muted-foreground text-[11px]">
-              Juz {juzNumber} · Part {rob3} ({partInJuz}/8)
+              {t("reader.juzPart", { juz: juzNumber, rob3, idx: partInJuz })}
             </span>
             {surahsOnPage.map(s => (
               <span
@@ -510,8 +512,8 @@ export default function Reader() {
                   onClick={startHideMode}
                   data-testid="btn-hide-all"
                 >
-                  <EyeOff className="w-4 h-4 mr-1.5" />
-                  Hide all ayahs
+                  <EyeOff className="w-4 h-4 me-1.5" />
+                  {t("reader.hideAll")}
                 </Button>
               ) : (
                 <>
@@ -522,8 +524,8 @@ export default function Reader() {
                     onClick={showAllAyahs}
                     data-testid="btn-show-all"
                   >
-                    <Eye className="w-4 h-4 mr-1.5" />
-                    Show all
+                    <Eye className="w-4 h-4 me-1.5" />
+                    {t("reader.showAll")}
                   </Button>
                   <Button
                     type="button"
@@ -531,13 +533,13 @@ export default function Reader() {
                     variant="ghost"
                     onClick={resetPractice}
                     data-testid="btn-reset-practice"
-                    title="Re-hide all and clear marks"
+                    title={t("reader.restartTitle")}
                   >
-                    <ChevronsLeft className="w-4 h-4 mr-1" />
-                    Restart
+                    <ChevronsLeft className="w-4 h-4 me-1 rtl:rotate-180" />
+                    {t("reader.restart")}
                   </Button>
                   <span className="text-xs text-muted-foreground tabular-nums" data-testid="reader-revealed-count">
-                    {revealedCount} / {totalAyahs} ayah{totalAyahs === 1 ? "" : "s"} revealed
+                    {t("reader.revealed", { count: revealedCount, total: totalAyahs })}
                   </span>
                 </>
               )}
@@ -547,19 +549,19 @@ export default function Reader() {
                 <span
                   className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200"
                   data-testid="reader-mistake-count"
-                  title="Mistakes will be recorded with your next quality rating"
+                  title={t("reader.mistakesTooltip")}
                 >
-                  {mistakeAyahs.size} mistake{mistakeAyahs.size === 1 ? "" : "s"}
+                  {t("reader.mistakes", { count: mistakeAyahs.size })}
                 </span>
               )}
               {linkAyahs.size > 0 && (
                 <span
                   className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1"
                   data-testid="reader-link-count"
-                  title="Link issues will be recorded with your next quality rating"
+                  title={t("reader.linkTooltip")}
                 >
                   <Link2 className="w-3 h-3" />
-                  {linkAyahs.size} link
+                  {t("reader.linkIssuesShort", { count: linkAyahs.size })}
                 </span>
               )}
               {clearedAyahs.size > 0 && (
@@ -567,7 +569,7 @@ export default function Reader() {
                   className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200"
                   data-testid="reader-cleared-count"
                 >
-                  {clearedAyahs.size} clear
+                  {t("reader.cleared", { count: clearedAyahs.size })}
                 </span>
               )}
             </div>
@@ -587,12 +589,10 @@ export default function Reader() {
           ) : ayahsError ? (
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-12 px-4" data-testid="reader-load-error">
               <AlertCircle className="w-10 h-10 mb-3 opacity-50" />
-              <p className="text-sm font-medium text-foreground">Couldn't load page text</p>
-              <p className="text-xs mt-1">
-                The Quran text service is unreachable right now. Navigation and marking still work.
-              </p>
+              <p className="text-sm font-medium text-foreground">{t("reader.loadErrorTitle")}</p>
+              <p className="text-xs mt-1">{t("reader.loadErrorBody")}</p>
               <Button variant="outline" size="sm" className="mt-4" onClick={() => void refetchAyahs()}>
-                Try again
+                {t("reader.tryAgain")}
               </Button>
               {arabicName && (
                 <p className="text-xl font-serif mt-6" dir="rtl" lang="ar">{arabicName}</p>
@@ -606,10 +606,10 @@ export default function Reader() {
                     <>
                       <div className="text-center py-2 border-y border-stone-400/40 dark:border-stone-700/60 bg-[#ead9b5]/60 dark:bg-stone-800/30 rounded">
                         <div className="font-serif text-lg" dir="rtl" lang="ar">
-                          سورة {SURAHS.find(s => s.number === group.surahNumber)?.arabic ?? group.surahName}
+                          {t("reader.surahHeading", { name: SURAHS.find(s => s.number === group.surahNumber)?.arabic ?? group.surahName })}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5" dir="ltr">
-                          {group.surahName} · Surah {group.surahNumber}
+                          {t("reader.surahLine", { name: group.surahName, n: group.surahNumber })}
                         </div>
                       </div>
                       {group.surahNumber !== 1 && group.surahNumber !== 9 && (
@@ -676,8 +676,8 @@ export default function Reader() {
                                   ? "bg-amber-500 border-amber-500 text-white"
                                   : "border-amber-300/70 bg-background text-amber-700 hover:bg-amber-100"
                               }`}
-                              title="Link mistake — failed to predict this ayah from the previous one"
-                              aria-label={`Mark link mistake before ayah ${a.numberInSurah}`}
+                              title={t("reader.linkTitle")}
+                              aria-label={t("reader.ariaLinkMistake", { n: a.numberInSurah })}
                               aria-pressed={isLink}
                               data-testid={`reader-ayah-link-${a.number}`}
                             >
@@ -707,8 +707,8 @@ export default function Reader() {
                                     ? "bg-emerald-500 border-emerald-500 text-white"
                                     : "border-border bg-background text-muted-foreground hover:text-emerald-700 hover:border-emerald-300"
                                 }`}
-                                title={isLatest ? "Clear (reveals next)" : "Mark clear"}
-                                aria-label={`Mark ayah ${a.numberInSurah} as clear`}
+                                title={isLatest ? t("reader.clearTitleLatest") : t("reader.clearTitle")}
+                                aria-label={t("reader.ariaMarkClear", { n: a.numberInSurah })}
                                 aria-pressed={isClear}
                                 data-testid={`reader-ayah-clear-${a.number}`}
                               >
@@ -722,8 +722,8 @@ export default function Reader() {
                                     ? "bg-rose-500 border-rose-500 text-white"
                                     : "border-border bg-background text-muted-foreground hover:text-rose-700 hover:border-rose-300"
                                 }`}
-                                title={isLatest ? "Mistake (reveals next)" : "Mark mistake"}
-                                aria-label={`Mark ayah ${a.numberInSurah} as mistake`}
+                                title={isLatest ? t("reader.mistakeTitleLatest") : t("reader.mistakeTitle")}
+                                aria-label={t("reader.ariaMarkMistake", { n: a.numberInSurah })}
                                 aria-pressed={isMistake}
                                 data-testid={`reader-ayah-mistake-${a.number}`}
                               >
@@ -739,7 +739,7 @@ export default function Reader() {
                 </div>
               ))}
               {groupedAyahs.length === 0 && (
-                <p className="text-center text-sm text-muted-foreground" dir="ltr">No ayahs returned for this page.</p>
+                <p className="text-center text-sm text-muted-foreground" dir="ltr">{t("reader.noAyahs")}</p>
               )}
 
               {hideMode && revealedCount < totalAyahs && (
@@ -751,16 +751,16 @@ export default function Reader() {
                     data-testid="btn-show-next-ayah"
                     className="shadow-md"
                   >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Show next ayah
-                    <span className="ml-2 text-xs font-normal opacity-80">({revealedCount + 1} / {totalAyahs})</span>
+                    <Eye className="w-4 h-4 me-2" />
+                    {t("reader.showNextAyah")}
+                    <span className="ms-2 text-xs font-normal opacity-80">{t("reader.showNextProgress", { n: revealedCount + 1, total: totalAyahs })}</span>
                   </Button>
                 </div>
               )}
               {hideMode && revealedCount >= totalAyahs && totalAyahs > 0 && (
-                <div className="pt-4 text-center text-sm text-muted-foreground" dir="ltr" data-testid="reader-all-revealed">
-                  All ayahs revealed. Pick a quality rating below to record this recitation
-                  {mistakeAyahs.size > 0 ? ` along with ${mistakeAyahs.size} mistake${mistakeAyahs.size === 1 ? "" : "s"}.` : "."}
+                <div className="pt-4 text-center text-sm text-muted-foreground" data-testid="reader-all-revealed">
+                  {t("reader.allRevealed")}
+                  {mistakeAyahs.size > 0 ? t("reader.allRevealedWith", { count: mistakeAyahs.size }) : t("reader.allRevealedEnd")}
                 </div>
               )}
             </div>
@@ -779,8 +779,8 @@ export default function Reader() {
               disabled={pageNumber >= TOTAL_PAGES}
               data-testid="btn-next-page"
             >
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Next
+              <ChevronLeft className="w-4 h-4 me-1" />
+              {t("reader.next")}
             </Button>
 
             <Button
@@ -790,24 +790,25 @@ export default function Reader() {
               disabled={pageNumber <= 1}
               data-testid="btn-prev-page"
             >
-              Previous
-              <ChevronRight className="w-4 h-4 ml-1" />
+              {t("reader.previous")}
+              <ChevronRight className="w-4 h-4 ms-1" />
             </Button>
           </div>
 
           <div className="border-t pt-3">
             <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-              <div className="text-sm font-medium">Mark this page as recited</div>
+              <div className="text-sm font-medium">{t("reader.markRecitedTitle")}</div>
               {lastRecitedLabel && (
                 <div className="text-xs text-muted-foreground" data-testid="reader-last-recited">
-                  Last recited: {lastRecitedLabel}
+                  {t("common.lastRecited")}: {lastRecitedLabel}
                 </div>
               )}
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {QUALITIES.map(({ value, label }) => {
+              {QUALITIES.map(({ value }) => {
                 const isActive = currentQuality === value;
                 const style = qualityStyle[value];
+                const label = t(`quality.${value}`);
                 return (
                   <button
                     key={value}
@@ -818,7 +819,7 @@ export default function Reader() {
                       isActive ? style.active : `border-border bg-background text-muted-foreground ${style.hover}`
                     } disabled:opacity-50`}
                     data-testid={`reader-quality-${value}`}
-                    aria-label={`Mark page ${pageNumber} as ${label}`}
+                    aria-label={t("reader.ariaMarkPage", { n: pageNumber, label })}
                     aria-pressed={isActive}
                   >
                     {label}
@@ -827,9 +828,7 @@ export default function Reader() {
               })}
             </div>
             {currentPage && !currentPage.inScope && currentQuality === null && (
-              <p className="text-[11px] text-muted-foreground mt-2">
-                Not in your memorization scope yet — marking a quality will add it automatically.
-              </p>
+              <p className="text-[11px] text-muted-foreground mt-2">{t("reader.notInScopeNote")}</p>
             )}
           </div>
         </CardContent>

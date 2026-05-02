@@ -5,10 +5,12 @@
  * Quran Memorization Tracker API
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateSettingsBodyLanguage } from "./updateSettingsBodyLanguage";
 
 export interface UpdateSettingsBody {
   excellentDays?: number;
   goodDays?: number;
   hardDays?: number;
   relearnDays?: number;
+  language?: UpdateSettingsBodyLanguage;
 }

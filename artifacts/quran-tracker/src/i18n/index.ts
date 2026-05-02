@@ -1,0 +1,52 @@
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import en from "./en.json";
+import ar from "./ar.json";
+
+export const SUPPORTED_LANGUAGES = ["en", "ar"] as const;
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+
+const STORAGE_KEY = "qurantracker.language";
+
+function getInitialLanguage(): SupportedLanguage {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "en" || stored === "ar") return stored;
+  } catch {
+    /* ignore */
+  }
+  return "en";
+}
+
+void i18n.use(initReactI18next).init({
+  resources: {
+    en: { translation: en },
+    ar: { translation: ar },
+  },
+  lng: getInitialLanguage(),
+  fallbackLng: "en",
+  interpolation: { escapeValue: false },
+  returnNull: false,
+});
+
+export function applyDocumentLanguage(lang: SupportedLanguage) {
+  const html = document.documentElement;
+  html.lang = lang;
+  html.dir = lang === "ar" ? "rtl" : "ltr";
+}
+
+export function setLanguage(lang: SupportedLanguage) {
+  if (i18n.language !== lang) {
+    void i18n.changeLanguage(lang);
+  }
+  applyDocumentLanguage(lang);
+  try {
+    localStorage.setItem(STORAGE_KEY, lang);
+  } catch {
+    /* ignore */
+  }
+}
+
+applyDocumentLanguage(getInitialLanguage());
+
+export default i18n;

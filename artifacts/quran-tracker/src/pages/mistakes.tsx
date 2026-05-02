@@ -7,13 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, Link2, X, Eye, FileText, BookMarked } from "lucide-react";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 type FilterType = "all" | "memorization" | "link";
-
-const TYPE_LABEL: Record<"memorization" | "link", string> = {
-  memorization: "Memorization",
-  link: "Link",
-};
 
 const TYPE_STYLE: Record<"memorization" | "link", { chip: string; icon: typeof X }> = {
   memorization: {
@@ -27,10 +23,15 @@ const TYPE_STYLE: Record<"memorization" | "link", { chip: string; icon: typeof X
 };
 
 export default function MistakesPage() {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<FilterType>("all");
   const { data, isLoading, isError } = useGetMistakes(
     filter === "all" ? { limit: 200 } : { limit: 200, type: filter }
   );
+  const TYPE_LABEL: Record<"memorization" | "link", string> = {
+    memorization: t("mistakes.filterMemorization"),
+    link: t("mistakes.filterLink"),
+  };
 
   const summary = data?.summary;
   const mistakes: Mistake[] = data?.mistakes ?? [];
@@ -51,19 +52,16 @@ export default function MistakesPage() {
       <div>
         <h2 className="text-2xl font-semibold flex items-center gap-2">
           <AlertTriangle className="w-6 h-6 text-amber-600" />
-          Mistakes
+          {t("mistakes.title")}
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Review the ayahs you've marked as a mistake. Tap <span className="font-medium">Practice</span> to jump back
-          to the page in hidden-ayah practice mode and test yourself again.
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">{t("mistakes.subtitle")}</p>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="mistakes-summary">
-        <SummaryCard label="Total mistakes" value={summary?.total ?? 0} loading={isLoading} testId="stat-total" />
+        <SummaryCard label={t("mistakes.summary.total")} value={summary?.total ?? 0} loading={isLoading} testId="stat-total" />
         <SummaryCard
-          label="Memorization"
+          label={t("mistakes.summary.memorization")}
           value={summary?.memorizationCount ?? 0}
           loading={isLoading}
           accent="rose"
@@ -71,7 +69,7 @@ export default function MistakesPage() {
           testId="stat-memorization"
         />
         <SummaryCard
-          label="Link"
+          label={t("mistakes.summary.link")}
           value={summary?.linkCount ?? 0}
           loading={isLoading}
           accent="amber"
@@ -79,7 +77,7 @@ export default function MistakesPage() {
           testId="stat-link"
         />
         <SummaryCard
-          label="Pages affected"
+          label={t("mistakes.summary.pages")}
           value={summary?.uniquePages ?? 0}
           loading={isLoading}
           icon={FileText}
@@ -91,7 +89,7 @@ export default function MistakesPage() {
       <Card className="border shadow-sm">
         <CardContent className="px-4 py-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-muted-foreground mr-1">Filter:</span>
+            <span className="text-xs text-muted-foreground me-1">{t("mistakes.filter")}</span>
             {(["all", "memorization", "link"] as FilterType[]).map(opt => (
               <button
                 key={opt}
@@ -104,7 +102,7 @@ export default function MistakesPage() {
                 }`}
                 data-testid={`filter-${opt}`}
               >
-                {opt === "all" ? "All" : TYPE_LABEL[opt]}
+                {opt === "all" ? t("mistakes.filterAll") : TYPE_LABEL[opt]}
               </button>
             ))}
           </div>
@@ -122,21 +120,19 @@ export default function MistakesPage() {
             </div>
           ) : isError ? (
             <div className="py-8 text-center text-sm text-muted-foreground" data-testid="mistakes-error">
-              Couldn't load mistakes. Try refreshing the page.
+              {t("mistakes.loadError")}
             </div>
           ) : mistakes.length === 0 ? (
             <div className="py-12 text-center" data-testid="mistakes-empty">
               <AlertTriangle className="w-10 h-10 mx-auto opacity-30 mb-2" />
-              <p className="text-sm font-medium">No mistakes recorded yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Use the X (memorization) and link buttons in the Reader's hide-mode to track ayahs you struggle with.
-              </p>
+              <p className="text-sm font-medium">{t("mistakes.empty")}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("mistakes.emptyHint")}</p>
               <Link
                 href="/reader"
                 className="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90"
               >
                 <BookMarked className="w-3.5 h-3.5" />
-                Open Reader
+                {t("mistakes.openReader")}
               </Link>
             </div>
           ) : (
@@ -165,10 +161,10 @@ export default function MistakesPage() {
                             </span>
                             <div className="min-w-0">
                               <div className="text-sm font-medium truncate">
-                                {m.surahName} <span className="text-muted-foreground">·</span> Ayah {m.ayahNumberInSurah}
+                                {m.surahName} <span className="text-muted-foreground">·</span> {t("mistakes.ayahLine", { n: m.ayahNumberInSurah })}
                               </div>
                               <div className="text-[11px] text-muted-foreground">
-                                Page {m.pageNumber} · {format(new Date(m.recitedAt), "h:mm a")}
+                                {t("mistakes.pageTime", { page: m.pageNumber, time: format(new Date(m.recitedAt), "h:mm a") })}
                               </div>
                             </div>
                           </div>
@@ -178,7 +174,7 @@ export default function MistakesPage() {
                             data-testid={`mistake-practice-${m.id}`}
                           >
                             <Eye className="w-3.5 h-3.5" />
-                            Practice
+                            {t("mistakes.practice")}
                           </Link>
                         </div>
                       );

@@ -5,6 +5,7 @@
  * Quran Memorization Tracker API
  * OpenAPI spec version: 0.1.0
  */
+import type { SettingsLanguage } from "./settingsLanguage";
 
 export interface Settings {
   id: number;
@@ -12,4 +13,5 @@ export interface Settings {
   goodDays: number;
   hardDays: number;
   relearnDays: number;
+  language: SettingsLanguage;
 }

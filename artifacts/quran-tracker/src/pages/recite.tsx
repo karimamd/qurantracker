@@ -19,10 +19,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Search } from "lucide-react";
 import { JUZ_RANGES, SURAHS, pagesForJuz, pagesForSurah, todayLocalISO } from "@/lib/quran-ref";
+import { useTranslation } from "react-i18next";
 
 type Mode = "juz" | "surah" | "pages";
 
 export default function Recite() {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>("pages");
 
   const [selectedJuz, setSelectedJuz] = useState<string>("");
@@ -69,13 +71,13 @@ export default function Recite() {
 
   const pagePreviewLabel = useMemo(() => {
     if (resolvedPages.length === 0) return null;
-    if (resolvedPages.length === 1) return `Page ${resolvedPages[0]}`;
-    return `Pages ${resolvedPages[0]}–${resolvedPages[resolvedPages.length - 1]} (${resolvedPages.length} pages)`;
-  }, [resolvedPages]);
+    if (resolvedPages.length === 1) return t("recite.preview.single", { n: resolvedPages[0] });
+    return t("recite.preview.range", { start: resolvedPages[0], end: resolvedPages[resolvedPages.length - 1], count: resolvedPages.length });
+  }, [resolvedPages, t]);
 
   const handleSubmit = () => {
     if (resolvedPages.length === 0) {
-      toast({ title: "Please select a valid page range", variant: "destructive" });
+      toast({ title: t("recite.selectError"), variant: "destructive" });
       return;
     }
 
@@ -86,7 +88,7 @@ export default function Recite() {
       {
         onSuccess: () => {
           setSubmitted(true);
-          toast({ title: `Recorded ${resolvedPages.length} page(s) as ${quality}` });
+          toast({ title: t("recite.recordedToast", { count: resolvedPages.length, quality: t(`quality.${quality}`) }) });
           queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListJuzProgressQueryKey() });
@@ -100,41 +102,47 @@ export default function Recite() {
     );
   };
 
-  const qualityOptions: { value: BatchRecitationBodyQuality; label: string; desc: string; ring: string }[] = [
-    { value: "excellent", label: "Excellent", desc: "Perfect or near-perfect", ring: "border-emerald-400 bg-emerald-50" },
-    { value: "good", label: "Good", desc: "≤2 mistakes per page", ring: "border-sky-400 bg-sky-50" },
-    { value: "hard", label: "Hard", desc: "Up to 3 mistakes avg", ring: "border-amber-400 bg-amber-50" },
-    { value: "relearn", label: "Relearn", desc: "Needs significant work", ring: "border-rose-400 bg-rose-50" },
+  const qualityOptions: { value: BatchRecitationBodyQuality; ring: string }[] = [
+    { value: "excellent", ring: "border-emerald-400 bg-emerald-50" },
+    { value: "good", ring: "border-sky-400 bg-sky-50" },
+    { value: "hard", ring: "border-amber-400 bg-amber-50" },
+    { value: "relearn", ring: "border-rose-400 bg-rose-50" },
   ];
+
+  const modeLabels: Record<Mode, string> = {
+    juz: t("recite.modeJuz"),
+    surah: t("recite.modeSurah"),
+    pages: t("recite.modePages"),
+  };
 
   return (
     <div className="space-y-5 max-w-2xl" data-testid="recite-page">
       <div>
-        <h2 className="text-2xl font-semibold">Record Recitation</h2>
-        <p className="text-sm text-muted-foreground mt-1">Log your revision or memorization session</p>
+        <h2 className="text-2xl font-semibold">{t("recite.title")}</h2>
+        <p className="text-sm text-muted-foreground mt-1">{t("recite.subtitle")}</p>
       </div>
 
       {submitted && (
         <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl" data-testid="success-message">
           <CheckCircle className="w-5 h-5" />
-          <span className="text-sm font-medium">Recitation recorded successfully</span>
+          <span className="text-sm font-medium">{t("recite.success")}</span>
         </div>
       )}
 
       <Card className="border shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Select Pages</CardTitle>
+          <CardTitle className="text-base">{t("recite.selectPages")}</CardTitle>
           <div className="flex gap-1 mt-2 bg-muted rounded-lg p-1 w-fit" data-testid="mode-tabs">
             {(["juz", "surah", "pages"] as Mode[]).map(m => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all capitalize ${
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                   mode === m ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
                 data-testid={`mode-tab-${m}`}
               >
-                By {m.charAt(0).toUpperCase() + m.slice(1)}
+                {modeLabels[m]}
               </button>
             ))}
           </div>
@@ -142,15 +150,15 @@ export default function Recite() {
         <CardContent className="space-y-3">
           {mode === "juz" && (
             <div data-testid="mode-juz-panel">
-              <Label>Select Juz</Label>
+              <Label>{t("recite.selectJuz")}</Label>
               <Select value={selectedJuz} onValueChange={setSelectedJuz}>
                 <SelectTrigger data-testid="select-juz">
-                  <SelectValue placeholder="Choose a Juz..." />
+                  <SelectValue placeholder={t("recite.chooseJuz")} />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
                   {JUZ_RANGES.map(j => (
                     <SelectItem key={j.juz} value={String(j.juz)}>
-                      Juz {j.juz} — pages {j.startPage}–{j.endPage}
+                      {t("recite.juzPages", { n: j.juz, start: j.startPage, end: j.endPage })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -160,12 +168,12 @@ export default function Recite() {
 
           {mode === "surah" && (
             <div className="space-y-2" data-testid="mode-surah-panel">
-              <Label>Select Surah</Label>
+              <Label>{t("recite.selectSurah")}</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                 <Input
-                  className="pl-9"
-                  placeholder="Search by name or number..."
+                  className="ps-9"
+                  placeholder={t("recite.searchSurah")}
                   value={surahSearch}
                   onChange={e => setSurahSearch(e.target.value)}
                   data-testid="surah-search-input"
@@ -176,7 +184,7 @@ export default function Recite() {
                   <button
                     key={s.number}
                     onClick={() => { setSelectedSurah(String(s.number)); setSurahSearch(""); }}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors text-left ${
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors text-start ${
                       selectedSurah === String(s.number) ? "bg-primary/8 font-medium" : ""
                     }`}
                     data-testid={`surah-option-${s.number}`}
@@ -188,7 +196,7 @@ export default function Recite() {
                       <span>{s.name}</span>
                       <span className="text-muted-foreground font-serif text-sm">{s.arabic}</span>
                     </span>
-                    <span className="text-muted-foreground text-xs shrink-0 ml-2">p.{s.startPage}{s.endPage !== s.startPage ? `–${s.endPage}` : ""}</span>
+                    <span className="text-muted-foreground text-xs shrink-0 ms-2">{t("recite.surahPageHint", { start: s.startPage, end: s.endPage !== s.startPage ? `–${s.endPage}` : "" })}</span>
                   </button>
                 ))}
               </div>
@@ -196,7 +204,7 @@ export default function Recite() {
                 const s = SURAHS.find(s => s.number === parseInt(selectedSurah, 10));
                 return s ? (
                   <div className="flex items-center gap-2 text-sm text-primary font-medium" data-testid="selected-surah-label">
-                    <CheckCircle className="w-4 h-4" /> {s.name} selected
+                    <CheckCircle className="w-4 h-4" /> {t("recite.selectedSurah", { name: s.name })}
                   </div>
                 ) : null;
               })()}
@@ -206,26 +214,26 @@ export default function Recite() {
           {mode === "pages" && (
             <div className="grid grid-cols-2 gap-4" data-testid="mode-pages-panel">
               <div>
-                <Label htmlFor="pageStart">Start Page</Label>
+                <Label htmlFor="pageStart">{t("recite.startPage")}</Label>
                 <Input
                   id="pageStart"
                   type="number"
                   min={1}
                   max={604}
-                  placeholder="e.g. 1"
+                  placeholder="1"
                   value={pageStart}
                   onChange={e => setPageStart(e.target.value)}
                   data-testid="input-page-start"
                 />
               </div>
               <div>
-                <Label htmlFor="pageEnd">End Page (optional)</Label>
+                <Label htmlFor="pageEnd">{t("recite.endPage")}</Label>
                 <Input
                   id="pageEnd"
                   type="number"
                   min={1}
                   max={604}
-                  placeholder="Same as start"
+                  placeholder={t("recite.endPagePlaceholder")}
                   value={pageEnd}
                   onChange={e => setPageEnd(e.target.value)}
                   data-testid="input-page-end"
@@ -244,7 +252,7 @@ export default function Recite() {
 
       <Card className="border shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Date</CardTitle>
+          <CardTitle className="text-base">{t("recite.date")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Input
@@ -254,15 +262,13 @@ export default function Recite() {
             max={todayLocalISO()}
             data-testid="input-recited-date"
           />
-          <p className="text-xs text-muted-foreground mt-1.5">
-            The due date for the next review will be calculated from this date.
-          </p>
+          <p className="text-xs text-muted-foreground mt-1.5">{t("recite.dateHint")}</p>
         </CardContent>
       </Card>
 
       <Card className="border shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Quality Rating</CardTitle>
+          <CardTitle className="text-base">{t("recite.qualityRating")}</CardTitle>
         </CardHeader>
         <CardContent>
           <RadioGroup
@@ -281,8 +287,8 @@ export default function Recite() {
               >
                 <RadioGroupItem value={opt.value} id={`quality-${opt.value}`} />
                 <div>
-                  <div className="font-medium text-sm">{opt.label}</div>
-                  <div className="text-xs text-muted-foreground">{opt.desc}</div>
+                  <div className="font-medium text-sm">{t(`quality.${opt.value}`)}</div>
+                  <div className="text-xs text-muted-foreground">{t(`recite.qualityDesc.${opt.value}`)}</div>
                 </div>
               </Label>
             ))}
@@ -292,13 +298,13 @@ export default function Recite() {
 
       <Card className="border shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Mistakes (optional)</CardTitle>
+          <CardTitle className="text-base">{t("recite.mistakes")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Input
             type="number"
             min={0}
-            placeholder="Total number of mistakes"
+            placeholder={t("recite.mistakesPlaceholder")}
             value={mistakes}
             onChange={e => setMistakes(e.target.value)}
             data-testid="input-mistakes"
@@ -314,10 +320,10 @@ export default function Recite() {
         data-testid="btn-record-recitation"
       >
         {recordBatch.isPending
-          ? "Recording..."
+          ? t("recite.submitting")
           : resolvedPages.length > 0
-          ? `Record ${resolvedPages.length} Page${resolvedPages.length > 1 ? "s" : ""}`
-          : "Record Recitation"}
+          ? t("recite.submitN", { count: resolvedPages.length })
+          : t("recite.submit")}
       </Button>
     </div>
   );

@@ -9,19 +9,37 @@ export interface HealthStatus {
   status: string;
 }
 
+export type SettingsLanguage =
+  (typeof SettingsLanguage)[keyof typeof SettingsLanguage];
+
+export const SettingsLanguage = {
+  en: "en",
+  ar: "ar",
+} as const;
+
 export interface Settings {
   id: number;
   excellentDays: number;
   goodDays: number;
   hardDays: number;
   relearnDays: number;
+  language: SettingsLanguage;
 }
+
+export type UpdateSettingsBodyLanguage =
+  (typeof UpdateSettingsBodyLanguage)[keyof typeof UpdateSettingsBodyLanguage];
+
+export const UpdateSettingsBodyLanguage = {
+  en: "en",
+  ar: "ar",
+} as const;
 
 export interface UpdateSettingsBody {
   excellentDays?: number;
   goodDays?: number;
   hardDays?: number;
   relearnDays?: number;
+  language?: UpdateSettingsBodyLanguage;
 }
 
 export interface ProgressOverview {

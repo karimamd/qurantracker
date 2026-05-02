@@ -24,6 +24,7 @@ export const GetSettingsResponse = zod.object({
   goodDays: zod.number(),
   hardDays: zod.number(),
   relearnDays: zod.number(),
+  language: zod.enum(["en", "ar"]),
 });
 
 /**
@@ -34,6 +35,7 @@ export const UpdateSettingsBody = zod.object({
   goodDays: zod.number().optional(),
   hardDays: zod.number().optional(),
   relearnDays: zod.number().optional(),
+  language: zod.enum(["en", "ar"]).optional(),
 });
 
 export const UpdateSettingsResponse = zod.object({
@@ -42,6 +44,7 @@ export const UpdateSettingsResponse = zod.object({
   goodDays: zod.number(),
   hardDays: zod.number(),
   relearnDays: zod.number(),
+  language: zod.enum(["en", "ar"]),
 });
 
 /**

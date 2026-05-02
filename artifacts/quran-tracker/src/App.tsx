@@ -9,6 +9,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { useTranslation } from "react-i18next";
+import { useGetSettings, getGetSettingsQueryKey } from "@workspace/api-client-react";
+import { setLanguage, type SupportedLanguage } from "@/i18n";
 import Dashboard from "@/pages/dashboard";
 import JuzList from "@/pages/juz-list";
 import JuzDetail from "@/pages/juz-detail";
@@ -114,6 +117,7 @@ function SignUpPage() {
 
 function Landing() {
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
   const handleTryAsGuest = () => {
     enterGuestMode();
     setLocation("/dashboard");
@@ -123,27 +127,27 @@ function Landing() {
       <header className="px-6 py-5 flex items-center justify-between max-w-6xl mx-auto">
         <div className="flex items-center gap-2">
           <img src={`${basePath}/logo.svg`} alt="Logo" className="h-9 w-9" />
-          <span className="font-semibold text-slate-900 text-lg">Quran Tracker</span>
+          <span className="font-semibold text-slate-900 text-lg">{t("app.name")}</span>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/sign-in">
-            <Button variant="ghost" size="sm" data-testid="link-sign-in">Sign in</Button>
+            <Button variant="ghost" size="sm" data-testid="link-sign-in">{t("auth.signIn")}</Button>
           </Link>
           <Link href="/sign-up">
-            <Button size="sm" className="bg-teal-700 hover:bg-teal-800" data-testid="link-sign-up">Get started</Button>
+            <Button size="sm" className="bg-teal-700 hover:bg-teal-800" data-testid="link-sign-up">{t("auth.getStarted")}</Button>
           </Link>
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-6 pt-16 pb-24 text-center">
         <div className="inline-flex items-center gap-2 bg-teal-100 text-teal-800 text-xs font-medium px-3 py-1 rounded-full mb-6">
           <BookOpen className="w-3.5 h-3.5" />
-          Personal memorization companion
+          {t("landing.badge")}
         </div>
         <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 tracking-tight mb-4">
-          Track your Quran memorization with care
+          {t("landing.title")}
         </h1>
         <p className="text-lg text-slate-600 mb-8 max-w-xl mx-auto">
-          Quality-based spaced repetition across Juz, Surah, and Page. Homework sessions, progress charts, and per-page reviews — all in one calm space.
+          {t("landing.subtitle")}
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Button
@@ -153,23 +157,37 @@ function Landing() {
             data-testid="cta-try-guest"
             className="border-teal-700 text-teal-700 hover:bg-teal-50"
           >
-            Try it now — no sign up <ArrowRight className="w-4 h-4 ml-2" />
+            {t("landing.tryGuest")} <ArrowRight className="w-4 h-4 ml-2 rtl:rotate-180" />
           </Button>
           <Link href="/sign-up">
             <Button size="lg" className="bg-teal-700 hover:bg-teal-800" data-testid="cta-sign-up">
-              Create your account
+              {t("landing.createAccount")}
             </Button>
           </Link>
           <Link href="/sign-in">
-            <Button size="lg" variant="ghost" data-testid="cta-sign-in">Sign in</Button>
+            <Button size="lg" variant="ghost" data-testid="cta-sign-in">{t("auth.signIn")}</Button>
           </Link>
         </div>
         <p className="text-xs text-slate-500 mt-6 max-w-md mx-auto">
-          Guest mode saves your progress on this device. Sign up any time to keep it across devices — your guest data carries over automatically.
+          {t("landing.guestNote")}
         </p>
       </main>
     </div>
   );
+}
+
+/** Sync the user's persisted language preference into i18n + <html dir/lang>. */
+function LanguageSync() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const enabled = isLoaded && (isSignedIn || isGuestMode());
+  const { data: settings } = useGetSettings({ query: { enabled, queryKey: getGetSettingsQueryKey() } });
+  useEffect(() => {
+    const lang = settings?.language;
+    if (lang === "en" || lang === "ar") {
+      setLanguage(lang as SupportedLanguage);
+    }
+  }, [settings?.language]);
+  return null;
 }
 
 function AuthLoadingScreen() {
@@ -193,6 +211,7 @@ function ProtectedApp() {
   if (!isSignedIn && !isGuestMode()) return <Redirect to="/" />;
   return (
     <Layout>
+      <LanguageSync />
       <ErrorBoundary>
         <Switch>
           <Route path="/dashboard" component={Dashboard} />

@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useGetProgressOverview } from "@workspace/api-client-react";
 import { isGuestMode } from "@/lib/guest-mode";
 import { CloudUpload, ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Guest-only call-to-action shown above dashboard content.
@@ -16,6 +17,7 @@ import { CloudUpload, ArrowRight } from "lucide-react";
 export default function GuestSavePrompt() {
   const { isSignedIn } = useAuth();
   const { data: overview } = useGetProgressOverview();
+  const { t } = useTranslation();
 
   if (isSignedIn || !isGuestMode()) return null;
 
@@ -39,29 +41,23 @@ export default function GuestSavePrompt() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-sm sm:text-base font-semibold text-slate-900" data-testid="guest-save-prompt-headline">
-            {hasProgress ? (
-              <>
-                Save your progress to your account
-              </>
-            ) : (
-              <>
-                Sign up so your progress follows you everywhere
-              </>
-            )}
+            {hasProgress ? t("guestPrompt.savedTitle") : t("guestPrompt.intro")}
           </div>
           <div className="text-xs sm:text-sm text-slate-600 mt-0.5">
             {hasProgress ? (
               <>
-                You have <span className="font-medium text-teal-700">{pagesTracked} {pagesTracked === 1 ? "page" : "pages"} in scope</span>
+                {t("guestPrompt.haveStored")}{" "}
+                <span className="font-medium text-teal-700">{t("guestPrompt.pages", { count: pagesTracked })}</span>
                 {recitations > 0 && (
                   <>
-                    {" "}and <span className="font-medium text-teal-700">{recitations} {recitations === 1 ? "recitation" : "recitations"}</span>
+                    {" "}{t("guestPrompt.andLine")}{" "}
+                    <span className="font-medium text-teal-700">{t("guestPrompt.recitations", { count: recitations })}</span>
                   </>
                 )}{" "}
-                stored on this device. Sign up and we'll move it all to your account automatically.
+                {t("guestPrompt.storedTail")}
               </>
             ) : (
-              <>Right now your progress is only on this device. Sign up to keep it across devices — takes a few seconds.</>
+              <>{t("guestPrompt.introTail")}</>
             )}
           </div>
         </div>
@@ -70,8 +66,8 @@ export default function GuestSavePrompt() {
           className="shrink-0 inline-flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold px-4 py-2 rounded-md transition-colors"
           data-testid="guest-save-prompt-button"
         >
-          Sign up
-          <ArrowRight className="w-4 h-4" />
+          {t("guestPrompt.signUp")}
+          <ArrowRight className="w-4 h-4 rtl:rotate-180" />
         </Link>
       </CardContent>
     </Card>

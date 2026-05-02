@@ -9,6 +9,7 @@ export const settingsTable = pgTable("settings", {
   goodDays: integer("good_days").notNull().default(14),
   hardDays: integer("hard_days").notNull().default(7),
   relearnDays: integer("relearn_days").notNull().default(3),
+  language: text("language").notNull().default("en"),
 }, (table) => ({
   userIdUnique: uniqueIndex("settings_user_id_unique").on(table.userId),
 }));
