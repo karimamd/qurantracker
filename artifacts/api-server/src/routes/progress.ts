@@ -47,7 +47,7 @@ import {
   getRob3Range,
   ROB3S_PER_JUZ,
 } from "../lib/quran-data";
-import { enrichPageProgress, getSettings, calculateDueDate, ensurePageExists, getDefaultPageName } from "../lib/progress-helpers";
+import { enrichPageProgress, getSettings, calculateDueDate, ensurePageExists, getDefaultPageName, aggregateQuality } from "../lib/progress-helpers";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -119,9 +119,6 @@ router.get("/progress/juz", async (req, res): Promise<void> => {
     const lastRecitedArr = inScope.filter(p => p.lastRecited).sort((a, b) => b.lastRecited!.getTime() - a.lastRecited!.getTime());
     const nextDueArr = inScope.filter(p => p.dueDate).sort((a, b) => a.dueDate!.getTime() - b.dueDate!.getTime());
 
-    const qualities = inScope.filter(p => p.quality).map(p => p.quality!);
-    const avgQuality = qualities.length > 0 ? getMostCommonQuality(qualities) : null;
-
     return {
       juzNumber: juz.juz,
       name: getJuzName(juz.juz),
@@ -132,7 +129,7 @@ router.get("/progress/juz", async (req, res): Promise<void> => {
       pagesOverdue: inScope.filter(p => p.status === "overdue").length,
       pagesDueSoon: inScope.filter(p => p.status === "due_soon").length,
       pagesOnTrack: inScope.filter(p => p.status === "on_track").length,
-      averageQuality: avgQuality,
+      averageQuality: aggregateQuality(inScope),
       lastRecited: lastRecitedArr.length > 0 ? lastRecitedArr[0].lastRecited : null,
       nextDue: nextDueArr.length > 0 ? nextDueArr[0].dueDate : null,
     };
@@ -170,7 +167,6 @@ router.get("/progress/juz/:juzNumber", async (req, res): Promise<void> => {
     const inScope = rob3Pages.filter(p => p.inScope);
     const lastRecitedArr = inScope.filter(p => p.lastRecited).sort((a, b) => b.lastRecited!.getTime() - a.lastRecited!.getTime());
     const nextDueArr = inScope.filter(p => p.dueDate).sort((a, b) => a.dueDate!.getTime() - b.dueDate!.getTime());
-    const qualities = inScope.filter(p => p.quality).map(p => p.quality!);
     const totalMistakes = inScope.reduce((sum, p) => sum + (p.mistakes || 0), 0);
 
     rob3s.push({
@@ -181,7 +177,7 @@ router.get("/progress/juz/:juzNumber", async (req, res): Promise<void> => {
       totalPages: range.endPage - range.startPage + 1,
       pagesInScope: inScope.length,
       pagesOverdue: inScope.filter(p => p.status === "overdue").length,
-      averageQuality: qualities.length > 0 ? getMostCommonQuality(qualities) : null,
+      averageQuality: aggregateQuality(inScope),
       lastRecited: lastRecitedArr.length > 0 ? lastRecitedArr[0].lastRecited : null,
       nextDue: nextDueArr.length > 0 ? nextDueArr[0].dueDate : null,
       totalMistakes: inScope.length > 0 ? totalMistakes : null,
@@ -241,7 +237,6 @@ router.get("/progress/rob3", async (req, res): Promise<void> => {
     const inScope = rob3Pages.filter(p => p.inScope);
     const lastRecitedArr = inScope.filter(p => p.lastRecited).sort((a, b) => b.lastRecited!.getTime() - a.lastRecited!.getTime());
     const nextDueArr = inScope.filter(p => p.dueDate).sort((a, b) => a.dueDate!.getTime() - b.dueDate!.getTime());
-    const qualities = inScope.filter(p => p.quality).map(p => p.quality!);
     const totalMistakes = inScope.reduce((sum, p) => sum + (p.mistakes || 0), 0);
     const startSurah = SURAHS.find(s => s.number === range.startSurah);
 
@@ -257,7 +252,7 @@ router.get("/progress/rob3", async (req, res): Promise<void> => {
       totalPages: range.endPage - range.startPage + 1,
       pagesInScope: inScope.length,
       pagesOverdue: inScope.filter(p => p.status === "overdue").length,
-      averageQuality: qualities.length > 0 ? getMostCommonQuality(qualities) : null,
+      averageQuality: aggregateQuality(inScope),
       lastRecited: lastRecitedArr.length > 0 ? lastRecitedArr[0].lastRecited : null,
       nextDue: nextDueArr.length > 0 ? nextDueArr[0].dueDate : null,
       totalMistakes: inScope.length > 0 ? totalMistakes : null,
@@ -277,8 +272,6 @@ router.get("/progress/surah", async (req, res): Promise<void> => {
     const inScope = surahPages.filter(p => p.inScope);
     const lastRecitedArr = inScope.filter(p => p.lastRecited).sort((a, b) => b.lastRecited!.getTime() - a.lastRecited!.getTime());
     const nextDueArr = inScope.filter(p => p.dueDate).sort((a, b) => a.dueDate!.getTime() - b.dueDate!.getTime());
-    const qualities = inScope.filter(p => p.quality).map(p => p.quality!);
-
     return {
       surahNumber: surah.number,
       name: surah.name,
@@ -289,7 +282,7 @@ router.get("/progress/surah", async (req, res): Promise<void> => {
       pagesInScope: inScope.length,
       pagesOverdue: inScope.filter(p => p.status === "overdue").length,
       pagesOnTrack: inScope.filter(p => p.status === "on_track" || p.status === "due_soon").length,
-      averageQuality: qualities.length > 0 ? getMostCommonQuality(qualities) : null,
+      averageQuality: aggregateQuality(inScope),
       lastRecited: lastRecitedArr.length > 0 ? lastRecitedArr[0].lastRecited : null,
       nextDue: nextDueArr.length > 0 ? nextDueArr[0].dueDate : null,
     };
@@ -960,16 +953,5 @@ router.delete("/progress/activity/:id", async (req, res): Promise<void> => {
 
   res.json(UndoRecitationResponse.parse(enrichPageProgress(updated)));
 });
-
-function getMostCommonQuality(qualities: string[]): string {
-  const priority: Record<string, number> = { relearn: 0, hard: 1, good: 2, excellent: 3 };
-  let worst = "excellent";
-  for (const q of qualities) {
-    if (priority[q] < priority[worst]) {
-      worst = q;
-    }
-  }
-  return worst;
-}
 
 export default router;

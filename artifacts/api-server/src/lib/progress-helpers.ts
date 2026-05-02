@@ -88,6 +88,53 @@ export function enrichPageProgress(page: typeof pageProgressTable.$inferSelect):
   };
 }
 
+// Canonical mapping between a quality and a "mistake count" used to derive an
+// aggregate quality across a group of pages (Rub'/Juz/Surah).
+//   Excellent ≤ 0 mistakes
+//   Good      ≤ 2 mistakes
+//   Hard      ≤ 6 mistakes
+//   Relearn   > 6 mistakes (capped at 10)
+const QUALITY_TO_MISTAKES: Record<string, number> = {
+  excellent: 0,
+  good: 2,
+  hard: 6,
+  relearn: 10,
+};
+
+export function qualityToMistakes(quality: string): number {
+  return QUALITY_TO_MISTAKES[quality] ?? 0;
+}
+
+// Map an average mistake count to a quality by ceiling to the nearest threshold.
+//   avg = 0      → Excellent
+//   0 < avg ≤ 2  → Good
+//   2 < avg ≤ 6  → Hard
+//   avg > 6      → Relearn
+export function mistakesToQuality(avg: number): string {
+  if (avg <= 0) return "excellent";
+  if (avg <= 2) return "good";
+  if (avg <= 6) return "hard";
+  return "relearn";
+}
+
+// Aggregate quality across a set of pages. For each in-scope page that has a
+// recorded quality, use its literal `mistakes` count if set, otherwise fall
+// back to the canonical mistake count for its quality. Average across those
+// pages and ceil to the nearest quality threshold. Returns null if no pages
+// in the group have a recorded quality.
+export function aggregateQuality(
+  pages: Array<{ inScope: boolean; quality: string | null; mistakes: number | null }>,
+): string | null {
+  const withQuality = pages.filter(p => p.inScope && p.quality);
+  if (withQuality.length === 0) return null;
+  const total = withQuality.reduce((sum, p) => {
+    const m = p.mistakes != null ? p.mistakes : qualityToMistakes(p.quality!);
+    return sum + m;
+  }, 0);
+  const avg = total / withQuality.length;
+  return mistakesToQuality(avg);
+}
+
 export async function ensurePageExists(userId: string, pageNumber: number) {
   const [existing] = await db.select().from(pageProgressTable)
     .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)));
