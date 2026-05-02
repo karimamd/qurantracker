@@ -25,6 +25,27 @@ export interface PageProgressEnriched {
   daysSinceRecited: number | null;
   daysUntilDue: number | null;
   status: string;
+  effectiveQuality: string | null;
+  qualityDowngrades: number;
+}
+
+const QUALITY_LADDER = ["excellent", "good", "hard", "relearn"] as const;
+const OVERDUE_DOWNGRADE_DAYS = 14;
+
+export function computeEffectiveQuality(
+  quality: string | null,
+  daysOverdue: number,
+): { effectiveQuality: string | null; qualityDowngrades: number } {
+  if (!quality) return { effectiveQuality: quality, qualityDowngrades: 0 };
+  const idx = QUALITY_LADDER.indexOf(quality as (typeof QUALITY_LADDER)[number]);
+  if (idx === -1) return { effectiveQuality: quality, qualityDowngrades: 0 };
+  const periods = daysOverdue > 0 ? Math.floor(daysOverdue / OVERDUE_DOWNGRADE_DAYS) : 0;
+  const maxDowngrade = QUALITY_LADDER.length - 1 - idx;
+  const downgrades = Math.min(periods, maxDowngrade);
+  return {
+    effectiveQuality: QUALITY_LADDER[idx + downgrades],
+    qualityDowngrades: downgrades,
+  };
 }
 
 export async function getSettings(userId: string) {
@@ -69,6 +90,14 @@ export function enrichPageProgress(page: typeof pageProgressTable.$inferSelect):
   }
 
   const defaultName = getDefaultPageName(page.pageNumber);
+  const daysOverdue =
+    status === "overdue" && daysUntilDue !== null && daysUntilDue < 0
+      ? -daysUntilDue
+      : 0;
+  const { effectiveQuality, qualityDowngrades } = computeEffectiveQuality(
+    page.quality,
+    daysOverdue,
+  );
   return {
     pageNumber: page.pageNumber,
     name: page.customName && page.customName.length > 0 ? page.customName : defaultName,
@@ -85,6 +114,8 @@ export function enrichPageProgress(page: typeof pageProgressTable.$inferSelect):
     daysSinceRecited,
     daysUntilDue,
     status,
+    effectiveQuality,
+    qualityDowngrades,
   };
 }
 

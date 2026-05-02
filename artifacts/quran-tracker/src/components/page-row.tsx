@@ -23,6 +23,8 @@ export interface PageRowProps {
   pageNumber: number;
   customName?: string | null;
   quality: string | null;
+  effectiveQuality?: string | null;
+  qualityDowngrades?: number;
   status: string;
   inScope: boolean;
   lastRecited?: Date | string | null;
@@ -55,6 +57,8 @@ export function PageRow({
   pageNumber,
   customName,
   quality,
+  effectiveQuality,
+  qualityDowngrades,
   status,
   inScope,
   lastRecited,
@@ -123,7 +127,13 @@ export function PageRow({
                 />
               </span>
               {extraBadges}
-              {hasQuality && <QualityBadge quality={quality} />}
+              {hasQuality && (
+                <QualityBadge
+                  quality={quality}
+                  effectiveQuality={effectiveQuality}
+                  qualityDowngrades={qualityDowngrades}
+                />
+              )}
               {highlight && highlightLabel && (
                 <Badge
                   className="text-xs py-0 bg-violet-500 hover:bg-violet-500 text-white border-0"

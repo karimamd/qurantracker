@@ -878,6 +878,13 @@ components:
         status:
           type: string
           enum: [overdue, due_soon, on_track, not_started, out_of_scope]
+        effectiveQuality:
+          type: ["string", "null"]
+          enum: [excellent, good, hard, relearn, null]
+          description: Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.
+        qualityDowngrades:
+          type: integer
+          description: Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn).
       required:
         - pageNumber
         - name
@@ -894,6 +901,8 @@ components:
         - daysSinceRecited
         - daysUntilDue
         - status
+        - effectiveQuality
+        - qualityDowngrades
 
     RenamePageBody:
       type: object

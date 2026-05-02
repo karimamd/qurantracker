@@ -35,6 +35,7 @@ export * from "./mistakeMistakeType";
 export * from "./mistakesResponse";
 export * from "./mistakesSummary";
 export * from "./pageProgress";
+export * from "./pageProgressEffectiveQuality";
 export * from "./pageProgressQuality";
 export * from "./pageProgressStatus";
 export * from "./progressChartEntry";

@@ -85,7 +85,14 @@
     "excellentShort": "ممتاز",
     "goodShort": "جيّد",
     "hardShort": "صعب",
-    "relearnShort": "إعادة"
+    "relearnShort": "إعادة",
+    "downgradedTooltip": "تم تخفيض التقييم تلقائيًا من {{original}} إلى {{effective}} بعد تأخّر {{weeks}} أسابيع. تقييمك المحفوظ لم يتغيّر.",
+    "downgradedAria_zero": "لم يحدث تخفيض",
+    "downgradedAria_one": "تم تخفيض درجة واحدة من {{original}}",
+    "downgradedAria_two": "تم تخفيض درجتين من {{original}}",
+    "downgradedAria_few": "تم تخفيض {{count}} درجات من {{original}}",
+    "downgradedAria_many": "تم تخفيض {{count}} درجة من {{original}}",
+    "downgradedAria_other": "تم تخفيض {{count}} درجة من {{original}}"
   },
   "status": {
     "overdue": "متأخّر",

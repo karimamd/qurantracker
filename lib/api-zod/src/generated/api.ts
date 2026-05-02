@@ -149,6 +149,23 @@ export const GetJuzDetailResponse = zod.object({
         "not_started",
         "out_of_scope",
       ]),
+      effectiveQuality: zod
+        .union([
+          zod.literal("excellent"),
+          zod.literal("good"),
+          zod.literal("hard"),
+          zod.literal("relearn"),
+          zod.literal(null),
+        ])
+        .nullable()
+        .describe(
+          "Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.",
+        ),
+      qualityDowngrades: zod
+        .number()
+        .describe(
+          "Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn).",
+        ),
     }),
   ),
 });
@@ -250,6 +267,23 @@ export const GetSurahDetailResponse = zod.object({
         "not_started",
         "out_of_scope",
       ]),
+      effectiveQuality: zod
+        .union([
+          zod.literal("excellent"),
+          zod.literal("good"),
+          zod.literal("hard"),
+          zod.literal("relearn"),
+          zod.literal(null),
+        ])
+        .nullable()
+        .describe(
+          "Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.",
+        ),
+      qualityDowngrades: zod
+        .number()
+        .describe(
+          "Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn).",
+        ),
     }),
   ),
 });
@@ -303,6 +337,23 @@ export const ListPageProgressResponseItem = zod.object({
     "not_started",
     "out_of_scope",
   ]),
+  effectiveQuality: zod
+    .union([
+      zod.literal("excellent"),
+      zod.literal("good"),
+      zod.literal("hard"),
+      zod.literal("relearn"),
+      zod.literal(null),
+    ])
+    .nullable()
+    .describe(
+      "Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.",
+    ),
+  qualityDowngrades: zod
+    .number()
+    .describe(
+      "Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn).",
+    ),
 });
 export const ListPageProgressResponse = zod.array(ListPageProgressResponseItem);
 
@@ -375,6 +426,23 @@ export const UpdatePageProgressResponse = zod.object({
     "not_started",
     "out_of_scope",
   ]),
+  effectiveQuality: zod
+    .union([
+      zod.literal("excellent"),
+      zod.literal("good"),
+      zod.literal("hard"),
+      zod.literal("relearn"),
+      zod.literal(null),
+    ])
+    .nullable()
+    .describe(
+      "Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.",
+    ),
+  qualityDowngrades: zod
+    .number()
+    .describe(
+      "Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn).",
+    ),
 });
 
 /**
@@ -428,6 +496,23 @@ export const RenamePageResponse = zod.object({
     "not_started",
     "out_of_scope",
   ]),
+  effectiveQuality: zod
+    .union([
+      zod.literal("excellent"),
+      zod.literal("good"),
+      zod.literal("hard"),
+      zod.literal("relearn"),
+      zod.literal(null),
+    ])
+    .nullable()
+    .describe(
+      "Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.",
+    ),
+  qualityDowngrades: zod
+    .number()
+    .describe(
+      "Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn).",
+    ),
 });
 
 /**
@@ -477,6 +562,23 @@ export const RecordBatchRecitationResponseItem = zod.object({
     "not_started",
     "out_of_scope",
   ]),
+  effectiveQuality: zod
+    .union([
+      zod.literal("excellent"),
+      zod.literal("good"),
+      zod.literal("hard"),
+      zod.literal("relearn"),
+      zod.literal(null),
+    ])
+    .nullable()
+    .describe(
+      "Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.",
+    ),
+  qualityDowngrades: zod
+    .number()
+    .describe(
+      "Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn).",
+    ),
 });
 export const RecordBatchRecitationResponse = zod.array(
   RecordBatchRecitationResponseItem,
@@ -526,6 +628,23 @@ export const AddToScopeResponseItem = zod.object({
     "not_started",
     "out_of_scope",
   ]),
+  effectiveQuality: zod
+    .union([
+      zod.literal("excellent"),
+      zod.literal("good"),
+      zod.literal("hard"),
+      zod.literal("relearn"),
+      zod.literal(null),
+    ])
+    .nullable()
+    .describe(
+      "Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.",
+    ),
+  qualityDowngrades: zod
+    .number()
+    .describe(
+      "Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn).",
+    ),
 });
 export const AddToScopeResponse = zod.array(AddToScopeResponseItem);
 
@@ -573,6 +692,23 @@ export const RemoveFromScopeResponseItem = zod.object({
     "not_started",
     "out_of_scope",
   ]),
+  effectiveQuality: zod
+    .union([
+      zod.literal("excellent"),
+      zod.literal("good"),
+      zod.literal("hard"),
+      zod.literal("relearn"),
+      zod.literal(null),
+    ])
+    .nullable()
+    .describe(
+      "Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.",
+    ),
+  qualityDowngrades: zod
+    .number()
+    .describe(
+      "Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn).",
+    ),
 });
 export const RemoveFromScopeResponse = zod.array(RemoveFromScopeResponseItem);
 
@@ -842,4 +978,21 @@ export const UndoRecitationResponse = zod.object({
     "not_started",
     "out_of_scope",
   ]),
+  effectiveQuality: zod
+    .union([
+      zod.literal("excellent"),
+      zod.literal("good"),
+      zod.literal("hard"),
+      zod.literal("relearn"),
+      zod.literal(null),
+    ])
+    .nullable()
+    .describe(
+      "Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.",
+    ),
+  qualityDowngrades: zod
+    .number()
+    .describe(
+      "Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn).",
+    ),
 });

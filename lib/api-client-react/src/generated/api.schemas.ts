@@ -119,6 +119,21 @@ export const PageProgressStatus = {
   out_of_scope: "out_of_scope",
 } as const;
 
+/**
+ * Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.
+ * @nullable
+ */
+export type PageProgressEffectiveQuality =
+  | (typeof PageProgressEffectiveQuality)[keyof typeof PageProgressEffectiveQuality]
+  | null;
+
+export const PageProgressEffectiveQuality = {
+  excellent: "excellent",
+  good: "good",
+  hard: "hard",
+  relearn: "relearn",
+} as const;
+
 export interface PageProgress {
   pageNumber: number;
   /** Display name (customName if set, otherwise defaultName) */
@@ -147,6 +162,13 @@ export interface PageProgress {
   /** @nullable */
   daysUntilDue: number | null;
   status: PageProgressStatus;
+  /**
+   * Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.
+   * @nullable
+   */
+  effectiveQuality: PageProgressEffectiveQuality;
+  /** Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn). */
+  qualityDowngrades: number;
 }
 
 export interface JuzDetail {

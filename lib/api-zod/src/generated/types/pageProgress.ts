@@ -5,6 +5,7 @@
  * Quran Memorization Tracker API
  * OpenAPI spec version: 0.1.0
  */
+import type { PageProgressEffectiveQuality } from "./pageProgressEffectiveQuality";
 import type { PageProgressQuality } from "./pageProgressQuality";
 import type { PageProgressStatus } from "./pageProgressStatus";
 
@@ -36,4 +37,11 @@ export interface PageProgress {
   /** @nullable */
   daysUntilDue: number | null;
   status: PageProgressStatus;
+  /**
+   * Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.
+   * @nullable
+   */
+  effectiveQuality: PageProgressEffectiveQuality;
+  /** Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn). */
+  qualityDowngrades: number;
 }

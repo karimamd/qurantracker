@@ -72,6 +72,8 @@ export default function SurahDetail() {
                 pageNumber={page.pageNumber}
                 customName={page.customName}
                 quality={page.quality}
+                effectiveQuality={page.effectiveQuality}
+                qualityDowngrades={page.qualityDowngrades}
                 status={page.status}
                 inScope={page.inScope}
                 lastRecited={page.lastRecited}

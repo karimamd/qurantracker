@@ -85,7 +85,10 @@
     "excellentShort": "Exc",
     "goodShort": "Good",
     "hardShort": "Hard",
-    "relearnShort": "Re"
+    "relearnShort": "Re",
+    "downgradedTooltip": "Auto-downgraded from {{original}} to {{effective}} after {{weeks}} weeks overdue. Your saved rating is unchanged.",
+    "downgradedAria_one": "Auto-downgraded one level from {{original}}",
+    "downgradedAria_other": "Auto-downgraded {{count}} levels from {{original}}"
   },
   "status": {
     "overdue": "Overdue",

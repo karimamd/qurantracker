@@ -265,7 +265,7 @@ function DuePagesSection() {
                     <div className="text-xs text-muted-foreground truncate">{page.surahs.split(",")[0]}</div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <QualityBadge quality={page.quality} />
+                    <QualityBadge quality={page.quality} effectiveQuality={page.effectiveQuality} qualityDowngrades={page.qualityDowngrades} />
                     {daysLabel && (
                       <span className={`text-xs font-medium ${isOverdue ? "text-rose-600" : "text-amber-600"}`}>
                         {daysLabel}

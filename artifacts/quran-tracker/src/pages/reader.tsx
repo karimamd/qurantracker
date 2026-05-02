@@ -493,7 +493,7 @@ export default function Reader() {
             {pagesLoading ? (
               <Skeleton className="h-5 w-16 rounded" />
             ) : currentPage?.quality ? (
-              <QualityBadge quality={currentPage.quality} />
+              <QualityBadge quality={currentPage.quality} effectiveQuality={currentPage.effectiveQuality} qualityDowngrades={currentPage.qualityDowngrades} />
             ) : null}
             {currentPage && <StatusBadge status={currentPage.status} />}
           </div>

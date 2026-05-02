@@ -206,6 +206,8 @@ router.get("/progress/juz/:juzNumber", async (req, res): Promise<void> => {
         daysSinceRecited: null,
         daysUntilDue: null,
         status: "out_of_scope",
+        effectiveQuality: null,
+        qualityDowngrades: 0,
       });
     }
   }
@@ -330,6 +332,8 @@ router.get("/progress/surah/:surahNumber", async (req, res): Promise<void> => {
         daysSinceRecited: null,
         daysUntilDue: null,
         status: "out_of_scope",
+        effectiveQuality: null,
+        qualityDowngrades: 0,
       });
     }
   }
@@ -379,6 +383,8 @@ router.get("/progress/pages", async (req, res): Promise<void> => {
       daysSinceRecited: null,
       daysUntilDue: null,
       status: "out_of_scope" as const,
+      effectiveQuality: null,
+      qualityDowngrades: 0,
     };
   });
 

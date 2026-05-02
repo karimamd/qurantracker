@@ -284,7 +284,7 @@ export default function PageList() {
                         ))}
                       </div>
                     </div>
-                    <div>{page.quality ? <QualityBadge quality={page.quality} /> : <span className="text-xs text-muted-foreground">—</span>}</div>
+                    <div>{page.quality ? <QualityBadge quality={page.quality} effectiveQuality={page.effectiveQuality} qualityDowngrades={page.qualityDowngrades} /> : <span className="text-xs text-muted-foreground">—</span>}</div>
                     <div><StatusBadge status={page.status} /></div>
                     <span className="text-xs text-muted-foreground">{formatDate(page.lastRecited)}</span>
                     <span className="text-xs text-muted-foreground">{formatDate(page.dueDate)}</span>
@@ -320,7 +320,7 @@ export default function PageList() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      {page.quality ? <QualityBadge quality={page.quality} /> : null}
+                      {page.quality ? <QualityBadge quality={page.quality} effectiveQuality={page.effectiveQuality} qualityDowngrades={page.qualityDowngrades} /> : null}
                       <span className={`text-xs font-medium ${
                         page.daysUntilDue !== null && page.daysUntilDue < 0
                           ? "text-rose-600"
