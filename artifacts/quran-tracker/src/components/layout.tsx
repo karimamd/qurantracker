@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, BookOpen, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info } from "lucide-react";
+import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info } from "lucide-react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { UserButton, useUser, useClerk, useAuth } from "@clerk/react";
@@ -9,6 +9,7 @@ import { isGuestMode, exitGuestMode } from "@/lib/guest-mode";
 const navItems = [
   { href: "/homework", label: "Homework", icon: ClipboardList },
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/reader", label: "Reader", icon: BookMarked },
   { href: "/juz", label: "Juz", icon: Layers },
   { href: "/rub", label: "Rub'", icon: Grid3x3 },
   { href: "/surah", label: "Surah", icon: BookOpen },
@@ -20,9 +21,9 @@ const navItems = [
 const bottomNavItems = [
   { href: "/homework", label: "Homework", icon: ClipboardList },
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/reader", label: "Reader", icon: BookMarked },
   { href: "/juz", label: "Juz", icon: Layers },
   { href: "/rub", label: "Rub'", icon: Grid3x3 },
-  { href: "/pages", label: "Pages", icon: FileText },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {

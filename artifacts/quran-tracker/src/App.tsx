@@ -13,6 +13,7 @@ import Dashboard from "@/pages/dashboard";
 import JuzList from "@/pages/juz-list";
 import JuzDetail from "@/pages/juz-detail";
 import Rob3List from "@/pages/rob3-list";
+import Reader from "@/pages/reader";
 import SurahList from "@/pages/surah-list";
 import SurahDetail from "@/pages/surah-detail";
 import PageList from "@/pages/page-list";
@@ -200,6 +201,8 @@ function ProtectedApp() {
           <Route path="/surah" component={SurahList} />
           <Route path="/surah/:id" component={SurahDetail} />
           <Route path="/pages" component={PageList} />
+          <Route path="/reader" component={Reader} />
+          <Route path="/reader/:page" component={Reader} />
           <Route path="/recite" component={Recite} />
           <Route path="/homework" component={HomeworkList} />
           <Route path="/homework/:id" component={HomeworkDetail} />
