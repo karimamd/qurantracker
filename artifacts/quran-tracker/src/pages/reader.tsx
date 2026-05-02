@@ -481,7 +481,7 @@ export default function Reader() {
             </div>
           </div>
         )}
-        <div className="bg-stone-50 dark:bg-stone-900/40 min-h-[60vh] p-4 sm:p-8">
+        <div className="bg-[#f4ecd8] text-stone-900 dark:bg-stone-900/60 dark:text-stone-100 min-h-[60vh] p-4 sm:p-8">
           {ayahsLoading ? (
             <div className="space-y-3" data-testid="reader-loading">
               <Skeleton className="h-6 w-1/2 mx-auto" />
@@ -511,7 +511,7 @@ export default function Reader() {
               {groupedAyahs.map((group, idx) => (
                 <div key={`${group.surahNumber}-${idx}`} className="space-y-3">
                   {group.isFirstAyah && (
-                    <div className="text-center py-2 border-y border-stone-300/60 dark:border-stone-700/60 bg-stone-100/60 dark:bg-stone-800/30 rounded">
+                    <div className="text-center py-2 border-y border-stone-400/40 dark:border-stone-700/60 bg-[#ead9b5]/60 dark:bg-stone-800/30 rounded">
                       <div className="font-serif text-lg" dir="rtl" lang="ar">
                         سورة {SURAHS.find(s => s.number === group.surahNumber)?.arabic ?? group.surahName}
                       </div>
