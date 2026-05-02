@@ -58,6 +58,17 @@ All user-facing tables include a nullable `user_id` column scoped to the Clerk s
 - An `ErrorBoundary` (`src/components/error-boundary.tsx`) wraps both the outer Switch (catches Layout/auth errors) and the inner Switch (catches per-page render errors). Stack details are gated to `import.meta.env.DEV` so production users see only a friendly recovery screen.
 - Orphan claim: on first authenticated request after server boot, any rows with `user_id IS NULL` (pre-auth dev data) are reassigned to that user. One-shot per process — see `requireAuth.ts` for the rationale.
 
+## Undo Recitation
+
+- Each row in the dashboard's "Recent Activity" card has an undo icon (`undo-activity-{id}`). Clicking opens a confirmation dialog (`undo-confirm-dialog`).
+- Confirming calls `DELETE /api/progress/activity/{id}` (`useUndoRecitation`) which:
+  1. Acquires a `SELECT ... FOR UPDATE` lock on the affected `page_progress` row in a transaction (serializes concurrent undos / undo-vs-new-recitation races for the same page).
+  2. Deletes the `recitation_log` row.
+  3. Recomputes `last_recited`, `due_date`, `quality`, `mistakes` on `page_progress` from the most-recent remaining log for that page (or clears them if none remain). `in_scope` is preserved.
+  4. Recomputes `homework_items.completed` for that page across all active homework sessions (positive remaining log → completed; otherwise → not completed). Mirrors `/recite-batch`'s derivation.
+- Due-date policy: undo uses the user's *current* settings to recompute, so the restored due-date may differ from what it was when the prior log was first written. This matches how new recitations are dated.
+- Client invalidates: `getRecentActivity`, `getProgressOverview`, `listPageProgress`, `listJuzProgress`, `listSurahProgress`, daily/progress charts, plus a predicate-based invalidation matching any open juz/surah detail key.
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages

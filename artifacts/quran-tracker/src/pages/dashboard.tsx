@@ -6,14 +6,33 @@ import {
   useGetProgressChart,
   useListHomework,
   useUpdatePageProgress,
+  useUndoRecitation,
   getListPageProgressQueryKey,
   getGetProgressOverviewQueryKey,
+  getGetRecentActivityQueryKey,
+  getListJuzProgressQueryKey,
+  getListSurahProgressQueryKey,
+  getGetJuzDetailQueryKey,
+  getGetSurahDetailQueryKey,
+  getGetDailyChartQueryKey,
+  getGetProgressChartQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QualityBadge } from "@/components/quality-badge";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight } from "lucide-react";
+import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight, Undo2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 import {
   BarChart,
   Bar,
@@ -386,9 +405,129 @@ function ProgressChartSection() {
   );
 }
 
+function RecentActivitySection() {
+  const { data: activity, isLoading: activityLoading } = useGetRecentActivity({ limit: 10 });
+  const undo = useUndoRecitation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [pendingUndo, setPendingUndo] = useState<{ id: number; pageNumber: number; quality: string } | null>(null);
+
+  const handleConfirm = () => {
+    if (!pendingUndo) return;
+    const { id, pageNumber } = pendingUndo;
+    undo.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          setPendingUndo(null);
+          toast({ title: "Recitation undone", description: `Page ${pageNumber} progress restored.` });
+          queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListJuzProgressQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListSurahProgressQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetDailyChartQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetProgressChartQueryKey() });
+          // Detail keys are per-id (e.g. ["/api/progress/juz/3"]). Use a predicate
+          // to invalidate any open juz/surah detail — we don't know which one the
+          // page belongs to without duplicating server logic on the client.
+          queryClient.invalidateQueries({
+            predicate: (q) => {
+              const k = q.queryKey[0];
+              return typeof k === "string" && (k.startsWith("/api/progress/juz/") || k.startsWith("/api/progress/surah/"));
+            },
+          });
+        },
+        onError: () => {
+          toast({ title: "Failed to undo", variant: "destructive" });
+          setPendingUndo(null);
+        },
+      },
+    );
+  };
+
+  return (
+    <Card className="border shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Recent Activity</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {activityLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10" />)}
+          </div>
+        ) : activity && activity.length > 0 ? (
+          <div className="space-y-2">
+            {activity.map(entry => (
+              <div
+                key={entry.id}
+                className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                data-testid={`activity-${entry.id}`}
+              >
+                <div className="min-w-0 flex-1">
+                  <PageLabel
+                    pageNumber={entry.pageNumber}
+                    customName={null}
+                    showEdit={false}
+                    prefixClassName="text-sm font-medium"
+                    nameClassName="text-sm"
+                  />
+                  <div className="text-xs text-muted-foreground truncate">{entry.surahName}</div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <QualityBadge quality={entry.quality} />
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
+                    {new Date(entry.recitedAt).toLocaleDateString()}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPendingUndo({ id: entry.id, pageNumber: entry.pageNumber, quality: entry.quality })}
+                    disabled={undo.isPending}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    aria-label={`Undo recitation of page ${entry.pageNumber}`}
+                    title="Undo this recitation"
+                    data-testid={`undo-activity-${entry.id}`}
+                  >
+                    <Undo2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-4">No recitations yet.</p>
+        )}
+
+        <AlertDialog open={pendingUndo !== null} onOpenChange={(open) => { if (!open) setPendingUndo(null); }}>
+          <AlertDialogContent data-testid="undo-confirm-dialog">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Undo this recitation?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {pendingUndo
+                  ? `This removes the "${pendingUndo.quality}" rating logged for page ${pendingUndo.pageNumber} and recomputes the page's last-recited date and due date from your remaining history. This cannot be undone.`
+                  : ""}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="undo-cancel">Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirm}
+                disabled={undo.isPending}
+                data-testid="undo-confirm"
+                className="bg-rose-600 hover:bg-rose-700 focus:ring-rose-600"
+              >
+                {undo.isPending ? "Undoing..." : "Undo"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Dashboard() {
   const { data: overview, isLoading: overviewLoading } = useGetProgressOverview();
-  const { data: activity, isLoading: activityLoading } = useGetRecentActivity({ limit: 10 });
 
   if (overviewLoading) {
     return (
@@ -484,43 +623,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {activityLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10" />)}
-              </div>
-            ) : activity && activity.length > 0 ? (
-              <div className="space-y-2">
-                {activity.map(entry => (
-                  <div key={entry.id} className="flex items-center justify-between py-2 border-b border-border last:border-0" data-testid={`activity-${entry.id}`}>
-                    <div>
-                      <PageLabel
-                        pageNumber={entry.pageNumber}
-                        customName={null}
-                        showEdit={false}
-                        prefixClassName="text-sm font-medium"
-                        nameClassName="text-sm"
-                      />
-                      <div className="text-xs text-muted-foreground">{entry.surahName}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <QualityBadge quality={entry.quality} />
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(entry.recitedAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">No recitations yet.</p>
-            )}
-          </CardContent>
-        </Card>
+        <RecentActivitySection />
       </div>
     </div>
   );

@@ -23,6 +23,8 @@ import {
   RemoveFromScopeResponse,
   GetRecentActivityQueryParams,
   GetRecentActivityResponse,
+  UndoRecitationParams,
+  UndoRecitationResponse,
   GetDailyChartQueryParams,
   GetDailyChartResponse,
   GetProgressChartQueryParams,
@@ -695,6 +697,140 @@ router.get("/progress/activity", async (req, res): Promise<void> => {
   }));
 
   res.json(GetRecentActivityResponse.parse(activity));
+});
+
+router.delete("/progress/activity/:id", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const params = UndoRecitationParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  // Look up + ensure the page row exists outside the txn (ensurePageExists is
+  // a separate read/insert path that we don't want to entangle in the lock).
+  const [preLog] = await db
+    .select()
+    .from(recitationLogTable)
+    .where(and(eq(recitationLogTable.id, params.data.id), eq(recitationLogTable.userId, userId)));
+  if (!preLog) {
+    res.status(404).json({ error: "Activity entry not found" });
+    return;
+  }
+  await ensurePageExists(userId, preLog.pageNumber);
+
+  // Recompute due-date policy: undo uses the user's CURRENT settings (matches
+  // how new recitations are dated), so the restored due_date may differ from
+  // the value it had when the prior log was first recorded.
+  const settings = await getSettings(userId);
+
+  const updated = await db.transaction(async (tx) => {
+    // Lock the page_progress row to serialize concurrent writes for this page
+    // (e.g. two simultaneous undos, or undo racing with a new recitation).
+    const [lockedPage] = await tx
+      .select()
+      .from(pageProgressTable)
+      .where(and(
+        eq(pageProgressTable.userId, userId),
+        eq(pageProgressTable.pageNumber, preLog.pageNumber),
+      ))
+      .for("update");
+
+    // Re-read the log inside the txn — it could have been deleted by a racing
+    // request between the pre-check and the lock acquisition.
+    const [logEntry] = await tx
+      .select()
+      .from(recitationLogTable)
+      .where(and(eq(recitationLogTable.id, params.data.id), eq(recitationLogTable.userId, userId)));
+    if (!logEntry || !lockedPage) {
+      return null;
+    }
+
+    await tx
+      .delete(recitationLogTable)
+      .where(and(eq(recitationLogTable.id, params.data.id), eq(recitationLogTable.userId, userId)));
+
+    const pageNumber = logEntry.pageNumber;
+
+    const [mostRecent] = await tx
+      .select()
+      .from(recitationLogTable)
+      .where(and(eq(recitationLogTable.userId, userId), eq(recitationLogTable.pageNumber, pageNumber)))
+      .orderBy(desc(recitationLogTable.recitedAt))
+      .limit(1);
+
+    let nextPage;
+    if (mostRecent) {
+      const dueDate = calculateDueDate(mostRecent.recitedAt, mostRecent.quality, settings);
+      [nextPage] = await tx
+        .update(pageProgressTable)
+        .set({
+          quality: mostRecent.quality,
+          mistakes: mostRecent.mistakes ?? null,
+          lastRecited: mostRecent.recitedAt,
+          dueDate,
+        })
+        .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)))
+        .returning();
+    } else {
+      [nextPage] = await tx
+        .update(pageProgressTable)
+        .set({
+          quality: null,
+          mistakes: null,
+          lastRecited: null,
+          dueDate: null,
+        })
+        .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)))
+        .returning();
+    }
+
+    // Recompute homework_items completion for this page across active homework
+    // sessions (sessions whose due-date has not passed). recite-batch sets
+    // completed=true when the latest log is "good"/"excellent", so undo should
+    // mirror that derivation from the new most-recent remaining log.
+    const now = new Date();
+    const activeSessions = await tx
+      .select({ id: homeworkSessionsTable.id })
+      .from(homeworkSessionsTable)
+      .where(and(
+        eq(homeworkSessionsTable.userId, userId),
+        gte(homeworkSessionsTable.dueDate, now),
+      ));
+    const activeSessionIds = activeSessions.map(s => s.id);
+
+    if (activeSessionIds.length > 0) {
+      const isPositive = mostRecent && (mostRecent.quality === "good" || mostRecent.quality === "excellent");
+      if (isPositive) {
+        await tx
+          .update(homeworkItemsTable)
+          .set({ completed: true, quality: mostRecent.quality, completedAt: mostRecent.recitedAt })
+          .where(and(
+            eq(homeworkItemsTable.userId, userId),
+            inArray(homeworkItemsTable.homeworkId, activeSessionIds),
+            eq(homeworkItemsTable.pageNumber, pageNumber),
+          ));
+      } else {
+        await tx
+          .update(homeworkItemsTable)
+          .set({ completed: false, quality: null, completedAt: null })
+          .where(and(
+            eq(homeworkItemsTable.userId, userId),
+            inArray(homeworkItemsTable.homeworkId, activeSessionIds),
+            eq(homeworkItemsTable.pageNumber, pageNumber),
+          ));
+      }
+    }
+
+    return nextPage;
+  });
+
+  if (!updated) {
+    res.status(404).json({ error: "Activity entry not found" });
+    return;
+  }
+
+  res.json(UndoRecitationResponse.parse(enrichPageProgress(updated)));
 });
 
 function getMostCommonQuality(qualities: string[]): string {

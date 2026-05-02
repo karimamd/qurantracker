@@ -479,6 +479,27 @@ paths:
                 items:
                   $ref: "#/components/schemas/ActivityEntry"
 
+  /progress/activity/{id}:
+    delete:
+      operationId: undoRecitation
+      tags: [progress]
+      summary: Undo a recitation by deleting its log entry and recomputing the page's progress from the remaining log history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recomputed page progress for the affected page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageProgress"
+        "404":
+          description: Activity entry not found
+
 components:
   schemas:
     HealthStatus:

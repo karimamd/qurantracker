@@ -721,3 +721,49 @@ export const GetRecentActivityResponseItem = zod.object({
 export const GetRecentActivityResponse = zod.array(
   GetRecentActivityResponseItem,
 );
+
+/**
+ * @summary Undo a recitation by deleting its log entry and recomputing the page's progress from the remaining log history
+ */
+export const UndoRecitationParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UndoRecitationResponse = zod.object({
+  pageNumber: zod.number(),
+  name: zod
+    .string()
+    .describe("Display name (customName if set, otherwise defaultName)"),
+  defaultName: zod
+    .string()
+    .describe("First 6 words of the ayah this page begins with"),
+  customName: zod
+    .string()
+    .nullable()
+    .describe("User-set custom name overriding defaultName"),
+  juzNumber: zod.number(),
+  rob3Number: zod.number(),
+  surahs: zod.string(),
+  inScope: zod.boolean(),
+  quality: zod
+    .union([
+      zod.literal("excellent"),
+      zod.literal("good"),
+      zod.literal("hard"),
+      zod.literal("relearn"),
+      zod.literal(null),
+    ])
+    .nullable(),
+  mistakes: zod.number().nullable(),
+  lastRecited: zod.coerce.date().nullable(),
+  dueDate: zod.coerce.date().nullable(),
+  daysSinceRecited: zod.number().nullable(),
+  daysUntilDue: zod.number().nullable(),
+  status: zod.enum([
+    "overdue",
+    "due_soon",
+    "on_track",
+    "not_started",
+    "out_of_scope",
+  ]),
+});

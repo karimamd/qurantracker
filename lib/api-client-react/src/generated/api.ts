@@ -2038,3 +2038,87 @@ export function useGetRecentActivity<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Undo a recitation by deleting its log entry and recomputing the page's progress from the remaining log history
+ */
+export const getUndoRecitationUrl = (id: number) => {
+  return `/api/progress/activity/${id}`;
+};
+
+export const undoRecitation = async (
+  id: number,
+  options?: RequestInit,
+): Promise<PageProgress> => {
+  return customFetch<PageProgress>(getUndoRecitationUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getUndoRecitationMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof undoRecitation>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof undoRecitation>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["undoRecitation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof undoRecitation>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return undoRecitation(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UndoRecitationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof undoRecitation>>
+>;
+
+export type UndoRecitationMutationError = ErrorType<void>;
+
+/**
+ * @summary Undo a recitation by deleting its log entry and recomputing the page's progress from the remaining log history
+ */
+export const useUndoRecitation = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof undoRecitation>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof undoRecitation>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getUndoRecitationMutationOptions(options));
+};
