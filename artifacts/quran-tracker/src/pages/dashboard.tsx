@@ -289,7 +289,7 @@ function ProgressChartSection() {
     shortLabel: format(parseISO(d.date), "d"),
   })) ?? [];
 
-  const hasAny = formatted.some(d => d.overdueCount > 0 || d.uniqueRecitedCount > 0);
+  const hasAny = formatted.some(d => d.overdueCount > 0 || d.dailyRecitedCount > 0);
 
   return (
     <Card className="border shadow-sm" data-testid="progress-chart-section">
@@ -346,8 +346,8 @@ function ProgressChartSection() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-primary" />
-                        <span className="text-muted-foreground">Unique recited:</span>
-                        <span className="font-medium">{d.uniqueRecitedCount}</span>
+                        <span className="text-muted-foreground">Recited that day:</span>
+                        <span className="font-medium">{d.dailyRecitedCount}</span>
                       </div>
                     </div>
                   );
@@ -371,8 +371,8 @@ function ProgressChartSection() {
               <Line
                 yAxisId="right"
                 type="monotone"
-                dataKey="uniqueRecitedCount"
-                name="Unique pages recited"
+                dataKey="dailyRecitedCount"
+                name="Pages recited that day"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 dot={false}

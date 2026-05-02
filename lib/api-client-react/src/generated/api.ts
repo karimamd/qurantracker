@@ -1846,7 +1846,7 @@ export function useGetDailyChart<
 }
 
 /**
- * @summary Historical overdue count and cumulative unique recited pages over the last N days
+ * @summary Per-day overdue count (state of day) and distinct pages recited that day, over the last N days
  */
 export const getGetProgressChartUrl = (params?: GetProgressChartParams) => {
   const normalizedParams = new URLSearchParams();
@@ -1916,7 +1916,7 @@ export type GetProgressChartQueryResult = NonNullable<
 export type GetProgressChartQueryError = ErrorType<unknown>;
 
 /**
- * @summary Historical overdue count and cumulative unique recited pages over the last N days
+ * @summary Per-day overdue count (state of day) and distinct pages recited that day, over the last N days
  */
 
 export function useGetProgressChart<

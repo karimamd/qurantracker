@@ -30,7 +30,7 @@ A personal Quran memorization progress tracker. Tracks revision across multiple 
 - **Streak counter**: Track consecutive days of revision
 - **Due pages dashboard section**: Pages requiring attention (overdue + due soon) sorted by due date, shown above the chart
 - **Daily recitation chart**: Bar chart of distinct pages recited per day over the last 30 days
-- **Progress over time chart**: Dual y-axis line chart showing historical overdue counts and cumulative unique pages recited
+- **Progress over time chart**: Dual y-axis line chart showing per-day overdue count (state at end of day) and distinct pages recited that day (per-day, not cumulative) — surfaces daily momentum needed to reduce overdue
 - **Quick-rate quality buttons**: Reusable `PageQualityButtons` component (Excellent/Good/Hard/Relearn) used in the Pages list view, Juz detail tiles, and Surah detail tiles
 - **Surah drill-down**: `/surah/:id` route shows per-page tiles for the selected surah with quick-rate buttons
 

@@ -628,23 +628,29 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
     .where(eq(recitationLogTable.userId, userId))
     .orderBy(recitationLogTable.recitedAt);
 
-  const result: { date: string; overdueCount: number; uniqueRecitedCount: number }[] = [];
+  const result: { date: string; overdueCount: number; dailyRecitedCount: number }[] = [];
   let logIdx = 0;
   const latestPerPage = new Map<number, { quality: string; recitedAt: Date }>();
 
   for (let i = numDays - 1; i >= 0; i--) {
     const day = new Date(today);
     day.setDate(day.getDate() - i);
+    const startOfDay = new Date(day);
+    startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(day);
     endOfDay.setHours(23, 59, 59, 999);
 
+    const recitedToday = new Set<number>();
     while (logIdx < allLogs.length && allLogs[logIdx].recitedAt <= endOfDay) {
       const log = allLogs[logIdx];
       latestPerPage.set(log.pageNumber, { quality: log.quality, recitedAt: log.recitedAt });
+      if (log.recitedAt >= startOfDay) {
+        recitedToday.add(log.pageNumber);
+      }
       logIdx++;
     }
 
-    const uniqueRecitedCount = latestPerPage.size;
+    const dailyRecitedCount = recitedToday.size;
 
     let overdueCount = 0;
     for (const [pageNumber, info] of latestPerPage) {
@@ -659,7 +665,7 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
     result.push({
       date: `${yyyy}-${mm}-${dd}`,
       overdueCount,
-      uniqueRecitedCount,
+      dailyRecitedCount,
     });
   }
 

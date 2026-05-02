@@ -194,8 +194,8 @@ export interface ProgressChartEntry {
   date: string;
   /** Number of in-scope pages that were overdue at the end of this day */
   overdueCount: number;
-  /** Cumulative count of distinct pages with at least one recitation on or before this day */
-  uniqueRecitedCount: number;
+  /** Number of distinct pages recited on this day */
+  dailyRecitedCount: number;
 }
 
 export interface SurahDetail {

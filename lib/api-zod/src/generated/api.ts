@@ -679,7 +679,7 @@ export const GetDailyChartResponseItem = zod.object({
 export const GetDailyChartResponse = zod.array(GetDailyChartResponseItem);
 
 /**
- * @summary Historical overdue count and cumulative unique recited pages over the last N days
+ * @summary Per-day overdue count (state of day) and distinct pages recited that day, over the last N days
  */
 export const getProgressChartQueryDaysDefault = 30;
 
@@ -694,11 +694,9 @@ export const GetProgressChartResponseItem = zod.object({
     .describe(
       "Number of in-scope pages that were overdue at the end of this day",
     ),
-  uniqueRecitedCount: zod
+  dailyRecitedCount: zod
     .number()
-    .describe(
-      "Cumulative count of distinct pages with at least one recitation on or before this day",
-    ),
+    .describe("Number of distinct pages recited on this day"),
 });
 export const GetProgressChartResponse = zod.array(GetProgressChartResponseItem);
 

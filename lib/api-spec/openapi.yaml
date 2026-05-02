@@ -439,7 +439,7 @@ paths:
     get:
       operationId: getProgressChart
       tags: [progress]
-      summary: Historical overdue count and cumulative unique recited pages over the last N days
+      summary: Per-day overdue count (state of day) and distinct pages recited that day, over the last N days
       parameters:
         - name: days
           in: query
@@ -816,13 +816,13 @@ components:
         overdueCount:
           type: integer
           description: Number of in-scope pages that were overdue at the end of this day
-        uniqueRecitedCount:
+        dailyRecitedCount:
           type: integer
-          description: Cumulative count of distinct pages with at least one recitation on or before this day
+          description: Number of distinct pages recited on this day
       required:
         - date
         - overdueCount
-        - uniqueRecitedCount
+        - dailyRecitedCount
 
     SurahDetail:
       type: object
