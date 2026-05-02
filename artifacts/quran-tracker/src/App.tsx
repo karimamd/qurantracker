@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout";
+import { ErrorBoundary } from "@/components/error-boundary";
 import Dashboard from "@/pages/dashboard";
 import JuzList from "@/pages/juz-list";
 import JuzDetail from "@/pages/juz-detail";
@@ -171,19 +172,21 @@ function ProtectedApp() {
   if (!isSignedIn) return <Redirect to="/" />;
   return (
     <Layout>
-      <Switch>
-        <Route path="/dashboard" component={Dashboard} />
-        <Route path="/juz" component={JuzList} />
-        <Route path="/juz/:id" component={JuzDetail} />
-        <Route path="/surah" component={SurahList} />
-        <Route path="/surah/:id" component={SurahDetail} />
-        <Route path="/pages" component={PageList} />
-        <Route path="/recite" component={Recite} />
-        <Route path="/homework" component={HomeworkList} />
-        <Route path="/homework/:id" component={HomeworkDetail} />
-        <Route path="/settings" component={SettingsPage} />
-        <Route component={NotFound} />
-      </Switch>
+      <ErrorBoundary>
+        <Switch>
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/juz" component={JuzList} />
+          <Route path="/juz/:id" component={JuzDetail} />
+          <Route path="/surah" component={SurahList} />
+          <Route path="/surah/:id" component={SurahDetail} />
+          <Route path="/pages" component={PageList} />
+          <Route path="/recite" component={Recite} />
+          <Route path="/homework" component={HomeworkList} />
+          <Route path="/homework/:id" component={HomeworkDetail} />
+          <Route path="/settings" component={SettingsPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </ErrorBoundary>
     </Layout>
   );
 }
@@ -237,12 +240,14 @@ function ClerkProviderWithRoutes() {
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
         <TooltipProvider>
-          <Switch>
-            <Route path="/" component={HomeRedirect} />
-            <Route path="/sign-in/*?" component={SignInPage} />
-            <Route path="/sign-up/*?" component={SignUpPage} />
-            <Route path="/:rest*" component={ProtectedApp} />
-          </Switch>
+          <ErrorBoundary>
+            <Switch>
+              <Route path="/" component={HomeRedirect} />
+              <Route path="/sign-in/*?" component={SignInPage} />
+              <Route path="/sign-up/*?" component={SignUpPage} />
+              <Route path="/:rest*" component={ProtectedApp} />
+            </Switch>
+          </ErrorBoundary>
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
