@@ -603,14 +603,26 @@ export default function Reader() {
               {groupedAyahs.map((group, idx) => (
                 <div key={`${group.surahNumber}-${idx}`} className="space-y-3">
                   {group.isFirstAyah && (
-                    <div className="text-center py-2 border-y border-stone-400/40 dark:border-stone-700/60 bg-[#ead9b5]/60 dark:bg-stone-800/30 rounded">
-                      <div className="font-serif text-lg" dir="rtl" lang="ar">
-                        سورة {SURAHS.find(s => s.number === group.surahNumber)?.arabic ?? group.surahName}
+                    <>
+                      <div className="text-center py-2 border-y border-stone-400/40 dark:border-stone-700/60 bg-[#ead9b5]/60 dark:bg-stone-800/30 rounded">
+                        <div className="font-serif text-lg" dir="rtl" lang="ar">
+                          سورة {SURAHS.find(s => s.number === group.surahNumber)?.arabic ?? group.surahName}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5" dir="ltr">
+                          {group.surahName} · Surah {group.surahNumber}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5" dir="ltr">
-                        {group.surahName} · Surah {group.surahNumber}
-                      </div>
-                    </div>
+                      {group.surahNumber !== 1 && group.surahNumber !== 9 && (
+                        <div
+                          className="text-center font-serif text-2xl sm:text-3xl py-2"
+                          dir="rtl"
+                          lang="ar"
+                          data-testid={`reader-bismillah-${group.surahNumber}`}
+                        >
+                          بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+                        </div>
+                      )}
+                    </>
                   )}
                   <p className="font-serif text-2xl sm:text-3xl leading-loose text-justify" style={{ wordSpacing: "0.1em" }}>
                     {group.ayahs.map((a, i) => {
