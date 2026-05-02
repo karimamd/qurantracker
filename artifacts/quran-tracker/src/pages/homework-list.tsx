@@ -7,11 +7,22 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Link } from "wouter";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronRight } from "lucide-react";
+import { SURAHS, ALL_ROB3S, ROB3S_PER_JUZ, JUZ_RANGES } from "@/lib/quran-ref";
+import { getDefaultPageName } from "@/lib/page-names";
 
 export default function HomeworkList() {
   const { data: sessions, isLoading } = useListHomework();
@@ -26,22 +37,31 @@ export default function HomeworkList() {
   const [memorizeRange, setMemorizeRange] = useState("");
   const [reviseRange, setReviseRange] = useState("");
 
+  const appendRange = (current: string, startPage: number, endPage: number): string => {
+    const fragment = startPage === endPage ? `${startPage}` : `${startPage}-${endPage}`;
+    const trimmed = current.trim();
+    if (!trimmed) return fragment;
+    return `${trimmed.replace(/,\s*$/, "")}, ${fragment}`;
+  };
+
   const parseRange = (rangeStr: string): number[] => {
     if (!rangeStr.trim()) return [];
-    const pages: number[] = [];
+    const seen = new Set<number>();
     const parts = rangeStr.split(",").map(p => p.trim());
     for (const part of parts) {
       if (part.includes("-")) {
         const [s, e] = part.split("-").map(n => parseInt(n.trim(), 10));
         if (!isNaN(s) && !isNaN(e)) {
-          for (let i = s; i <= e; i++) pages.push(i);
+          const lo = Math.min(s, e);
+          const hi = Math.max(s, e);
+          for (let i = lo; i <= hi; i++) seen.add(i);
         }
       } else {
         const n = parseInt(part, 10);
-        if (!isNaN(n)) pages.push(n);
+        if (!isNaN(n)) seen.add(n);
       }
     }
-    return pages;
+    return Array.from(seen).sort((a, b) => a - b);
   };
 
   const handleCreate = () => {
@@ -120,11 +140,19 @@ export default function HomeworkList() {
               <div>
                 <Label>Pages to Memorize</Label>
                 <Input value={memorizeRange} onChange={e => setMemorizeRange(e.target.value)} placeholder="e.g. 100-105, 110" data-testid="input-hw-memorize" />
-                <p className="text-xs text-muted-foreground mt-1">Use ranges (100-105) or comma-separated (100, 101, 105)</p>
+                <RangePickers
+                  testIdPrefix="memorize"
+                  onPick={(start, end) => setMemorizeRange(appendRange(memorizeRange, start, end))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Type ranges (100-105 or 100, 101, 105) or pick a Surah / Part above to append.</p>
               </div>
               <div>
                 <Label>Pages to Revise</Label>
                 <Input value={reviseRange} onChange={e => setReviseRange(e.target.value)} placeholder="e.g. 1-20" data-testid="input-hw-revise" />
+                <RangePickers
+                  testIdPrefix="revise"
+                  onPick={(start, end) => setReviseRange(appendRange(reviseRange, start, end))}
+                />
               </div>
               <Button onClick={handleCreate} disabled={createHomework.isPending} className="w-full" data-testid="btn-submit-homework">
                 {createHomework.isPending ? "Creating..." : "Create Session"}
@@ -186,6 +214,96 @@ export default function HomeworkList() {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+interface RangePickersProps {
+  testIdPrefix: string;
+  onPick: (startPage: number, endPage: number) => void;
+}
+
+function RangePickers({ testIdPrefix, onPick }: RangePickersProps) {
+  const [surahKey, setSurahKey] = useState(0);
+  const [partKey, setPartKey] = useState(0);
+
+  const handleSurah = (value: string) => {
+    const n = parseInt(value, 10);
+    const s = SURAHS.find(x => x.number === n);
+    if (s) onPick(s.startPage, s.endPage);
+    setSurahKey(k => k + 1);
+  };
+
+  const handlePart = (value: string) => {
+    const n = parseInt(value, 10);
+    const r = ALL_ROB3S.find(x => x.rob3 === n);
+    if (r) onPick(r.startPage, r.endPage);
+    setPartKey(k => k + 1);
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-2 mt-2" data-testid={`range-pickers-${testIdPrefix}`}>
+      <Select key={`surah-${surahKey}`} onValueChange={handleSurah}>
+        <SelectTrigger data-testid={`select-surah-${testIdPrefix}`}>
+          <SelectValue placeholder="Add Surah…" />
+        </SelectTrigger>
+        <SelectContent className="max-h-72">
+          {SURAHS.map(s => {
+            const range = s.startPage === s.endPage ? `p. ${s.startPage}` : `p. ${s.startPage}–${s.endPage}`;
+            return (
+              <SelectItem
+                key={s.number}
+                value={String(s.number)}
+                data-testid={`opt-surah-${testIdPrefix}-${s.number}`}
+              >
+                <div className="flex flex-col items-start gap-0 py-0.5">
+                  <span className="text-sm">
+                    {s.number}. {s.name}
+                    <span className="ml-2 text-muted-foreground" dir="rtl">{s.arabic}</span>
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">{range}</span>
+                </div>
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+
+      <Select key={`part-${partKey}`} onValueChange={handlePart}>
+        <SelectTrigger data-testid={`select-part-${testIdPrefix}`}>
+          <SelectValue placeholder="Add Part…" />
+        </SelectTrigger>
+        <SelectContent className="max-h-72">
+          {JUZ_RANGES.map(juz => (
+            <SelectGroup key={juz.juz}>
+              <SelectLabel>Juz {juz.juz}</SelectLabel>
+              {ALL_ROB3S.filter(r => r.juz === juz.juz).map(r => {
+                const range = r.startPage === r.endPage ? `p. ${r.startPage}` : `p. ${r.startPage}–${r.endPage}`;
+                const ayah = getDefaultPageName(r.startPage);
+                return (
+                  <SelectItem
+                    key={r.rob3}
+                    value={String(r.rob3)}
+                    data-testid={`opt-part-${testIdPrefix}-${r.rob3}`}
+                  >
+                    <div className="flex flex-col items-start gap-0 py-0.5 max-w-[260px]">
+                      <span className="text-sm">
+                        Part {r.rob3InJuz + 1}/{ROB3S_PER_JUZ}
+                        <span className="ml-2 text-muted-foreground">· {range}</span>
+                      </span>
+                      {ayah ? (
+                        <span className="text-[11px] text-muted-foreground truncate w-full" dir="rtl">
+                          {ayah}
+                        </span>
+                      ) : null}
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectGroup>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

@@ -164,3 +164,33 @@ export function todayLocalISO(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+
+export const ROB3S_PER_JUZ = 8;
+export const TOTAL_ROB3S = JUZ_RANGES.length * ROB3S_PER_JUZ;
+
+export interface Rob3Range {
+  rob3: number;
+  rob3InJuz: number;
+  juz: number;
+  startPage: number;
+  endPage: number;
+}
+
+export function getRob3Range(rob3Number: number): Rob3Range {
+  const juzIndex = Math.floor((rob3Number - 1) / ROB3S_PER_JUZ);
+  const rob3InJuz = (rob3Number - 1) % ROB3S_PER_JUZ;
+  const juz = JUZ_RANGES[juzIndex];
+  if (!juz) return { rob3: rob3Number, rob3InJuz, juz: 1, startPage: 1, endPage: 1 };
+  const juzPages = juz.endPage - juz.startPage + 1;
+  const pagesPerRob3 = juzPages / ROB3S_PER_JUZ;
+  const startPage = juz.startPage + Math.floor(rob3InJuz * pagesPerRob3);
+  const endPage =
+    rob3InJuz === ROB3S_PER_JUZ - 1
+      ? juz.endPage
+      : juz.startPage + Math.floor((rob3InJuz + 1) * pagesPerRob3) - 1;
+  return { rob3: rob3Number, rob3InJuz, juz: juz.juz, startPage, endPage };
+}
+
+export const ALL_ROB3S: Rob3Range[] = Array.from({ length: TOTAL_ROB3S }, (_, i) =>
+  getRob3Range(i + 1),
+);

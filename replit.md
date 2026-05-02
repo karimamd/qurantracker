@@ -25,7 +25,7 @@ A personal Quran memorization progress tracker. Tracks revision across multiple 
 - **Color-coded status**: Overdue (red), Due Soon (amber), On Track (green), Not Started (blue)
 - **Scope management**: Add/remove pages from memorization scope
 - **Batch recitation recording**: Record quality for page ranges
-- **Homework tracking**: Create bi-weekly sessions with memorize/revise pages
+- **Homework tracking**: Create bi-weekly sessions with memorize/revise pages. Create dialog includes Surah and Part dropdowns next to each input — selecting appends the page range (Surah shows arabic name + range; Part is grouped by Juz and shows "Part N/8 · p. start–end" with the first ayah snippet from `page-names.json`).
 - **Activity feed**: Recent recitation history
 - **Streak counter**: Track consecutive days of revision
 - **Due pages dashboard section**: Pages requiring attention (overdue + due soon) sorted by due date, shown above the chart
