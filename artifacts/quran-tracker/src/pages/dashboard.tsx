@@ -44,6 +44,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
   Legend,
+  LabelList,
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { PageLabel } from "@/components/page-label";
@@ -296,6 +297,45 @@ function DailyChartSection() {
   );
 }
 
+// Renders a value label only at sparse intervals (every Nth point) and skips
+// zeros, so the line chart numbers are readable without crowding.
+function makeSparseLabel(totalPoints: number, fill: string) {
+  // Aim for ~6-7 labels visible regardless of series length.
+  const step = Math.max(1, Math.ceil(totalPoints / 7));
+  return function SparseLabel(props: {
+    x?: number;
+    y?: number;
+    value?: number;
+    index?: number;
+  }) {
+    const { x, y, value, index } = props;
+    if (
+      typeof x !== "number" ||
+      typeof y !== "number" ||
+      typeof value !== "number" ||
+      typeof index !== "number"
+    ) {
+      return null;
+    }
+    const isLast = index === totalPoints - 1;
+    if (value === 0) return null;
+    if (!isLast && index % step !== 0) return null;
+    return (
+      <text
+        x={x}
+        y={y}
+        dy={-6}
+        textAnchor="middle"
+        fontSize={10}
+        fontWeight={600}
+        fill={fill}
+      >
+        {value}
+      </text>
+    );
+  };
+}
+
 function ProgressChartSection() {
   const { data: chartData, isLoading } = useGetProgressChart({ days: 30 });
 
@@ -385,9 +425,15 @@ function ProgressChartSection() {
                 name="Overdue pages"
                 stroke="#f43f5e"
                 strokeWidth={2}
-                dot={false}
+                dot={{ r: 2.5, fill: "#f43f5e", strokeWidth: 0 }}
                 activeDot={{ r: 4 }}
-              />
+              >
+                <LabelList
+                  dataKey="overdueCount"
+                  position="top"
+                  content={makeSparseLabel(formatted.length, "#be123c")}
+                />
+              </Line>
               <Line
                 yAxisId="right"
                 type="monotone"
@@ -395,9 +441,15 @@ function ProgressChartSection() {
                 name="Pages recited that day"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
-                dot={false}
+                dot={{ r: 2.5, fill: "hsl(var(--primary))", strokeWidth: 0 }}
                 activeDot={{ r: 4 }}
-              />
+              >
+                <LabelList
+                  dataKey="dailyRecitedCount"
+                  position="bottom"
+                  content={makeSparseLabel(formatted.length, "hsl(var(--primary))")}
+                />
+              </Line>
             </LineChart>
           </ResponsiveContainer>
         )}
@@ -626,9 +678,9 @@ export default function Dashboard() {
 
       <ActiveHomeworkSection />
 
-      <DuePagesSection />
-
       <ProgressChartSection />
+
+      <DuePagesSection />
 
       <DailyChartSection />
 
