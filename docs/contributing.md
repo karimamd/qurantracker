@@ -46,7 +46,8 @@ A typical feature touches 3–5 layers. Here's the canonical sequence — skip a
 7. **Implement the React UI**.
    - Use the generated hook (`use<OperationId>`) — don't hand-write `fetch`.
    - For mutations, invalidate every relevant query key in `onSuccess` (or use a predicate for per-id detail keys).
-   - Add `data-testid` attributes to interactive elements so the testing harness can target them.
+   - Add `data-testid` attributes to interactive elements so the testing harness can target them. Use stable English values so they don't depend on the active language.
+   - **Localize every user-facing string.** Add the key to both `artifacts/quran-tracker/src/i18n/en.json` and `ar.json`. For counts, English needs `_one`/`_other`; Arabic needs `_zero`/`_one`/`_two`/`_few`/`_many`/`_other`. Prefer Tailwind logical-property utilities (`ms-*`, `me-*`, `text-end`, `start-*`, `end-*`) so layouts mirror in RTL. See [Components — i18n](./components.md#internationalization-i18n).
 8. **Run the canonical typecheck**.
    ```bash
    pnpm run typecheck
@@ -85,6 +86,17 @@ These are real footguns we've hit:
 
 Open a GitHub issue for anything: a question, an idea, a bug. There's no template requirement — just write what you'd want to read.
 
+## Reporting bugs
+
+Open a GitHub issue with:
+
+- A short summary in the title.
+- Reproduction steps (URL, what you clicked, what happened, what you expected).
+- Browser + device if it's a frontend bug.
+- A copy of the relevant console or workflow log if you have it.
+
+For security issues — anything that exposes one user's data to another, or any auth bypass — please email the maintainer instead of filing a public issue.
+
 ## License
 
-This project is currently personal-use; reach out before redistributing or building on top of it commercially.
+MIT — see [`LICENSE`](../LICENSE) at the repo root. By contributing, you agree that your contributions will be licensed under the same terms.

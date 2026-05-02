@@ -14,7 +14,11 @@ import { db, pageProgressTable, recitationLogTable, ... } from "@workspace/db";
 
 Every domain table has a nullable `user_id text` column. Every query in the API server **must** filter by `req.userId`. The `requireAuth` middleware enforces this at the request level — handlers should treat `req.userId!` as required.
 
-`user_id` is nullable for one reason only: this app started as a single-user system before Clerk was added, so legacy rows have `NULL`. The `requireAuth` middleware has a one-shot **orphan claim** that reassigns those NULL rows to the configured `OWNER_EMAIL` user on their first signed-in request. After that the column is effectively non-null.
+`user_id` shapes you'll see in the data:
+
+- `user_xxx…` — Clerk users.
+- `guest_<32hex>` — anonymous visitors. Auto-minted as an httpOnly cookie by `requireAuth` on the first API call from any unauthenticated visitor; migrated to the Clerk id on first sign-in (see [Authentication](./auth.md)).
+- `NULL` — pre-Clerk legacy rows from the original single-user version. The `requireAuth` middleware has a one-shot **orphan claim** that reassigns these to the configured `OWNER_EMAIL` user on their first signed-in request. After that the column is effectively non-null.
 
 ## Tables
 
@@ -97,6 +101,24 @@ Individual pages assigned within a homework session.
 
 `recite-batch` and the undo flow both maintain `homework_items.completed` consistency: a positive (good/excellent) most-recent log marks active items completed; otherwise items are uncompleted.
 
+### `ayah_mistakes`
+
+Append-only per-ayah mistake records. Captured during Reader hide-mode practice and submitted alongside the page's quality rating in `PATCH /api/progress/pages/:n` (atomic with the recitation log entry). Powers the `/mistakes` analytics page.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | serial PK | |
+| `user_id` | text | |
+| `page_number` | integer | The Mushaf page the ayah belongs to. |
+| `surah_number` | integer | 1–114. |
+| `ayah_number_in_surah` | integer | 1-based ayah index within the surah. |
+| `global_ayah_number` | integer | 1–6,236 — used to deep-link `/reader/<page>?practice=<n>`. |
+| `mistake_type` | text | Currently `"memorization"` (failed to remember the ayah) or `"link"` (failed to predict it from the previous one). The two are independent dimensions and can coexist on the same ayah. |
+| `recited_at` | timestamptz default `now()` | Time the parent recitation was recorded. |
+| `created_at` | timestamptz default `now()` | |
+
+**Indexes:** `(user_id)`, `(user_id, recited_at)`, `(user_id, page_number)`.
+
 ## Relationships (logical)
 
 ```text
@@ -111,6 +133,10 @@ page_progress  N───1  user
 homework_sessions  1───N  homework_items  (by homework_id)
         │                       │
         └─── user ───────────────┘
+
+ayah_mistakes  N───1  user
+        │
+        └─── (page_number) — ayah belongs to one of 604 pages
 ```
 
 Foreign keys are not declared at the SQL level; integrity is enforced in application code. This was an early decision to keep migrations cheap during rapid iteration.

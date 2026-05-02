@@ -3,7 +3,7 @@
 The HTTP contract is defined in `lib/api-spec/openapi.yaml`. **That file is the source of truth** — if you change anything below, update the spec and regenerate.
 
 - **Base URL (dev & prod):** `/api` (served behind the shared proxy).
-- **Auth:** every endpoint except `/healthz` requires a valid Clerk session (browser cookie). Unauthenticated requests get `401`.
+- **Auth:** every endpoint except `/healthz` requires an identity. That's **either** a valid Clerk session cookie **or** a `guest_id` cookie (auto-minted by `requireAuth` on the first API call from any unauthenticated visitor). Both identities work the same way downstream — see [Authentication](./auth.md).
 - **Generated client:** import the typed React Query hooks from `@workspace/api-client-react`.
 - **Generated schemas:** import the Zod schemas from `@workspace/api-zod` to validate request/response shapes inside route handlers.
 
@@ -26,21 +26,42 @@ The HTTP contract is defined in `lib/api-spec/openapi.yaml`. **That file is the 
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
-| `GET` | `/progress/overview` | Yes | Dashboard summary: `pagesInScope`, `pagesOverdue`, `pagesDueSoon`, `pagesOnTrack`, `totalPages` (604), `streakDays`. |
+| `GET` | `/progress/overview` | Yes | Dashboard summary: `pagesInScope`, `pagesOverdue`, `pagesDueSoon`, `pagesOnTrack`, `totalPages` (604), `streakDays`, `excellentCount`/`goodCount`/`hardCount`/`relearnCount`. Counts use the **stored** quality (auto-downgrade is display-only). |
 | `GET` | `/progress/pages` | Yes | Filterable list of pages. Query params: `status` (`overdue` \| `due_soon` \| `on_track` \| `not_started` \| `out_of_scope`), `inScope` (bool). |
 | `GET` | `/progress/juz` | Yes | All 30 Juz with aggregated counts and progress. |
 | `GET` | `/progress/juz/{juzNumber}` | Yes | Detail for a single Juz: includes 8 Rob3s and the contained pages. |
 | `GET` | `/progress/surah` | Yes | All 114 Surahs with aggregated counts. |
 | `GET` | `/progress/surah/{surahNumber}` | Yes | Detail for a single Surah: name, page range, and pages. |
+| `GET` | `/progress/rob3` | Yes | All 240 Rub' al-Hizb with aggregated stats. |
+
+#### `PageProgress` shape (returned by every endpoint above)
+
+Every page object is enriched server-side via `enrichPageProgress`. The notable computed fields:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `quality` | enum \| null | The user's last recorded rating. Never auto-mutated. |
+| `effectiveQuality` | enum \| null | **Display-only auto-downgrade**: drops one rung (excellent→good→hard→relearn) per 14 days overdue. Equals `quality` when not overdue. See [Business Logic — Auto-downgrade](./business-logic.md#auto-downgrade-for-overdue-pages-display-only). |
+| `qualityDowngrades` | integer 0–3 | Number of 14-day overdue periods feeding `effectiveQuality`. Frontend renders this as ↓ chevrons next to the badge. |
+| `status` | enum | `overdue` / `due_soon` / `on_track` / `not_started` / `out_of_scope`. Derived from `(in_scope, last_recited, due_date, now)`. Never stored. |
+| `daysSinceRecited`, `daysUntilDue` | integer \| null | Convenience deltas. |
 
 ### Progress — recitation actions
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
-| `PATCH` | `/progress/pages/{pageNumber}` | Yes | Record a single-page recitation. Body: `{ quality, mistakes? }`. Updates `page_progress` and appends a `recitation_log` row. |
-| `POST` | `/progress/recite-batch` | Yes | Record the same quality across a list of pages. Body: `{ pageNumbers: number[], quality, mistakes? }`. Also marks matching `homework_items` completed for active sessions. |
+| `PATCH` | `/progress/pages/{pageNumber}` | Yes | Record a single-page recitation. Body: `{ quality, mistakes?, ayahMistakes? }`. Updates `page_progress`, appends a `recitation_log` row, and persists per-ayah mistakes into `ayah_mistakes` (atomic). |
+| `POST` | `/progress/recite-batch` | Yes | Record the same quality across a list of pages. Body: `{ pageNumbers: number[], quality, mistakes? }`. Also adds the pages to scope and marks matching `homework_items` completed for active sessions. |
 | `DELETE` | `/progress/activity/{id}` | Yes | **Undo recitation.** Deletes one `recitation_log` row, recomputes `page_progress` and `homework_items.completed` from the remaining history. Transactional with row lock. |
 | `PUT` | `/progress/pages/{pageNumber}/name` | Yes | Set or clear the custom name for a page. |
+
+`ayahMistakes[]` items are `{ surahNumber, ayahNumberInSurah, globalAyahNumber, mistakeType }`. `mistakeType` is currently `"memorization"` or `"link"` — both can coexist on the same ayah.
+
+### Mistakes
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `GET` | `/mistakes` | Yes | Date-grouped feed of per-ayah mistakes for the Mistakes page. Filterable by mistake type. Each entry includes the surah, ayah, page, type, and timestamp — used to deep-link to `/reader/<page>?practice=<globalAyahNumber>`. |
 
 ### Progress — scope
 

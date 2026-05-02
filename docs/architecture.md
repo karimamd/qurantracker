@@ -13,27 +13,30 @@ artifacts/                              Deployable applications
 │   │   ├── routes/                     Per-domain route modules
 │   │   │   ├── health.ts               GET /healthz
 │   │   │   ├── settings.ts             /settings — SR interval config
-│   │   │   ├── progress.ts             /progress/* — pages, juz, surah, charts, activity, undo
+│   │   │   ├── progress.ts             /progress/* — pages, juz, surah, rob3, charts, activity, undo
+│   │   │   ├── mistakes.ts             /mistakes — per-ayah mistake feed for the Mistakes page
 │   │   │   ├── homework.ts             /homework/* — sessions and items
 │   │   │   └── index.ts                Aggregates routers
 │   │   ├── middlewares/
-│   │   │   ├── requireAuth.ts          Resolves Clerk userId, claims orphan rows for OWNER_EMAIL once
+│   │   │   ├── requireAuth.ts          Resolves Clerk userId OR mints/migrates a guest_id cookie
 │   │   │   └── clerkProxy.ts           Proxies Clerk frontend assets to avoid 3rd-party-cookie issues
 │   │   └── lib/
-│   │       ├── progress-helpers.ts     calculateDueDate, enrichPageProgress, ensurePageExists, getSettings
-│   │       ├── quran-data.ts           Page → Juz/Rob3/Surah lookups
+│   │       ├── progress-helpers.ts     calculateDueDate, enrichPageProgress (incl. effectiveQuality auto-downgrade),
+│   │       │                            aggregateQuality, ensurePageExists, getSettings
+│   │       ├── quran-data.ts           Page → Juz/Rob3/Surah lookups (server copy)
 │   │       └── page-names.json         Default per-page name (surah + ayah text)
 │   ├── build.mjs                       esbuild bundling script (CJS → single ESM bundle)
 │   └── .replit-artifact/artifact.toml  Service definition (port 8080, path /api, prod build/start)
 │
 ├── quran-tracker/                      React + Vite SPA
 │   ├── src/
-│   │   ├── main.tsx                    Vite entrypoint
-│   │   ├── App.tsx                     Router + ClerkProvider + QueryClientProvider + ProtectedApp gate
-│   │   ├── pages/                      One file per top-level route
-│   │   ├── components/                 Layout, ErrorBoundary, PageLabel, PageQualityButtons, ui/* (shadcn)
+│   │   ├── main.tsx                    Vite entrypoint — also imports ./i18n for side-effects
+│   │   ├── App.tsx                     Router + ClerkProvider + QueryClientProvider + ProtectedApp + landing
+│   │   ├── pages/                      One file per top-level route (dashboard, reader, mistakes, rob3-list, …)
+│   │   ├── components/                 Layout, ErrorBoundary, QualityBadge, PageRow, OnboardingScopeSetup, GuestSavePrompt, ui/* (shadcn)
 │   │   ├── hooks/                      use-mobile, use-toast
-│   │   ├── lib/                        page-names, quran-ref helpers, utils
+│   │   ├── i18n/                       react-i18next setup + en.json + ar.json (RTL)
+│   │   ├── lib/                        page-names, quran-ref helpers, quality utilities, utils
 │   │   └── index.css                   Tailwind entry
 │   ├── vite.config.ts                  Vite config (allows all hosts for the proxy iframe)
 │   └── .replit-artifact/artifact.toml  Static-build deployment config
@@ -49,7 +52,8 @@ lib/                                    Shared libraries
 │   ├── generated/                      GENERATED — React Query hooks
 │   └── custom-fetch.ts                 The fetch mutator used by all hooks (handles base URL, auth)
 └── db/
-    ├── src/schema/                     Drizzle table definitions (one file per domain)
+    ├── src/schema/                     Drizzle tables: settings, page-progress, recitation-log,
+    │                                    homework, ayah-mistakes (one file per domain)
     ├── src/index.ts                    db client export + table re-exports
     └── drizzle.config.ts               drizzle-kit config (uses DATABASE_URL)
 

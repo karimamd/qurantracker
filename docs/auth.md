@@ -1,6 +1,11 @@
 # Authentication
 
-The app uses [Clerk](https://clerk.com) for authentication. Clerk is a hosted identity provider — users sign in with email + password, Google, or other social providers; we never store passwords ourselves.
+The app supports **two identity types**, treated identically by every downstream layer:
+
+1. **Clerk users** — `userId` looks like `user_xxx`. Created via [Clerk](https://clerk.com), a hosted identity provider (email + password, Google, or other socials; we never store passwords ourselves).
+2. **Guests** — `userId` looks like `guest_<32hex>`. Auto-minted as an httpOnly cookie by `requireAuth` on the first API request from any unauthenticated visitor. No friction, no sign-up.
+
+Every downstream piece of the system — Drizzle queries, spaced-repetition logic, scope rules, charts, the auto-downgrade — sees `req.userId` and treats it the same way regardless of which identity it represents.
 
 ## Frontend (`@clerk/react`)
 
@@ -65,6 +70,19 @@ Both the SPA and the API are reached through the **same Replit proxy origin**. T
 This avoids both CORS and the third-party-cookie issues that come with a separately-hosted API origin.
 
 The `clerkProxyMiddleware` proxies a small set of Clerk frontend assets through the API origin so the SPA never has to load anything cross-origin from `clerk.com`.
+
+## Guest mode
+
+Guests are issued an httpOnly cookie named `guest_id` (1-year lifetime, `SameSite=Lax`) on the first authenticated-but-no-Clerk-session API call. The id is a random 32-hex string prefixed `guest_`. From that point on, every API call carries the same identity — `requireAuth` reads the cookie and sets `req.userId`.
+
+**Migration on sign-up.** When a guest signs in/up via Clerk, the FIRST signed-in API request will see both:
+
+- a Clerk session (`getAuth(req).userId === "user_xxx"`), and
+- the still-present `guest_id` cookie.
+
+`requireAuth` then runs `migrateGuestData(guestUserId, clerkUserId)` which reassigns every row across the user-scoped tables (`page_progress`, `recitation_log`, `homework_sessions`, `homework_items`, `settings`, `ayah_mistakes`) in a `Promise.all`, then clears the cookie. From then on the user has one consistent identity and all guest-mode practice carries over. This is the contract behind the "Try it now — your data carries over automatically" CTA on the landing page.
+
+**Per-device.** A guest cookie is local to a single browser. Two devices with no shared sign-up = two separate guest accounts. Signing up is the only way to merge them.
 
 ## Orphan claim (legacy data migration)
 

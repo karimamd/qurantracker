@@ -177,6 +177,33 @@ Pure addition: `dueDate = lastRecited + interval[quality]`. There's no fancy SM-
 
 These are **per-user**, persisted in the `settings` table, editable via `PATCH /settings`. A row is auto-created with defaults on first read.
 
+### Auto-downgrade for overdue pages (display-only)
+
+Once a page goes overdue, its **displayed** quality decays one rung down the ladder for every full 14 days it stays overdue:
+
+```text
+excellent  ─ 14d ─►  good  ─ 14d ─►  hard  ─ 14d ─►  relearn   (capped here)
+```
+
+This is a **read-time computation only**. It never mutates `page_progress.quality`, never touches `recitation_log`, never affects the `status` enum (`overdue`/`due_soon`/…), and never changes `dueDate`. Recording a new recitation clears the overdue state on the next read and the badge snaps back to its solid color.
+
+The math lives in `computeEffectiveQuality(quality, daysOverdue)` in `progress-helpers.ts` and is called from `enrichPageProgress`. Two new fields are added to every `PageProgress` returned by the API:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `effectiveQuality` | same enum as `quality`, nullable | The downgraded quality. Equals `quality` when the page is not overdue. |
+| `qualityDowngrades` | integer (0–3) | Number of 14-day periods that contributed to the downgrade. Capped so we never go past `relearn`. |
+
+`Math.floor(daysOverdue / 14)` is the period count. A page exactly 14 days overdue drops one notch; 28 days drops two; 42+ days drops three (and stays at relearn).
+
+The frontend `QualityBadge` reads these two fields and renders:
+
+- the **effective** quality label, in a **faded + dashed-border** palette (visually distinct from a recorded rating, so users instantly read it as computed-not-recorded);
+- one ↓ chevron per `qualityDowngrades` (max 3) to hint at the original rating;
+- a tooltip and screen-reader label that spell out "auto-downgraded from {original} to {effective} after N weeks overdue. Your saved rating is unchanged."
+
+Aggregate views (Juz/Surah/Rub' average quality) and the dashboard's quality counts (`excellentCount` etc.) deliberately keep using the **stored** `quality`, not the effective one — the rating history is sacred.
+
 ### Status derivation
 
 `enrichPageProgress` derives a status string from the stored row plus `now`:

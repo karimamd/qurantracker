@@ -23,7 +23,8 @@ Start here, then jump into the area you care about.
 
 ## Quick orientation
 
-- **Stack:** React + Vite + Tailwind + shadcn/ui (frontend) · Express 5 + Drizzle ORM + PostgreSQL (backend) · Clerk (auth) · OpenAPI + Orval (contract-first codegen) · pnpm workspaces.
+- **Stack:** React 19 + Vite + Tailwind 4 + shadcn/ui (frontend) · Express 5 + Drizzle ORM + PostgreSQL 16 (backend) · Clerk (auth, with first-class guest mode) · OpenAPI + Orval (contract-first codegen) · pnpm workspaces.
+- **i18n:** English + Arabic (RTL) via `react-i18next` — see [Components → Internationalization](./components.md#internationalization-i18n).
 - **Three artifacts:** `artifacts/quran-tracker` (web app), `artifacts/api-server` (REST API), `artifacts/mockup-sandbox` (component preview tool, dev-only).
 - **Four shared libraries:** `lib/api-spec` (OpenAPI source of truth), `lib/api-zod` (generated Zod schemas), `lib/api-client-react` (generated React Query hooks), `lib/db` (Drizzle schema + db client).
 - **Contract-first:** the OpenAPI spec at `lib/api-spec/openapi.yaml` is the single source of truth. Backend uses generated Zod schemas to validate; frontend uses generated React Query hooks to call.
@@ -58,4 +59,4 @@ Start here, then jump into the area you care about.
 
 ## License
 
-This repository is currently a personal project. If you'd like to contribute or fork, see [`contributing.md`](./contributing.md).
+MIT — see [`LICENSE`](../LICENSE) at the repo root. Contributions are welcome; start with [`contributing.md`](./contributing.md).
