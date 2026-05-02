@@ -2,22 +2,7 @@ import { useUpdatePageProgress } from "@workspace/api-client-react";
 import type { QueryKey } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-
-type Quality = "excellent" | "good" | "hard" | "relearn";
-
-const QUALITIES: { value: Quality; label: string; short: string }[] = [
-  { value: "excellent", label: "Excellent", short: "Exc" },
-  { value: "good", label: "Good", short: "Good" },
-  { value: "hard", label: "Hard", short: "Hard" },
-  { value: "relearn", label: "Relearn", short: "Re" },
-];
-
-const qualityStyle: Record<Quality, { active: string; hover: string }> = {
-  excellent: { active: "bg-emerald-500 border-emerald-500 text-white", hover: "hover:border-emerald-300 hover:text-emerald-700" },
-  good: { active: "bg-sky-500 border-sky-500 text-white", hover: "hover:border-sky-300 hover:text-sky-700" },
-  hard: { active: "bg-amber-500 border-amber-500 text-white", hover: "hover:border-amber-300 hover:text-amber-700" },
-  relearn: { active: "bg-rose-500 border-rose-500 text-white", hover: "hover:border-rose-300 hover:text-rose-700" },
-};
+import { type Quality, QUALITIES, qualityStyle } from "@/lib/quality";
 
 interface PageQualityButtonsProps {
   pageNumber: number;

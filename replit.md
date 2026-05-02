@@ -82,6 +82,21 @@ The app is fully usable without signing up. This makes it easy for new visitors 
 - Due-date policy: undo uses the user's *current* settings to recompute, so the restored due-date may differ from what it was when the prior log was first written. This matches how new recitations are dated.
 - Client invalidates: `getRecentActivity`, `getProgressOverview`, `listPageProgress`, `listJuzProgress`, `listSurahProgress`, daily/progress charts, plus a predicate-based invalidation matching any open juz/surah detail key.
 
+## Shared UI: Unified PageRow
+
+Juz detail, Surah detail, and Homework detail all render the same rich page card via `components/page-row.tsx`. The row shows: status dot, `PageLabel` (with rename popover), badges (incl. quality + week-count + mistakes + caller-supplied `extraBadges`), `FirstAyahPreview` (lazy-loaded via IntersectionObserver from al-Quran cloud, cached by React Query), last-recited timestamp, Read button, and quality buttons. Quality buttons either:
+- (default) use shared `PageQualityButtons` (PATCH page progress) when no override is provided, or
+- call a caller-supplied `onQualitySelect(quality)` (used by Homework, which routes through `useUpdateHomeworkItem` so `homework_items.completed` stays accurate for session summaries).
+
+`rowId` prop overrides the test-id suffix (defaults to `pageNumber`); homework passes `rowId={item.id}` so the same page in memorize+revise lists doesn't collide. Test-id prefixes: `page-cell` (juz), `surah-page-cell` (surah), `hw-item` (homework).
+
+Shared modules backing this:
+- `lib/quality.ts` — `Quality` type, `QUALITIES`, `qualityStyle`, `dotStyle`, `rowStyle`, `getStatusBarColor`, `isCompletedQuality`.
+- `hooks/use-page-ayahs.ts` — `usePageAyahs(pageNumber)` + memoized `usePrefetchPageAyahs()` (al-Quran cloud, 24h staleTime).
+- `components/first-ayah-preview.tsx` — strips Bismillah, ~7-word preview, lazy-loaded.
+
+Reader (`pages/reader.tsx`) and `components/page-quality-buttons.tsx` consume the same shared modules.
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages

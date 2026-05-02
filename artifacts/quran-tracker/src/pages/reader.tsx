@@ -14,7 +14,7 @@ import {
 import type { PageProgress } from "@workspace/api-client-react";
 import { useParams, useLocation } from "wouter";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,45 +26,8 @@ import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff
 import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
-
-type Quality = "excellent" | "good" | "hard" | "relearn";
-
-const QUALITIES: { value: Quality; label: string }[] = [
-  { value: "excellent", label: "Excellent" },
-  { value: "good", label: "Good" },
-  { value: "hard", label: "Hard" },
-  { value: "relearn", label: "Relearn" },
-];
-
-const qualityStyle: Record<Quality, { active: string; hover: string }> = {
-  excellent: { active: "bg-emerald-500 border-emerald-500 text-white", hover: "hover:border-emerald-300 hover:text-emerald-700" },
-  good:      { active: "bg-sky-500 border-sky-500 text-white",         hover: "hover:border-sky-300 hover:text-sky-700" },
-  hard:      { active: "bg-amber-500 border-amber-500 text-white",     hover: "hover:border-amber-300 hover:text-amber-700" },
-  relearn:   { active: "bg-rose-500 border-rose-500 text-white",       hover: "hover:border-rose-300 hover:text-rose-700" },
-};
-
-interface ApiAyah {
-  number: number;
-  text: string;
-  numberInSurah: number;
-  surah: { number: number; englishName: string; englishNameTranslation: string };
-}
-interface ApiPageResponse {
-  code: number;
-  status: string;
-  data: { number: number; ayahs: ApiAyah[] };
-}
-
-async function fetchPageAyahs(pageNumber: number, signal?: AbortSignal): Promise<ApiAyah[]> {
-  const res = await fetch(
-    `https://api.alquran.cloud/v1/page/${pageNumber}/quran-uthmani`,
-    { signal },
-  );
-  if (!res.ok) throw new Error(`Failed to load page ${pageNumber}: ${res.status}`);
-  const json = (await res.json()) as ApiPageResponse;
-  if (json.code !== 200 || !json.data?.ayahs) throw new Error(`Invalid response for page ${pageNumber}`);
-  return json.data.ayahs;
-}
+import { type Quality, QUALITIES, qualityStyle } from "@/lib/quality";
+import { usePageAyahs, usePrefetchPageAyahs, type ApiAyah } from "@/hooks/use-page-ayahs";
 
 function clampPage(n: number): number {
   if (Number.isNaN(n)) return 1;
@@ -117,13 +80,8 @@ export default function Reader() {
     isLoading: ayahsLoading,
     isError: ayahsError,
     refetch: refetchAyahs,
-  } = useQuery({
-    queryKey: ["alquran-cloud-page", pageNumber],
-    queryFn: ({ signal }) => fetchPageAyahs(pageNumber, signal),
-    staleTime: 1000 * 60 * 60,
-    gcTime: 1000 * 60 * 60,
-    retry: 1,
-  });
+  } = usePageAyahs(pageNumber);
+  const prefetchPageAyahs = usePrefetchPageAyahs();
 
   // URL -> state sync (only when user navigates browser back/forward)
   useEffect(() => {
@@ -170,13 +128,8 @@ export default function Reader() {
   // Prefetch the next page's ayahs for instant nav
   useEffect(() => {
     if (pageNumber >= TOTAL_PAGES) return;
-    const next = pageNumber + 1;
-    queryClient.prefetchQuery({
-      queryKey: ["alquran-cloud-page", next],
-      queryFn: ({ signal }) => fetchPageAyahs(next, signal),
-      staleTime: 1000 * 60 * 60,
-    });
-  }, [pageNumber, queryClient]);
+    prefetchPageAyahs(pageNumber + 1);
+  }, [pageNumber, prefetchPageAyahs]);
 
   const currentPage: PageProgress | null = useMemo(() => {
     if (!allPages) return null;
