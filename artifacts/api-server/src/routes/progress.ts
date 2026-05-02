@@ -25,6 +25,10 @@ import {
   GetRecentActivityResponse,
   GetDailyChartQueryParams,
   GetDailyChartResponse,
+  GetProgressChartQueryParams,
+  GetProgressChartResponse,
+  GetSurahDetailParams,
+  GetSurahDetailResponse,
 } from "@workspace/api-zod";
 import {
   TOTAL_PAGES,
@@ -175,6 +179,9 @@ router.get("/progress/juz/:juzNumber", async (req, res): Promise<void> => {
     } else {
       allPagesForJuz.push({
         pageNumber: p,
+        name: getDefaultPageName(p),
+        defaultName: getDefaultPageName(p),
+        customName: null,
         juzNumber: juz.juz,
         rob3Number: getRob3ForPage(p),
         surahs: getSurahsForPage(p),
@@ -230,6 +237,64 @@ router.get("/progress/surah", async (_req, res): Promise<void> => {
   });
 
   res.json(ListSurahProgressResponse.parse(surahList));
+});
+
+router.get("/progress/surah/:surahNumber", async (req, res): Promise<void> => {
+  const params = GetSurahDetailParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const surah = SURAHS.find(s => s.number === params.data.surahNumber);
+  if (!surah) {
+    res.status(404).json({ error: "Surah not found" });
+    return;
+  }
+
+  const allPages = await db.select().from(pageProgressTable);
+  const enriched = allPages.map(enrichPageProgress);
+
+  const pages = [];
+  for (let p = surah.startPage; p <= surah.endPage; p++) {
+    const existing = enriched.find(e => e.pageNumber === p);
+    if (existing) {
+      pages.push(existing);
+    } else {
+      pages.push({
+        pageNumber: p,
+        name: getDefaultPageName(p),
+        defaultName: getDefaultPageName(p),
+        customName: null,
+        juzNumber: getJuzForPage(p),
+        rob3Number: getRob3ForPage(p),
+        surahs: getSurahsForPage(p),
+        inScope: false,
+        quality: null,
+        mistakes: null,
+        lastRecited: null,
+        dueDate: null,
+        daysSinceRecited: null,
+        daysUntilDue: null,
+        status: "out_of_scope",
+      });
+    }
+  }
+
+  const inScope = pages.filter(p => p.inScope);
+  const detail = {
+    surahNumber: surah.number,
+    name: surah.name,
+    arabicName: surah.arabicName,
+    startPage: surah.startPage,
+    endPage: surah.endPage,
+    totalPages: surah.endPage - surah.startPage + 1,
+    pagesInScope: inScope.length,
+    pagesOverdue: inScope.filter(p => p.status === "overdue").length,
+    pages,
+  };
+
+  res.json(GetSurahDetailResponse.parse(detail));
 });
 
 router.get("/progress/pages", async (req, res): Promise<void> => {
@@ -513,6 +578,69 @@ router.get("/progress/daily-chart", async (req, res): Promise<void> => {
   }));
 
   res.json(GetDailyChartResponse.parse(result));
+});
+
+router.get("/progress/progress-chart", async (req, res): Promise<void> => {
+  const queryParams = GetProgressChartQueryParams.safeParse(req.query);
+  const requestedDays = queryParams.success ? queryParams.data.days : 30;
+  const numDays = Math.min(Math.max(requestedDays, 1), 365);
+
+  const settings = await getSettings();
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const scopePages = await db
+    .select({ pageNumber: pageProgressTable.pageNumber })
+    .from(pageProgressTable)
+    .where(eq(pageProgressTable.inScope, true));
+  const inScopeSet = new Set(scopePages.map(p => p.pageNumber));
+
+  const allLogs = await db
+    .select({
+      pageNumber: recitationLogTable.pageNumber,
+      quality: recitationLogTable.quality,
+      recitedAt: recitationLogTable.recitedAt,
+    })
+    .from(recitationLogTable)
+    .orderBy(recitationLogTable.recitedAt);
+
+  const result: { date: string; overdueCount: number; uniqueRecitedCount: number }[] = [];
+  let logIdx = 0;
+  const latestPerPage = new Map<number, { quality: string; recitedAt: Date }>();
+
+  for (let i = numDays - 1; i >= 0; i--) {
+    const day = new Date(today);
+    day.setDate(day.getDate() - i);
+    const endOfDay = new Date(day);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    while (logIdx < allLogs.length && allLogs[logIdx].recitedAt <= endOfDay) {
+      const log = allLogs[logIdx];
+      latestPerPage.set(log.pageNumber, { quality: log.quality, recitedAt: log.recitedAt });
+      logIdx++;
+    }
+
+    const uniqueRecitedCount = latestPerPage.size;
+
+    let overdueCount = 0;
+    for (const [pageNumber, info] of latestPerPage) {
+      if (!inScopeSet.has(pageNumber)) continue;
+      const dueDate = calculateDueDate(info.recitedAt, info.quality, settings);
+      if (dueDate <= endOfDay) overdueCount++;
+    }
+
+    const yyyy = day.getFullYear();
+    const mm = String(day.getMonth() + 1).padStart(2, "0");
+    const dd = String(day.getDate()).padStart(2, "0");
+    result.push({
+      date: `${yyyy}-${mm}-${dd}`,
+      overdueCount,
+      uniqueRecitedCount,
+    });
+  }
+
+  res.json(GetProgressChartResponse.parse(result));
 });
 
 router.get("/progress/activity", async (req, res): Promise<void> => {

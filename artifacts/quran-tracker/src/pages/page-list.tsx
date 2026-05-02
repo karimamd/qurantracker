@@ -1,6 +1,12 @@
-import { useListPageProgress, useAddToScope, useRemoveFromScope, getListPageProgressQueryKey } from "@workspace/api-client-react";
+import {
+  useListPageProgress,
+  useAddToScope,
+  useRemoveFromScope,
+  getListPageProgressQueryKey,
+  getGetProgressOverviewQueryKey,
+} from "@workspace/api-client-react";
 import type { ListPageProgressParams, ListPageProgressStatus } from "@workspace/api-client-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Minus, LayoutGrid, LayoutList } from "lucide-react";
 import { format } from "date-fns";
 import { PageLabel } from "@/components/page-label";
+import { PageQualityButtons } from "@/components/page-quality-buttons";
 
 function formatDate(d: Date | string | null | undefined): string {
   if (!d) return "—";
@@ -325,6 +332,20 @@ export default function PageList() {
                       <span className="text-[10px] text-muted-foreground">{formatDate(page.lastRecited)}</span>
                     </div>
                   </div>
+                  {page.inScope && (
+                    <div className="mt-2 sm:pl-[60px]" onClick={(e) => e.stopPropagation()}>
+                      <PageQualityButtons
+                        pageNumber={page.pageNumber}
+                        currentQuality={page.quality}
+                        size="xs"
+                        invalidateKeys={[
+                          getListPageProgressQueryKey(params),
+                          getListPageProgressQueryKey(),
+                          getGetProgressOverviewQueryKey(),
+                        ]}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}

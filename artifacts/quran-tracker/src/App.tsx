@@ -7,6 +7,7 @@ import Dashboard from "@/pages/dashboard";
 import JuzList from "@/pages/juz-list";
 import JuzDetail from "@/pages/juz-detail";
 import SurahList from "@/pages/surah-list";
+import SurahDetail from "@/pages/surah-detail";
 import PageList from "@/pages/page-list";
 import Recite from "@/pages/recite";
 import HomeworkList from "@/pages/homework-list";
@@ -24,6 +25,7 @@ function Router() {
         <Route path="/juz" component={JuzList} />
         <Route path="/juz/:id" component={JuzDetail} />
         <Route path="/surah" component={SurahList} />
+        <Route path="/surah/:id" component={SurahDetail} />
         <Route path="/pages" component={PageList} />
         <Route path="/recite" component={Recite} />
         <Route path="/homework" component={HomeworkList} />

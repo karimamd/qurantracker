@@ -1,10 +1,16 @@
-import { useGetJuzDetail, getGetJuzDetailQueryKey } from "@workspace/api-client-react";
+import {
+  useGetJuzDetail,
+  getGetJuzDetailQueryKey,
+  getListPageProgressQueryKey,
+  getGetProgressOverviewQueryKey,
+} from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QualityBadge, StatusBadge, getQualityColor } from "@/components/quality-badge";
+import { QualityBadge, getQualityColor } from "@/components/quality-badge";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageQualityButtons } from "@/components/page-quality-buttons";
 
 export default function JuzDetail() {
   const params = useParams<{ id: string }>();
@@ -71,27 +77,45 @@ export default function JuzDetail() {
 
       <div>
         <h3 className="text-lg font-medium mb-3">Pages</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {detail.pages.map(page => (
             <div
               key={page.pageNumber}
-              className={`p-2.5 rounded-lg border text-center text-sm transition-all ${
+              className={`p-2.5 rounded-lg border transition-all ${
                 page.status === "overdue"
-                  ? "bg-rose-50 border-rose-200 text-rose-800"
+                  ? "bg-rose-50 border-rose-200"
                   : page.status === "due_soon"
-                  ? "bg-amber-50 border-amber-200 text-amber-800"
+                  ? "bg-amber-50 border-amber-200"
                   : page.status === "on_track"
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  ? "bg-emerald-50 border-emerald-200"
                   : page.status === "not_started"
-                  ? "bg-blue-50 border-blue-200 text-blue-700"
-                  : "bg-gray-50 border-gray-100 text-gray-400"
+                  ? "bg-blue-50 border-blue-200"
+                  : "bg-gray-50 border-gray-100"
               }`}
               data-testid={`page-cell-${page.pageNumber}`}
             >
-              <div className="font-semibold">{page.pageNumber}</div>
-              <div className="text-[10px] mt-0.5 truncate">{page.surahs.split(",")[0]}</div>
-              {page.quality && (
-                <div className="text-[10px] mt-0.5 capitalize">{page.quality}</div>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-semibold text-sm">{page.pageNumber}</span>
+                  <span className="text-xs text-muted-foreground truncate">{page.surahs.split(",")[0]}</span>
+                </div>
+                <QualityBadge quality={page.quality} />
+              </div>
+              {page.inScope ? (
+                <PageQualityButtons
+                  pageNumber={page.pageNumber}
+                  currentQuality={page.quality}
+                  size="xs"
+                  compact
+                  className="justify-between"
+                  invalidateKeys={[
+                    getGetJuzDetailQueryKey(juzNumber),
+                    getListPageProgressQueryKey(),
+                    getGetProgressOverviewQueryKey(),
+                  ]}
+                />
+              ) : (
+                <div className="text-[10px] text-muted-foreground italic text-center py-1">Not in scope</div>
               )}
             </div>
           ))}

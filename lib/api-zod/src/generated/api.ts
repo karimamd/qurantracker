@@ -172,6 +172,64 @@ export const ListSurahProgressResponse = zod.array(
 );
 
 /**
+ * @summary Get a single surah with all its pages
+ */
+export const GetSurahDetailParams = zod.object({
+  surahNumber: zod.coerce.number(),
+});
+
+export const GetSurahDetailResponse = zod.object({
+  surahNumber: zod.number(),
+  name: zod.string(),
+  arabicName: zod.string(),
+  startPage: zod.number(),
+  endPage: zod.number(),
+  totalPages: zod.number(),
+  pagesInScope: zod.number(),
+  pagesOverdue: zod.number(),
+  pages: zod.array(
+    zod.object({
+      pageNumber: zod.number(),
+      name: zod
+        .string()
+        .describe("Display name (customName if set, otherwise defaultName)"),
+      defaultName: zod
+        .string()
+        .describe("First 6 words of the ayah this page begins with"),
+      customName: zod
+        .string()
+        .nullable()
+        .describe("User-set custom name overriding defaultName"),
+      juzNumber: zod.number(),
+      rob3Number: zod.number(),
+      surahs: zod.string(),
+      inScope: zod.boolean(),
+      quality: zod
+        .union([
+          zod.literal("excellent"),
+          zod.literal("good"),
+          zod.literal("hard"),
+          zod.literal("relearn"),
+          zod.literal(null),
+        ])
+        .nullable(),
+      mistakes: zod.number().nullable(),
+      lastRecited: zod.coerce.date().nullable(),
+      dueDate: zod.coerce.date().nullable(),
+      daysSinceRecited: zod.number().nullable(),
+      daysUntilDue: zod.number().nullable(),
+      status: zod.enum([
+        "overdue",
+        "due_soon",
+        "on_track",
+        "not_started",
+        "out_of_scope",
+      ]),
+    }),
+  ),
+});
+
+/**
  * @summary List pages with progress, filterable
  */
 export const ListPageProgressQueryParams = zod.object({
@@ -531,7 +589,9 @@ export const GetHomeworkResponse = zod.object({
       completedAt: zod.coerce.date().nullable(),
       weekCount: zod
         .number()
-        .describe("Number of times this page has been recited in the past 7 days (including today)"),
+        .describe(
+          "Number of times this page has been recited in the past 7 days (including today)",
+        ),
     }),
   ),
 });
@@ -598,7 +658,9 @@ export const UpdateHomeworkItemResponse = zod.object({
   completedAt: zod.coerce.date().nullable(),
   weekCount: zod
     .number()
-    .describe("Number of times this page has been recited in the past 7 days (including today)"),
+    .describe(
+      "Number of times this page has been recited in the past 7 days (including today)",
+    ),
 });
 
 /**
@@ -615,6 +677,30 @@ export const GetDailyChartResponseItem = zod.object({
   pages: zod.number().describe("Count of distinct pages recited on this day"),
 });
 export const GetDailyChartResponse = zod.array(GetDailyChartResponseItem);
+
+/**
+ * @summary Historical overdue count and cumulative unique recited pages over the last N days
+ */
+export const getProgressChartQueryDaysDefault = 30;
+
+export const GetProgressChartQueryParams = zod.object({
+  days: zod.coerce.number().default(getProgressChartQueryDaysDefault),
+});
+
+export const GetProgressChartResponseItem = zod.object({
+  date: zod.string().describe("ISO date string (YYYY-MM-DD)"),
+  overdueCount: zod
+    .number()
+    .describe(
+      "Number of in-scope pages that were overdue at the end of this day",
+    ),
+  uniqueRecitedCount: zod
+    .number()
+    .describe(
+      "Cumulative count of distinct pages with at least one recitation on or before this day",
+    ),
+});
+export const GetProgressChartResponse = zod.array(GetProgressChartResponseItem);
 
 /**
  * @summary Recent recitation activity feed

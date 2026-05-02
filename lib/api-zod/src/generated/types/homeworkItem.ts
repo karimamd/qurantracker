@@ -21,6 +21,6 @@ export interface HomeworkItem {
   quality: HomeworkItemQuality;
   /** @nullable */
   completedAt: Date | null;
-  /** Number of times this page has been recited today */
+  /** Number of times this page has been recited in the past 7 days (including today) */
   weekCount: number;
 }

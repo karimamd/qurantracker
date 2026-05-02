@@ -4,20 +4,20 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 
 const navItems = [
+  { href: "/homework", label: "Homework", icon: ClipboardList },
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/juz", label: "Juz", icon: Layers },
   { href: "/surah", label: "Surah", icon: BookOpen },
   { href: "/pages", label: "Pages", icon: FileText },
   { href: "/recite", label: "Recite", icon: PenLine },
-  { href: "/homework", label: "Homework", icon: ClipboardList },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 const bottomNavItems = [
-  { href: "/", label: "Home", icon: LayoutDashboard },
-  { href: "/juz", label: "Juz", icon: Layers },
-  { href: "/recite", label: "Recite", icon: PenLine },
   { href: "/homework", label: "Homework", icon: ClipboardList },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/juz", label: "Juz", icon: Layers },
+  { href: "/surah", label: "Surah", icon: BookOpen },
   { href: "/pages", label: "Pages", icon: FileText },
 ];
 

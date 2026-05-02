@@ -125,6 +125,27 @@ paths:
                 items:
                   $ref: "#/components/schemas/SurahProgress"
 
+  /progress/surah/{surahNumber}:
+    get:
+      operationId: getSurahDetail
+      tags: [progress]
+      summary: Get a single surah with all its pages
+      parameters:
+        - name: surahNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Surah detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SurahDetail"
+        "404":
+          description: Surah not found
+
   /progress/pages:
     get:
       operationId: listPageProgress
@@ -413,6 +434,28 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DailyChartEntry"
+
+  /progress/progress-chart:
+    get:
+      operationId: getProgressChart
+      tags: [progress]
+      summary: Historical overdue count and cumulative unique recited pages over the last N days
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Progress chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProgressChartEntry"
 
   /progress/activity:
     get:
@@ -762,6 +805,57 @@ components:
           description: Count of distinct pages recited on this day
       required:
         - date
+        - pages
+
+    ProgressChartEntry:
+      type: object
+      properties:
+        date:
+          type: string
+          description: ISO date string (YYYY-MM-DD)
+        overdueCount:
+          type: integer
+          description: Number of in-scope pages that were overdue at the end of this day
+        uniqueRecitedCount:
+          type: integer
+          description: Cumulative count of distinct pages with at least one recitation on or before this day
+      required:
+        - date
+        - overdueCount
+        - uniqueRecitedCount
+
+    SurahDetail:
+      type: object
+      properties:
+        surahNumber:
+          type: integer
+        name:
+          type: string
+        arabicName:
+          type: string
+        startPage:
+          type: integer
+        endPage:
+          type: integer
+        totalPages:
+          type: integer
+        pagesInScope:
+          type: integer
+        pagesOverdue:
+          type: integer
+        pages:
+          type: array
+          items:
+            $ref: "#/components/schemas/PageProgress"
+      required:
+        - surahNumber
+        - name
+        - arabicName
+        - startPage
+        - endPage
+        - totalPages
+        - pagesInScope
+        - pagesOverdue
         - pages
 
     BatchRecitationBody:

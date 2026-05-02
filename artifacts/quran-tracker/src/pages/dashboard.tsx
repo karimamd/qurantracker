@@ -3,6 +3,7 @@ import {
   useGetRecentActivity,
   useListPageProgress,
   useGetDailyChart,
+  useGetProgressChart,
   useListHomework,
   useUpdatePageProgress,
   getListPageProgressQueryKey,
@@ -16,11 +17,14 @@ import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight } from
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Legend,
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { PageLabel } from "@/components/page-label";
@@ -272,6 +276,116 @@ function DailyChartSection() {
   );
 }
 
+function ProgressChartSection() {
+  const { data: chartData, isLoading } = useGetProgressChart({ days: 30 });
+
+  if (isLoading) {
+    return <Skeleton className="h-64 rounded-xl" />;
+  }
+
+  const formatted = chartData?.map(d => ({
+    ...d,
+    label: format(parseISO(d.date), "MMM d"),
+    shortLabel: format(parseISO(d.date), "d"),
+  })) ?? [];
+
+  const hasAny = formatted.some(d => d.overdueCount > 0 || d.uniqueRecitedCount > 0);
+
+  return (
+    <Card className="border shadow-sm" data-testid="progress-chart-section">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">Progress Over Time</CardTitle>
+          <span className="text-xs text-muted-foreground">Last 30 days</span>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-2 pb-4 px-2">
+        {!hasAny ? (
+          <div className="h-44 flex items-center justify-center">
+            <p className="text-sm text-muted-foreground">No progress data yet.</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={formatted} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+              <XAxis
+                dataKey="shortLabel"
+                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                interval={4}
+              />
+              <YAxis
+                yAxisId="left"
+                tick={{ fontSize: 10, fill: "#f43f5e" }}
+                axisLine={false}
+                tickLine={false}
+                allowDecimals={false}
+                width={32}
+              />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                tick={{ fontSize: 10, fill: "hsl(var(--primary))" }}
+                axisLine={false}
+                tickLine={false}
+                allowDecimals={false}
+                width={32}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0].payload as (typeof formatted)[0];
+                  return (
+                    <div className="bg-background border rounded-lg shadow-md px-3 py-2 text-xs space-y-0.5">
+                      <div className="font-medium text-sm mb-1">{d.label}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-rose-500" />
+                        <span className="text-muted-foreground">Overdue:</span>
+                        <span className="font-medium">{d.overdueCount}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-primary" />
+                        <span className="text-muted-foreground">Unique recited:</span>
+                        <span className="font-medium">{d.uniqueRecitedCount}</span>
+                      </div>
+                    </div>
+                  );
+                }}
+              />
+              <Legend
+                wrapperStyle={{ fontSize: 11, paddingTop: 4 }}
+                iconType="circle"
+                iconSize={8}
+              />
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey="overdueCount"
+                name="Overdue pages"
+                stroke="#f43f5e"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="uniqueRecitedCount"
+                name="Unique pages recited"
+                stroke="hsl(var(--primary))"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Dashboard() {
   const { data: overview, isLoading: overviewLoading } = useGetProgressOverview();
   const { data: activity, isLoading: activityLoading } = useGetRecentActivity({ limit: 10 });
@@ -333,6 +447,8 @@ export default function Dashboard() {
       <ActiveHomeworkSection />
 
       <DuePagesSection />
+
+      <ProgressChartSection />
 
       <DailyChartSection />
 

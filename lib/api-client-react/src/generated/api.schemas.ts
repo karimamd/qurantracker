@@ -189,6 +189,27 @@ export interface DailyChartEntry {
   pages: number;
 }
 
+export interface ProgressChartEntry {
+  /** ISO date string (YYYY-MM-DD) */
+  date: string;
+  /** Number of in-scope pages that were overdue at the end of this day */
+  overdueCount: number;
+  /** Cumulative count of distinct pages with at least one recitation on or before this day */
+  uniqueRecitedCount: number;
+}
+
+export interface SurahDetail {
+  surahNumber: number;
+  name: string;
+  arabicName: string;
+  startPage: number;
+  endPage: number;
+  totalPages: number;
+  pagesInScope: number;
+  pagesOverdue: number;
+  pages: PageProgress[];
+}
+
 export type BatchRecitationBodyQuality =
   (typeof BatchRecitationBodyQuality)[keyof typeof BatchRecitationBodyQuality];
 
@@ -276,8 +297,8 @@ export interface HomeworkItem {
   quality: HomeworkItemQuality;
   /** @nullable */
   completedAt: string | null;
-  /** Number of times this page has been recited today */
-  todayCount: number;
+  /** Number of times this page has been recited in the past 7 days (including today) */
+  weekCount: number;
 }
 
 export interface HomeworkSessionDetail {
@@ -342,6 +363,10 @@ export const ListPageProgressStatus = {
 } as const;
 
 export type GetDailyChartParams = {
+  days?: number;
+};
+
+export type GetProgressChartParams = {
   days?: number;
 };
 

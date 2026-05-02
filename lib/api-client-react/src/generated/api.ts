@@ -22,6 +22,7 @@ import type {
   CreateHomeworkBody,
   DailyChartEntry,
   GetDailyChartParams,
+  GetProgressChartParams,
   GetRecentActivityParams,
   HealthStatus,
   HomeworkItem,
@@ -31,11 +32,13 @@ import type {
   JuzProgress,
   ListPageProgressParams,
   PageProgress,
+  ProgressChartEntry,
   ProgressOverview,
   RecordRecitationBody,
   RenamePageBody,
   ScopeBody,
   Settings,
+  SurahDetail,
   SurahProgress,
   UpdateHomeworkBody,
   UpdateHomeworkItemBody,
@@ -590,6 +593,94 @@ export function useListSurahProgress<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListSurahProgressQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get a single surah with all its pages
+ */
+export const getGetSurahDetailUrl = (surahNumber: number) => {
+  return `/api/progress/surah/${surahNumber}`;
+};
+
+export const getSurahDetail = async (
+  surahNumber: number,
+  options?: RequestInit,
+): Promise<SurahDetail> => {
+  return customFetch<SurahDetail>(getGetSurahDetailUrl(surahNumber), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSurahDetailQueryKey = (surahNumber: number) => {
+  return [`/api/progress/surah/${surahNumber}`] as const;
+};
+
+export const getGetSurahDetailQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSurahDetail>>,
+  TError = ErrorType<void>,
+>(
+  surahNumber: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSurahDetail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetSurahDetailQueryKey(surahNumber);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSurahDetail>>> = ({
+    signal,
+  }) => getSurahDetail(surahNumber, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!surahNumber,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSurahDetail>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSurahDetailQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSurahDetail>>
+>;
+export type GetSurahDetailQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a single surah with all its pages
+ */
+
+export function useGetSurahDetail<
+  TData = Awaited<ReturnType<typeof getSurahDetail>>,
+  TError = ErrorType<void>,
+>(
+  surahNumber: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSurahDetail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSurahDetailQueryOptions(surahNumber, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -1746,6 +1837,103 @@ export function useGetDailyChart<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetDailyChartQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Historical overdue count and cumulative unique recited pages over the last N days
+ */
+export const getGetProgressChartUrl = (params?: GetProgressChartParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/progress/progress-chart?${stringifiedParams}`
+    : `/api/progress/progress-chart`;
+};
+
+export const getProgressChart = async (
+  params?: GetProgressChartParams,
+  options?: RequestInit,
+): Promise<ProgressChartEntry[]> => {
+  return customFetch<ProgressChartEntry[]>(getGetProgressChartUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProgressChartQueryKey = (
+  params?: GetProgressChartParams,
+) => {
+  return [`/api/progress/progress-chart`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetProgressChartQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProgressChart>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetProgressChartParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProgressChart>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetProgressChartQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProgressChart>>
+  > = ({ signal }) => getProgressChart(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProgressChart>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProgressChartQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProgressChart>>
+>;
+export type GetProgressChartQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Historical overdue count and cumulative unique recited pages over the last N days
+ */
+
+export function useGetProgressChart<
+  TData = Awaited<ReturnType<typeof getProgressChart>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetProgressChartParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProgressChart>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProgressChartQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
