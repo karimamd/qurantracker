@@ -14,12 +14,18 @@ import {
   UpdateHomeworkItemBody,
   UpdateHomeworkItemResponse,
 } from "@workspace/api-zod";
-import { ensurePageExists, getSettings, calculateDueDate, enrichPageProgress, getDefaultPageName } from "../lib/progress-helpers";
+import { ensurePageExists, getSettings, calculateDueDate, getDefaultPageName } from "../lib/progress-helpers";
+import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
-router.get("/homework", async (_req, res): Promise<void> => {
-  const sessions = await db.select().from(homeworkSessionsTable).orderBy(homeworkSessionsTable.createdAt);
+router.use(requireAuth);
+
+router.get("/homework", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const sessions = await db.select().from(homeworkSessionsTable)
+    .where(eq(homeworkSessionsTable.userId, userId))
+    .orderBy(homeworkSessionsTable.createdAt);
   const now = new Date();
 
   const itemCounts = await db
@@ -29,6 +35,7 @@ router.get("/homework", async (_req, res): Promise<void> => {
       completedItems: count(sql`CASE WHEN ${homeworkItemsTable.completed} = true THEN 1 END`),
     })
     .from(homeworkItemsTable)
+    .where(eq(homeworkItemsTable.userId, userId))
     .groupBy(homeworkItemsTable.homeworkId);
 
   const countsMap = new Map(itemCounts.map(c => [c.homeworkId, { total: Number(c.totalItems), completed: Number(c.completedItems) }]));
@@ -59,6 +66,7 @@ router.get("/homework", async (_req, res): Promise<void> => {
 });
 
 router.post("/homework", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const parsed = CreateHomeworkBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -66,6 +74,7 @@ router.post("/homework", async (req, res): Promise<void> => {
   }
 
   const [session] = await db.insert(homeworkSessionsTable).values({
+    userId,
     title: parsed.data.title,
     dueDate: new Date(parsed.data.dueDate),
   }).returning();
@@ -74,8 +83,9 @@ router.post("/homework", async (req, res): Promise<void> => {
   const revisePages = parsed.data.revisePages || [];
 
   for (const pageNumber of memorizePages) {
-    await ensurePageExists(pageNumber);
+    await ensurePageExists(userId, pageNumber);
     await db.insert(homeworkItemsTable).values({
+      userId,
       homeworkId: session.id,
       pageNumber,
       type: "memorize",
@@ -83,15 +93,17 @@ router.post("/homework", async (req, res): Promise<void> => {
   }
 
   for (const pageNumber of revisePages) {
-    await ensurePageExists(pageNumber);
+    await ensurePageExists(userId, pageNumber);
     await db.insert(homeworkItemsTable).values({
+      userId,
       homeworkId: session.id,
       pageNumber,
       type: "revise",
     });
   }
 
-  const items = await db.select().from(homeworkItemsTable).where(eq(homeworkItemsTable.homeworkId, session.id));
+  const items = await db.select().from(homeworkItemsTable)
+    .where(and(eq(homeworkItemsTable.userId, userId), eq(homeworkItemsTable.homeworkId, session.id)));
 
   res.status(201).json({
     id: session.id,
@@ -105,13 +117,15 @@ router.post("/homework", async (req, res): Promise<void> => {
 });
 
 router.get("/homework/:id", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const params = GetHomeworkParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const [session] = await db.select().from(homeworkSessionsTable).where(eq(homeworkSessionsTable.id, params.data.id));
+  const [session] = await db.select().from(homeworkSessionsTable)
+    .where(and(eq(homeworkSessionsTable.userId, userId), eq(homeworkSessionsTable.id, params.data.id)));
   if (!session) {
     res.status(404).json({ error: "Homework session not found" });
     return;
@@ -128,8 +142,14 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
       customName: pageProgressTable.customName,
     })
     .from(homeworkItemsTable)
-    .leftJoin(pageProgressTable, eq(pageProgressTable.pageNumber, homeworkItemsTable.pageNumber))
-    .where(eq(homeworkItemsTable.homeworkId, session.id))
+    .leftJoin(
+      pageProgressTable,
+      and(
+        eq(pageProgressTable.pageNumber, homeworkItemsTable.pageNumber),
+        eq(pageProgressTable.userId, userId),
+      ),
+    )
+    .where(and(eq(homeworkItemsTable.userId, userId), eq(homeworkItemsTable.homeworkId, session.id)))
     .orderBy(homeworkItemsTable.pageNumber);
 
   const pageNumbers = rows.map(r => r.pageNumber);
@@ -146,6 +166,7 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
         .from(recitationLogTable)
         .where(
           and(
+            eq(recitationLogTable.userId, userId),
             inArray(recitationLogTable.pageNumber, pageNumbers),
             gte(recitationLogTable.recitedAt, weekStart)
           )
@@ -181,6 +202,7 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
 });
 
 router.patch("/homework/:id", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const params = UpdateHomeworkParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -200,7 +222,7 @@ router.patch("/homework/:id", async (req, res): Promise<void> => {
   const [updated] = await db
     .update(homeworkSessionsTable)
     .set(updateData)
-    .where(eq(homeworkSessionsTable.id, params.data.id))
+    .where(and(eq(homeworkSessionsTable.userId, userId), eq(homeworkSessionsTable.id, params.data.id)))
     .returning();
 
   if (!updated) {
@@ -208,7 +230,8 @@ router.patch("/homework/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const items = await db.select().from(homeworkItemsTable).where(eq(homeworkItemsTable.homeworkId, updated.id));
+  const items = await db.select().from(homeworkItemsTable)
+    .where(and(eq(homeworkItemsTable.userId, userId), eq(homeworkItemsTable.homeworkId, updated.id)));
   const completedItems = items.filter(i => i.completed).length;
   const now = new Date();
 
@@ -233,14 +256,18 @@ router.patch("/homework/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/homework/:id", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const params = DeleteHomeworkParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  await db.delete(homeworkItemsTable).where(eq(homeworkItemsTable.homeworkId, params.data.id));
-  const [deleted] = await db.delete(homeworkSessionsTable).where(eq(homeworkSessionsTable.id, params.data.id)).returning();
+  await db.delete(homeworkItemsTable)
+    .where(and(eq(homeworkItemsTable.userId, userId), eq(homeworkItemsTable.homeworkId, params.data.id)));
+  const [deleted] = await db.delete(homeworkSessionsTable)
+    .where(and(eq(homeworkSessionsTable.userId, userId), eq(homeworkSessionsTable.id, params.data.id)))
+    .returning();
 
   if (!deleted) {
     res.status(404).json({ error: "Homework session not found" });
@@ -251,6 +278,7 @@ router.delete("/homework/:id", async (req, res): Promise<void> => {
 });
 
 router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const params = UpdateHomeworkItemParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -265,6 +293,7 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
 
   const [item] = await db.select().from(homeworkItemsTable)
     .where(and(
+      eq(homeworkItemsTable.userId, userId),
       eq(homeworkItemsTable.id, params.data.itemId),
       eq(homeworkItemsTable.homeworkId, params.data.homeworkId),
     ));
@@ -289,12 +318,12 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
   const [updated] = await db
     .update(homeworkItemsTable)
     .set(updateData)
-    .where(eq(homeworkItemsTable.id, params.data.itemId))
+    .where(and(eq(homeworkItemsTable.userId, userId), eq(homeworkItemsTable.id, params.data.itemId)))
     .returning();
 
   if (parsed.data.quality) {
-    await ensurePageExists(item.pageNumber);
-    const settings = await getSettings();
+    await ensurePageExists(userId, item.pageNumber);
+    const settings = await getSettings(userId);
     const now = new Date();
     const dueDate = calculateDueDate(now, parsed.data.quality, settings);
 
@@ -306,9 +335,10 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
         dueDate,
         inScope: true,
       })
-      .where(eq(pageProgressTable.pageNumber, item.pageNumber));
+      .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, item.pageNumber)));
 
     await db.insert(recitationLogTable).values({
+      userId,
       pageNumber: item.pageNumber,
       quality: parsed.data.quality,
       recitedAt: now,
@@ -323,6 +353,7 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
     .from(recitationLogTable)
     .where(
       and(
+        eq(recitationLogTable.userId, userId),
         eq(recitationLogTable.pageNumber, item.pageNumber),
         gte(recitationLogTable.recitedAt, weekStart)
       )
@@ -335,7 +366,7 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
       customName: pageProgressTable.customName,
     })
     .from(pageProgressTable)
-    .where(eq(pageProgressTable.pageNumber, item.pageNumber));
+    .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, item.pageNumber)));
   const globalQuality = currentProgress[0]?.quality ?? updated.quality;
   const globalLastRecited = currentProgress[0]?.lastRecited ?? updated.completedAt;
   const customName = currentProgress[0]?.customName ?? null;

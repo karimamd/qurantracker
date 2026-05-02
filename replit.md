@@ -16,6 +16,7 @@ A personal Quran memorization progress tracker. Tracks revision across multiple 
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **Auth**: Clerk (`@clerk/react` on web, `@clerk/express` on server) — Replit-managed, multi-tenant
 
 ## Key Features
 
@@ -35,11 +36,20 @@ A personal Quran memorization progress tracker. Tracks revision across multiple 
 
 ## Database Tables
 
-- `settings` - configurable review interval days per quality level
-- `page_progress` - per-page tracking (scope, quality, mistakes, last recited, due date)
+All user-facing tables include a nullable `user_id` column scoped to the Clerk session userId. Every API route is protected by `requireAuth` which sets `req.userId` and returns 401 to unauthenticated requests; all queries filter by `req.userId`.
+
+- `settings` - configurable review interval days per quality level (unique per `user_id`)
+- `page_progress` - per-page tracking (scope, quality, mistakes, last recited, due date) — composite unique on `(user_id, page_number)`
 - `recitation_log` - history of all recitations for activity feed
 - `homework_sessions` - homework assignments with due dates
 - `homework_items` - individual pages within homework sessions
+
+## Auth Notes
+
+- Clerk publishable/secret keys are provisioned via Replit's `setupClerkWhitelabelAuth` — accessed in code through `VITE_CLERK_PUBLISHABLE_KEY` (client) and `CLERK_SECRET_KEY` / `CLERK_PUBLISHABLE_KEY` (server). Do not hardcode.
+- Server: `app.ts` mounts the Clerk proxy middleware before body parsers, then `clerkMiddleware`, then the API router (which uses `requireAuth`).
+- Client: `App.tsx` wraps the app in `<ClerkProvider>` (shadcn theme + brand variables). Routing uses wouter — `HomeRedirect` and `ProtectedApp` use `useAuth()` to gate signed-in vs signed-out (showing a small loading spinner during the auth-loading window). Sign-in/Sign-up rendered via `<SignIn />` / `<SignUp />` at `/sign-in` and `/sign-up`.
+- Orphan claim: on first authenticated request after server boot, any rows with `user_id IS NULL` (pre-auth dev data) are reassigned to that user. One-shot per process — see `requireAuth.ts` for the rationale.
 
 ## Key Commands
 

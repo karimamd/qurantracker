@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, BookOpen, Layers, FileText, PenLine, ClipboardList, Settings } from "lucide-react";
+import { LayoutDashboard, BookOpen, Layers, FileText, PenLine, ClipboardList, Settings, LogOut } from "lucide-react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { UserButton, useUser, useClerk } from "@clerk/react";
 
 const navItems = [
   { href: "/homework", label: "Homework", icon: ClipboardList },
@@ -24,9 +25,13 @@ const bottomNavItems = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { user } = useUser();
+  const { signOut } = useClerk();
 
   const isActive = (href: string) =>
     location === href || (href !== "/" && location.startsWith(href));
+
+  const userLabel = user?.primaryEmailAddress?.emailAddress ?? user?.firstName ?? "Account";
 
   return (
     <div className="min-h-screen flex" data-testid="app-layout">
@@ -52,6 +57,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
+        <div className="px-3 pt-3 mt-3 border-t border-sidebar-border space-y-2">
+          <div className="flex items-center gap-2 px-1" data-testid="user-info">
+            <UserButton />
+            <span className="text-xs text-sidebar-foreground/80 truncate flex-1" title={userLabel}>{userLabel}</span>
+          </div>
+          <button
+            onClick={() => signOut({ redirectUrl: "/" })}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            data-testid="button-sign-out"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </button>
+        </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -59,14 +78,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <h1 className="text-base font-semibold leading-tight">Quran Tracker</h1>
           </div>
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="p-2 rounded-lg hover:bg-muted transition-colors"
-            aria-label="Open menu"
-            data-testid="mobile-menu-btn"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <UserButton />
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="p-2 rounded-lg hover:bg-muted transition-colors"
+              aria-label="Open menu"
+              data-testid="mobile-menu-btn"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
         </header>
 
         {drawerOpen && (
@@ -107,6 +129,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Link>
                 ))}
               </nav>
+              <div className="px-3 pt-3 mt-3 border-t border-sidebar-border">
+                <button
+                  onClick={() => { setDrawerOpen(false); signOut({ redirectUrl: "/" }); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                  data-testid="mobile-button-sign-out"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign out
+                </button>
+              </div>
             </div>
           </div>
         )}

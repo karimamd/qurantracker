@@ -1,5 +1,5 @@
 import { db, settingsTable, pageProgressTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getJuzForPage, getRob3ForPage, getSurahsForPage } from "./quran-data";
 import pageNamesData from "./page-names.json" with { type: "json" };
 
@@ -27,10 +27,10 @@ export interface PageProgressEnriched {
   status: string;
 }
 
-export async function getSettings() {
-  const [settings] = await db.select().from(settingsTable);
+export async function getSettings(userId: string) {
+  const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.userId, userId));
   if (!settings) {
-    const [created] = await db.insert(settingsTable).values({}).returning();
+    const [created] = await db.insert(settingsTable).values({ userId }).returning();
     return created;
   }
   return settings;
@@ -88,10 +88,11 @@ export function enrichPageProgress(page: typeof pageProgressTable.$inferSelect):
   };
 }
 
-export async function ensurePageExists(pageNumber: number) {
-  const [existing] = await db.select().from(pageProgressTable).where(eq(pageProgressTable.pageNumber, pageNumber));
+export async function ensurePageExists(userId: string, pageNumber: number) {
+  const [existing] = await db.select().from(pageProgressTable)
+    .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)));
   if (!existing) {
-    const [created] = await db.insert(pageProgressTable).values({ pageNumber }).returning();
+    const [created] = await db.insert(pageProgressTable).values({ userId, pageNumber }).returning();
     return created;
   }
   return existing;

@@ -42,18 +42,24 @@ import {
   ROB3S_PER_JUZ,
 } from "../lib/quran-data";
 import { enrichPageProgress, getSettings, calculateDueDate, ensurePageExists, getDefaultPageName } from "../lib/progress-helpers";
+import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
-router.get("/progress/overview", async (_req, res): Promise<void> => {
-  const allPages = await db.select().from(pageProgressTable);
+router.use(requireAuth);
+
+router.get("/progress/overview", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const allPages = await db.select().from(pageProgressTable).where(eq(pageProgressTable.userId, userId));
   const enriched = allPages.map(enrichPageProgress);
   const inScope = enriched.filter(p => p.inScope);
 
   const now = new Date();
   let streakDays = 0;
   if (allPages.length > 0) {
-    const logs = await db.select().from(recitationLogTable).orderBy(desc(recitationLogTable.recitedAt));
+    const logs = await db.select().from(recitationLogTable)
+      .where(eq(recitationLogTable.userId, userId))
+      .orderBy(desc(recitationLogTable.recitedAt));
     if (logs.length > 0) {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       let checkDate = new Date(today);
@@ -96,8 +102,9 @@ router.get("/progress/overview", async (_req, res): Promise<void> => {
   res.json(GetProgressOverviewResponse.parse(overview));
 });
 
-router.get("/progress/juz", async (_req, res): Promise<void> => {
-  const allPages = await db.select().from(pageProgressTable);
+router.get("/progress/juz", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const allPages = await db.select().from(pageProgressTable).where(eq(pageProgressTable.userId, userId));
   const enriched = allPages.map(enrichPageProgress);
 
   const juzList = JUZ_PAGE_RANGES.map(juz => {
@@ -129,6 +136,7 @@ router.get("/progress/juz", async (_req, res): Promise<void> => {
 });
 
 router.get("/progress/juz/:juzNumber", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const params = GetJuzDetailParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -141,7 +149,7 @@ router.get("/progress/juz/:juzNumber", async (req, res): Promise<void> => {
     return;
   }
 
-  const allPages = await db.select().from(pageProgressTable);
+  const allPages = await db.select().from(pageProgressTable).where(eq(pageProgressTable.userId, userId));
   const enriched = allPages.map(enrichPageProgress);
   const juzPages = enriched.filter(p => p.juzNumber === juz.juz);
 
@@ -209,8 +217,9 @@ router.get("/progress/juz/:juzNumber", async (req, res): Promise<void> => {
   res.json(GetJuzDetailResponse.parse(detail));
 });
 
-router.get("/progress/surah", async (_req, res): Promise<void> => {
-  const allPages = await db.select().from(pageProgressTable);
+router.get("/progress/surah", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const allPages = await db.select().from(pageProgressTable).where(eq(pageProgressTable.userId, userId));
   const enriched = allPages.map(enrichPageProgress);
 
   const surahList = SURAHS.map(surah => {
@@ -240,6 +249,7 @@ router.get("/progress/surah", async (_req, res): Promise<void> => {
 });
 
 router.get("/progress/surah/:surahNumber", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const params = GetSurahDetailParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -252,7 +262,7 @@ router.get("/progress/surah/:surahNumber", async (req, res): Promise<void> => {
     return;
   }
 
-  const allPages = await db.select().from(pageProgressTable);
+  const allPages = await db.select().from(pageProgressTable).where(eq(pageProgressTable.userId, userId));
   const enriched = allPages.map(enrichPageProgress);
 
   const pages = [];
@@ -298,10 +308,11 @@ router.get("/progress/surah/:surahNumber", async (req, res): Promise<void> => {
 });
 
 router.get("/progress/pages", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const queryParams = ListPageProgressQueryParams.safeParse(req.query);
   const filters = queryParams.success ? queryParams.data : {};
 
-  const allPages = await db.select().from(pageProgressTable);
+  const allPages = await db.select().from(pageProgressTable).where(eq(pageProgressTable.userId, userId));
   let enriched = allPages.map(enrichPageProgress);
 
   const allPageNumbers = Array.from({ length: TOTAL_PAGES }, (_, i) => i + 1);
@@ -350,6 +361,7 @@ router.get("/progress/pages", async (req, res): Promise<void> => {
 });
 
 router.patch("/progress/pages/:pageNumber", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const params = UpdatePageProgressParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -368,8 +380,8 @@ router.patch("/progress/pages/:pageNumber", async (req, res): Promise<void> => {
     return;
   }
 
-  await ensurePageExists(pageNumber);
-  const settings = await getSettings();
+  await ensurePageExists(userId, pageNumber);
+  const settings = await getSettings(userId);
   const recitedAt = parsed.data.recitedAt ? new Date(parsed.data.recitedAt) : new Date();
   const dueDate = calculateDueDate(recitedAt, parsed.data.quality, settings);
 
@@ -382,10 +394,11 @@ router.patch("/progress/pages/:pageNumber", async (req, res): Promise<void> => {
       dueDate,
       inScope: true,
     })
-    .where(eq(pageProgressTable.pageNumber, pageNumber))
+    .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)))
     .returning();
 
   await db.insert(recitationLogTable).values({
+    userId,
     pageNumber,
     quality: parsed.data.quality,
     mistakes: parsed.data.mistakes ?? null,
@@ -397,6 +410,7 @@ router.patch("/progress/pages/:pageNumber", async (req, res): Promise<void> => {
 });
 
 router.put("/progress/pages/:pageNumber/name", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const params = RenamePageParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -412,32 +426,33 @@ router.put("/progress/pages/:pageNumber/name", async (req, res): Promise<void> =
     res.status(400).json({ error: "Invalid page number" });
     return;
   }
-  await ensurePageExists(pageNumber);
+  await ensurePageExists(userId, pageNumber);
   const raw = parsed.data.customName;
   const next = raw == null || raw.trim().length === 0 ? null : raw.trim();
   const [updated] = await db
     .update(pageProgressTable)
     .set({ customName: next })
-    .where(eq(pageProgressTable.pageNumber, pageNumber))
+    .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)))
     .returning();
   res.json(RenamePageResponse.parse(enrichPageProgress(updated)));
 });
 
 router.post("/progress/recite-batch", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const parsed = RecordBatchRecitationBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  const settings = await getSettings();
+  const settings = await getSettings(userId);
   const recitedAt = parsed.data.recitedAt ? new Date(parsed.data.recitedAt) : new Date();
   const dueDate = calculateDueDate(recitedAt, parsed.data.quality, settings);
   const results = [];
 
   for (const pageNumber of parsed.data.pageNumbers) {
     if (pageNumber < 1 || pageNumber > TOTAL_PAGES) continue;
-    await ensurePageExists(pageNumber);
+    await ensurePageExists(userId, pageNumber);
     const [updated] = await db
       .update(pageProgressTable)
       .set({
@@ -447,10 +462,11 @@ router.post("/progress/recite-batch", async (req, res): Promise<void> => {
         dueDate,
         inScope: true,
       })
-      .where(eq(pageProgressTable.pageNumber, pageNumber))
+      .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)))
       .returning();
 
     await db.insert(recitationLogTable).values({
+      userId,
       pageNumber,
       quality: parsed.data.quality,
       mistakes: parsed.data.mistakes ?? null,
@@ -460,13 +476,15 @@ router.post("/progress/recite-batch", async (req, res): Promise<void> => {
     results.push(enrichPageProgress(updated));
   }
 
-  // Sync with active homework sessions
   const validPageNumbers = parsed.data.pageNumbers.filter(p => p >= 1 && p <= TOTAL_PAGES);
   if (validPageNumbers.length > 0) {
     const activeSessions = await db
       .select({ id: homeworkSessionsTable.id })
       .from(homeworkSessionsTable)
-      .where(gte(homeworkSessionsTable.dueDate, recitedAt));
+      .where(and(
+        eq(homeworkSessionsTable.userId, userId),
+        gte(homeworkSessionsTable.dueDate, recitedAt),
+      ));
 
     const activeSessionIds = activeSessions.map(s => s.id);
 
@@ -479,6 +497,7 @@ router.post("/progress/recite-batch", async (req, res): Promise<void> => {
           .set({ completed: true, quality: parsed.data.quality, completedAt: recitedAt })
           .where(
             and(
+              eq(homeworkItemsTable.userId, userId),
               inArray(homeworkItemsTable.homeworkId, activeSessionIds),
               inArray(homeworkItemsTable.pageNumber, validPageNumbers)
             )
@@ -489,6 +508,7 @@ router.post("/progress/recite-batch", async (req, res): Promise<void> => {
           .set({ completed: false, quality: null, completedAt: null })
           .where(
             and(
+              eq(homeworkItemsTable.userId, userId),
               inArray(homeworkItemsTable.homeworkId, activeSessionIds),
               inArray(homeworkItemsTable.pageNumber, validPageNumbers)
             )
@@ -501,6 +521,7 @@ router.post("/progress/recite-batch", async (req, res): Promise<void> => {
 });
 
 router.post("/progress/scope", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const parsed = AddToScopeBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -510,11 +531,11 @@ router.post("/progress/scope", async (req, res): Promise<void> => {
   const results = [];
   for (const pageNumber of parsed.data.pageNumbers) {
     if (pageNumber < 1 || pageNumber > TOTAL_PAGES) continue;
-    await ensurePageExists(pageNumber);
+    await ensurePageExists(userId, pageNumber);
     const [updated] = await db
       .update(pageProgressTable)
       .set({ inScope: true })
-      .where(eq(pageProgressTable.pageNumber, pageNumber))
+      .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)))
       .returning();
     results.push(enrichPageProgress(updated));
   }
@@ -523,6 +544,7 @@ router.post("/progress/scope", async (req, res): Promise<void> => {
 });
 
 router.delete("/progress/scope", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const parsed = RemoveFromScopeBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -534,7 +556,7 @@ router.delete("/progress/scope", async (req, res): Promise<void> => {
     const [updated] = await db
       .update(pageProgressTable)
       .set({ inScope: false })
-      .where(eq(pageProgressTable.pageNumber, pageNumber))
+      .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)))
       .returning();
     if (updated) results.push(enrichPageProgress(updated));
   }
@@ -543,10 +565,10 @@ router.delete("/progress/scope", async (req, res): Promise<void> => {
 });
 
 router.get("/progress/daily-chart", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const queryParams = GetDailyChartQueryParams.safeParse(req.query);
   const numDays = queryParams.success ? queryParams.data.days : 30;
 
-  // Build an array of the last numDays dates
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dateList: string[] = [];
@@ -559,14 +581,13 @@ router.get("/progress/daily-chart", async (req, res): Promise<void> => {
   const since = new Date(today);
   since.setDate(since.getDate() - (numDays - 1));
 
-  // Query: count distinct pages per day
   const rows = await db
     .select({
       date: sql<string>`DATE(${recitationLogTable.recitedAt} AT TIME ZONE 'UTC')`.as("date"),
       pages: sql<number>`COUNT(DISTINCT ${recitationLogTable.pageNumber})`.as("pages"),
     })
     .from(recitationLogTable)
-    .where(gte(recitationLogTable.recitedAt, since))
+    .where(and(eq(recitationLogTable.userId, userId), gte(recitationLogTable.recitedAt, since)))
     .groupBy(sql`DATE(${recitationLogTable.recitedAt} AT TIME ZONE 'UTC')`)
     .orderBy(sql`DATE(${recitationLogTable.recitedAt} AT TIME ZONE 'UTC')`);
 
@@ -581,11 +602,12 @@ router.get("/progress/daily-chart", async (req, res): Promise<void> => {
 });
 
 router.get("/progress/progress-chart", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const queryParams = GetProgressChartQueryParams.safeParse(req.query);
   const requestedDays = queryParams.success ? queryParams.data.days : 30;
   const numDays = Math.min(Math.max(requestedDays, 1), 365);
 
-  const settings = await getSettings();
+  const settings = await getSettings(userId);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -593,7 +615,7 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
   const scopePages = await db
     .select({ pageNumber: pageProgressTable.pageNumber })
     .from(pageProgressTable)
-    .where(eq(pageProgressTable.inScope, true));
+    .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.inScope, true)));
   const inScopeSet = new Set(scopePages.map(p => p.pageNumber));
 
   const allLogs = await db
@@ -603,6 +625,7 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
       recitedAt: recitationLogTable.recitedAt,
     })
     .from(recitationLogTable)
+    .where(eq(recitationLogTable.userId, userId))
     .orderBy(recitationLogTable.recitedAt);
 
   const result: { date: string; overdueCount: number; uniqueRecitedCount: number }[] = [];
@@ -644,12 +667,14 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
 });
 
 router.get("/progress/activity", async (req, res): Promise<void> => {
+  const userId = req.userId!;
   const queryParams = GetRecentActivityQueryParams.safeParse(req.query);
   const limit = queryParams.success && queryParams.data.limit ? queryParams.data.limit : 20;
 
   const logs = await db
     .select()
     .from(recitationLogTable)
+    .where(eq(recitationLogTable.userId, userId))
     .orderBy(desc(recitationLogTable.recitedAt))
     .limit(limit);
 
@@ -668,10 +693,6 @@ router.get("/progress/activity", async (req, res): Promise<void> => {
 
 function getMostCommonQuality(qualities: string[]): string {
   const priority: Record<string, number> = { relearn: 0, hard: 1, good: 2, excellent: 3 };
-  const counts: Record<string, number> = {};
-  for (const q of qualities) {
-    counts[q] = (counts[q] || 0) + 1;
-  }
   let worst = "excellent";
   for (const q of qualities) {
     if (priority[q] < priority[worst]) {
