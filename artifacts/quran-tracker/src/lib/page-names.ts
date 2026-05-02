@@ -6,6 +6,12 @@ export function getDefaultPageName(pageNumber: number): string {
   return PAGE_NAMES[String(pageNumber)]?.text ?? "";
 }
 
+export function getPageMeta(
+  pageNumber: number,
+): { surah: number; ayah: number; text: string } | null {
+  return PAGE_NAMES[String(pageNumber)] ?? null;
+}
+
 export function getPageDisplayName(
   pageNumber: number,
   customName?: string | null,

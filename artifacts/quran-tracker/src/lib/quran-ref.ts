@@ -154,6 +154,13 @@ export function pagesForJuz(juz: number): number[] {
   return Array.from({ length: entry.endPage - entry.startPage + 1 }, (_, i) => entry.startPage + i);
 }
 
+export function getSurahsInPageRange(
+  startPage: number,
+  endPage: number,
+): typeof SURAHS[number][] {
+  return SURAHS.filter(s => s.startPage <= endPage && s.endPage >= startPage);
+}
+
 export function pagesForSurah(surahNumber: number): number[] {
   const s = SURAHS.find(s => s.number === surahNumber);
   if (!s) return [];

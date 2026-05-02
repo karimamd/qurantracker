@@ -21,8 +21,8 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronRight } from "lucide-react";
-import { SURAHS, ALL_ROB3S, ROB3S_PER_JUZ, JUZ_RANGES } from "@/lib/quran-ref";
-import { getDefaultPageName } from "@/lib/page-names";
+import { SURAHS, ALL_ROB3S, ROB3S_PER_JUZ, JUZ_RANGES, getSurahsInPageRange } from "@/lib/quran-ref";
+import { getPageMeta } from "@/lib/page-names";
 
 export default function HomeworkList() {
   const { data: sessions, isLoading } = useListHomework();
@@ -226,11 +226,15 @@ interface RangePickersProps {
 function RangePickers({ testIdPrefix, onPick }: RangePickersProps) {
   const [surahKey, setSurahKey] = useState(0);
   const [partKey, setPartKey] = useState(0);
+  const [filterSurah, setFilterSurah] = useState<number | null>(null);
 
   const handleSurah = (value: string) => {
     const n = parseInt(value, 10);
     const s = SURAHS.find(x => x.number === n);
-    if (s) onPick(s.startPage, s.endPage);
+    if (s) {
+      onPick(s.startPage, s.endPage);
+      setFilterSurah(n);
+    }
     setSurahKey(k => k + 1);
   };
 
@@ -241,69 +245,124 @@ function RangePickers({ testIdPrefix, onPick }: RangePickersProps) {
     setPartKey(k => k + 1);
   };
 
-  return (
-    <div className="grid grid-cols-2 gap-2 mt-2" data-testid={`range-pickers-${testIdPrefix}`}>
-      <Select key={`surah-${surahKey}`} onValueChange={handleSurah}>
-        <SelectTrigger data-testid={`select-surah-${testIdPrefix}`}>
-          <SelectValue placeholder="Add Surah…" />
-        </SelectTrigger>
-        <SelectContent className="max-h-72">
-          {SURAHS.map(s => {
-            const range = s.startPage === s.endPage ? `p. ${s.startPage}` : `p. ${s.startPage}–${s.endPage}`;
-            return (
-              <SelectItem
-                key={s.number}
-                value={String(s.number)}
-                data-testid={`opt-surah-${testIdPrefix}-${s.number}`}
-              >
-                <div className="flex flex-col items-start gap-0 py-0.5">
-                  <span className="text-sm">
-                    {s.number}. {s.name}
-                    <span className="ml-2 text-muted-foreground" dir="rtl">{s.arabic}</span>
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">{range}</span>
-                </div>
-              </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
+  const filterSurahData = filterSurah !== null
+    ? SURAHS.find(s => s.number === filterSurah) ?? null
+    : null;
 
-      <Select key={`part-${partKey}`} onValueChange={handlePart}>
-        <SelectTrigger data-testid={`select-part-${testIdPrefix}`}>
-          <SelectValue placeholder="Add Part…" />
-        </SelectTrigger>
-        <SelectContent className="max-h-72">
-          {JUZ_RANGES.map(juz => (
-            <SelectGroup key={juz.juz}>
-              <SelectLabel>Juz {juz.juz}</SelectLabel>
-              {ALL_ROB3S.filter(r => r.juz === juz.juz).map(r => {
-                const range = r.startPage === r.endPage ? `p. ${r.startPage}` : `p. ${r.startPage}–${r.endPage}`;
-                const ayah = getDefaultPageName(r.startPage);
-                return (
-                  <SelectItem
-                    key={r.rob3}
-                    value={String(r.rob3)}
-                    data-testid={`opt-part-${testIdPrefix}-${r.rob3}`}
-                  >
-                    <div className="flex flex-col items-start gap-0 py-0.5 max-w-[260px]">
-                      <span className="text-sm">
-                        Part {r.rob3InJuz + 1}/{ROB3S_PER_JUZ}
-                        <span className="ml-2 text-muted-foreground">· {range}</span>
-                      </span>
-                      {ayah ? (
-                        <span className="text-[11px] text-muted-foreground truncate w-full" dir="rtl">
-                          {ayah}
-                        </span>
-                      ) : null}
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectGroup>
-          ))}
-        </SelectContent>
-      </Select>
+  const visibleParts = filterSurahData
+    ? ALL_ROB3S.filter(
+        r => r.startPage <= filterSurahData.endPage && r.endPage >= filterSurahData.startPage,
+      )
+    : ALL_ROB3S;
+
+  const partsByJuz = JUZ_RANGES.map(juz => ({
+    juz: juz.juz,
+    parts: visibleParts.filter(r => r.juz === juz.juz),
+  })).filter(g => g.parts.length > 0);
+
+  const partPlaceholder = filterSurahData ? `Part of ${filterSurahData.name}…` : "Add Part…";
+
+  return (
+    <div className="space-y-2 mt-2" data-testid={`range-pickers-${testIdPrefix}`}>
+      <div className="grid grid-cols-2 gap-2">
+        <Select key={`surah-${surahKey}`} onValueChange={handleSurah}>
+          <SelectTrigger data-testid={`select-surah-${testIdPrefix}`}>
+            <SelectValue placeholder="Add Surah…" />
+          </SelectTrigger>
+          <SelectContent className="max-h-72">
+            {SURAHS.map(s => {
+              const range = s.startPage === s.endPage ? `p. ${s.startPage}` : `p. ${s.startPage}–${s.endPage}`;
+              return (
+                <SelectItem
+                  key={s.number}
+                  value={String(s.number)}
+                  data-testid={`opt-surah-${testIdPrefix}-${s.number}`}
+                >
+                  <div className="flex flex-col items-start gap-0 py-0.5">
+                    <span className="text-sm">
+                      {s.number}. {s.name}
+                      <span className="ml-2 text-muted-foreground" dir="rtl">{s.arabic}</span>
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">{range}</span>
+                  </div>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+
+        <Select key={`part-${partKey}`} onValueChange={handlePart}>
+          <SelectTrigger data-testid={`select-part-${testIdPrefix}`}>
+            <SelectValue placeholder={partPlaceholder} />
+          </SelectTrigger>
+          <SelectContent className="max-h-72">
+            {partsByJuz.length === 0 ? (
+              <div className="px-2 py-3 text-xs text-muted-foreground">
+                No Parts overlap the selected Surah.
+              </div>
+            ) : (
+              partsByJuz.map(({ juz, parts }) => (
+                <SelectGroup key={juz}>
+                  <SelectLabel>Juz {juz}</SelectLabel>
+                  {parts.map(r => {
+                    const range = r.startPage === r.endPage ? `p. ${r.startPage}` : `p. ${r.startPage}–${r.endPage}`;
+                    const meta = getPageMeta(r.startPage);
+                    const surahsSpanned = getSurahsInPageRange(r.startPage, r.endPage);
+                    const surahsLabel = surahsSpanned
+                      .map(s => s.name)
+                      .slice(0, 2)
+                      .join(", ") + (surahsSpanned.length > 2 ? ` +${surahsSpanned.length - 2}` : "");
+                    const startSurah = meta ? SURAHS.find(s => s.number === meta.surah) : null;
+                    return (
+                      <SelectItem
+                        key={r.rob3}
+                        value={String(r.rob3)}
+                        data-testid={`opt-part-${testIdPrefix}-${r.rob3}`}
+                      >
+                        <div className="flex flex-col items-start gap-0.5 py-0.5 max-w-[280px]">
+                          <span className="text-sm">
+                            Part {r.rob3InJuz + 1}/{ROB3S_PER_JUZ}
+                            <span className="ml-2 text-muted-foreground">· {range}</span>
+                          </span>
+                          {surahsLabel ? (
+                            <span className="text-[11px] text-muted-foreground">{surahsLabel}</span>
+                          ) : null}
+                          {meta && startSurah ? (
+                            <span className="text-[11px] text-muted-foreground">
+                              p.{r.startPage} opens with {startSurah.name} {meta.ayah}
+                            </span>
+                          ) : null}
+                          {meta?.text ? (
+                            <span className="text-[11px] text-muted-foreground truncate w-full" dir="rtl">
+                              {meta.text}
+                            </span>
+                          ) : null}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectGroup>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {filterSurahData ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>
+            Showing Parts in <span className="font-medium text-foreground">{filterSurahData.name}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setFilterSurah(null)}
+            className="text-teal-700 hover:text-teal-800 underline"
+            data-testid={`clear-surah-filter-${testIdPrefix}`}
+          >
+            Show all Parts
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
