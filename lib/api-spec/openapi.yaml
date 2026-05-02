@@ -110,6 +110,21 @@ paths:
         "404":
           description: Juz not found
 
+  /progress/rob3:
+    get:
+      operationId: listRob3Progress
+      tags: [progress]
+      summary: List all 240 Rub' al-Hizb (Parts) with aggregated progress
+      responses:
+        "200":
+          description: Rob3 progress list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rob3ProgressItem"
+
   /progress/surah:
     get:
       operationId: listSurahProgress
@@ -686,6 +701,59 @@ components:
         - juzNumber
         - startPage
         - endPage
+        - totalPages
+        - pagesInScope
+        - pagesOverdue
+        - averageQuality
+        - lastRecited
+        - nextDue
+        - totalMistakes
+
+    Rob3ProgressItem:
+      type: object
+      properties:
+        rob3Number:
+          type: integer
+        partInJuz:
+          type: integer
+          description: Position within the juz (1-8)
+        juzNumber:
+          type: integer
+        juzName:
+          type: string
+        startPage:
+          type: integer
+        endPage:
+          type: integer
+        startSurahName:
+          type: string
+        startAyah:
+          type: integer
+        totalPages:
+          type: integer
+        pagesInScope:
+          type: integer
+        pagesOverdue:
+          type: integer
+        averageQuality:
+          type: ["string", "null"]
+        lastRecited:
+          type: ["string", "null"]
+          format: date-time
+        nextDue:
+          type: ["string", "null"]
+          format: date-time
+        totalMistakes:
+          type: ["integer", "null"]
+      required:
+        - rob3Number
+        - partInJuz
+        - juzNumber
+        - juzName
+        - startPage
+        - endPage
+        - startSurahName
+        - startAyah
         - totalPages
         - pagesInScope
         - pagesOverdue

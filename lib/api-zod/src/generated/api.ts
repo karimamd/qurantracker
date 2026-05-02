@@ -151,6 +151,28 @@ export const GetJuzDetailResponse = zod.object({
 });
 
 /**
+ * @summary List all 240 Rub' al-Hizb (Parts) with aggregated progress
+ */
+export const ListRob3ProgressResponseItem = zod.object({
+  rob3Number: zod.number(),
+  partInJuz: zod.number().describe("Position within the juz (1-8)"),
+  juzNumber: zod.number(),
+  juzName: zod.string(),
+  startPage: zod.number(),
+  endPage: zod.number(),
+  startSurahName: zod.string(),
+  startAyah: zod.number(),
+  totalPages: zod.number(),
+  pagesInScope: zod.number(),
+  pagesOverdue: zod.number(),
+  averageQuality: zod.string().nullable(),
+  lastRecited: zod.coerce.date().nullable(),
+  nextDue: zod.coerce.date().nullable(),
+  totalMistakes: zod.number().nullable(),
+});
+export const ListRob3ProgressResponse = zod.array(ListRob3ProgressResponseItem);
+
+/**
  * @summary List all 114 surahs with aggregated progress
  */
 export const ListSurahProgressResponseItem = zod.object({

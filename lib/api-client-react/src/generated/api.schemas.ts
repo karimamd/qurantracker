@@ -140,6 +140,29 @@ export interface JuzDetail {
   pages: PageProgress[];
 }
 
+export interface Rob3ProgressItem {
+  rob3Number: number;
+  /** Position within the juz (1-8) */
+  partInJuz: number;
+  juzNumber: number;
+  juzName: string;
+  startPage: number;
+  endPage: number;
+  startSurahName: string;
+  startAyah: number;
+  totalPages: number;
+  pagesInScope: number;
+  pagesOverdue: number;
+  /** @nullable */
+  averageQuality: string | null;
+  /** @nullable */
+  lastRecited: string | null;
+  /** @nullable */
+  nextDue: string | null;
+  /** @nullable */
+  totalMistakes: number | null;
+}
+
 export interface SurahProgress {
   surahNumber: number;
   name: string;

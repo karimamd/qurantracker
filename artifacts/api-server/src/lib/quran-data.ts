@@ -187,14 +187,20 @@ export function getRob3ForPage(pageNumber: number): number {
   return result;
 }
 
-export function getRob3Range(rob3Number: number): { startPage: number; endPage: number; juzNumber: number } {
+export function getRob3Range(rob3Number: number): {
+  startPage: number;
+  endPage: number;
+  juzNumber: number;
+  startSurah: number;
+  startAyah: number;
+} {
   const boundary = ROB3_BOUNDARIES[rob3Number - 1];
   const next = ROB3_BOUNDARIES[rob3Number];
   const juzNumber = Math.floor((rob3Number - 1) / ROB3S_PER_JUZ) + 1;
-  if (!boundary) return { startPage: 1, endPage: 1, juzNumber: 1 };
+  if (!boundary) return { startPage: 1, endPage: 1, juzNumber: 1, startSurah: 1, startAyah: 1 };
   const startPage = boundary.page;
   const endPage = next ? Math.max(startPage, next.page - 1) : TOTAL_PAGES;
-  return { startPage, endPage, juzNumber };
+  return { startPage, endPage, juzNumber, startSurah: boundary.surah, startAyah: boundary.ayah };
 }
 
 export function getSurahsForPage(pageNumber: number): string {

@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import Dashboard from "@/pages/dashboard";
 import JuzList from "@/pages/juz-list";
 import JuzDetail from "@/pages/juz-detail";
+import Rob3List from "@/pages/rob3-list";
 import SurahList from "@/pages/surah-list";
 import SurahDetail from "@/pages/surah-detail";
 import PageList from "@/pages/page-list";
@@ -195,6 +196,7 @@ function ProtectedApp() {
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/juz" component={JuzList} />
           <Route path="/juz/:id" component={JuzDetail} />
+          <Route path="/rub" component={Rob3List} />
           <Route path="/surah" component={SurahList} />
           <Route path="/surah/:id" component={SurahDetail} />
           <Route path="/pages" component={PageList} />

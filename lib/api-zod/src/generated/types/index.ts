@@ -35,6 +35,7 @@ export * from "./recordRecitationBody";
 export * from "./recordRecitationBodyQuality";
 export * from "./renamePageBody";
 export * from "./rob3Progress";
+export * from "./rob3ProgressItem";
 export * from "./scopeBody";
 export * from "./settings";
 export * from "./surahDetail";

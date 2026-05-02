@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, BookOpen, Layers, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info } from "lucide-react";
+import { LayoutDashboard, BookOpen, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info } from "lucide-react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { UserButton, useUser, useClerk, useAuth } from "@clerk/react";
@@ -10,6 +10,7 @@ const navItems = [
   { href: "/homework", label: "Homework", icon: ClipboardList },
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/juz", label: "Juz", icon: Layers },
+  { href: "/rub", label: "Rub'", icon: Grid3x3 },
   { href: "/surah", label: "Surah", icon: BookOpen },
   { href: "/pages", label: "Pages", icon: FileText },
   { href: "/recite", label: "Recite", icon: PenLine },
@@ -20,7 +21,7 @@ const bottomNavItems = [
   { href: "/homework", label: "Homework", icon: ClipboardList },
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/juz", label: "Juz", icon: Layers },
-  { href: "/surah", label: "Surah", icon: BookOpen },
+  { href: "/rub", label: "Rub'", icon: Grid3x3 },
   { href: "/pages", label: "Pages", icon: FileText },
 ];
 

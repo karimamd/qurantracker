@@ -36,6 +36,7 @@ import type {
   ProgressOverview,
   RecordRecitationBody,
   RenamePageBody,
+  Rob3ProgressItem,
   ScopeBody,
   Settings,
   SurahDetail,
@@ -518,6 +519,81 @@ export function useGetJuzDetail<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetJuzDetailQueryOptions(juzNumber, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List all 240 Rub' al-Hizb (Parts) with aggregated progress
+ */
+export const getListRob3ProgressUrl = () => {
+  return `/api/progress/rob3`;
+};
+
+export const listRob3Progress = async (
+  options?: RequestInit,
+): Promise<Rob3ProgressItem[]> => {
+  return customFetch<Rob3ProgressItem[]>(getListRob3ProgressUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListRob3ProgressQueryKey = () => {
+  return [`/api/progress/rob3`] as const;
+};
+
+export const getListRob3ProgressQueryOptions = <
+  TData = Awaited<ReturnType<typeof listRob3Progress>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listRob3Progress>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListRob3ProgressQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listRob3Progress>>
+  > = ({ signal }) => listRob3Progress({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listRob3Progress>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListRob3ProgressQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listRob3Progress>>
+>;
+export type ListRob3ProgressQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all 240 Rub' al-Hizb (Parts) with aggregated progress
+ */
+
+export function useListRob3Progress<
+  TData = Awaited<ReturnType<typeof listRob3Progress>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listRob3Progress>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListRob3ProgressQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

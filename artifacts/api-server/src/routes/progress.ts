@@ -31,9 +31,11 @@ import {
   GetProgressChartResponse,
   GetSurahDetailParams,
   GetSurahDetailResponse,
+  ListRob3ProgressResponse,
 } from "@workspace/api-zod";
 import {
   TOTAL_PAGES,
+  TOTAL_ROB3S,
   JUZ_PAGE_RANGES,
   SURAHS,
   getJuzForPage,
@@ -217,6 +219,46 @@ router.get("/progress/juz/:juzNumber", async (req, res): Promise<void> => {
   };
 
   res.json(GetJuzDetailResponse.parse(detail));
+});
+
+router.get("/progress/rob3", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const allPages = await db.select().from(pageProgressTable).where(eq(pageProgressTable.userId, userId));
+  const enriched = allPages.map(enrichPageProgress);
+
+  const list = [];
+  for (let n = 1; n <= TOTAL_ROB3S; n++) {
+    const range = getRob3Range(n);
+    const juzNumber = Math.floor((n - 1) / ROB3S_PER_JUZ) + 1;
+    const partInJuz = ((n - 1) % ROB3S_PER_JUZ) + 1;
+    const rob3Pages = enriched.filter(p => p.rob3Number === n);
+    const inScope = rob3Pages.filter(p => p.inScope);
+    const lastRecitedArr = inScope.filter(p => p.lastRecited).sort((a, b) => b.lastRecited!.getTime() - a.lastRecited!.getTime());
+    const nextDueArr = inScope.filter(p => p.dueDate).sort((a, b) => a.dueDate!.getTime() - b.dueDate!.getTime());
+    const qualities = inScope.filter(p => p.quality).map(p => p.quality!);
+    const totalMistakes = inScope.reduce((sum, p) => sum + (p.mistakes || 0), 0);
+    const startSurah = SURAHS.find(s => s.number === range.startSurah);
+
+    list.push({
+      rob3Number: n,
+      partInJuz,
+      juzNumber,
+      juzName: getJuzName(juzNumber),
+      startPage: range.startPage,
+      endPage: range.endPage,
+      startSurahName: startSurah?.name ?? `Surah ${range.startSurah}`,
+      startAyah: range.startAyah,
+      totalPages: range.endPage - range.startPage + 1,
+      pagesInScope: inScope.length,
+      pagesOverdue: inScope.filter(p => p.status === "overdue").length,
+      averageQuality: qualities.length > 0 ? getMostCommonQuality(qualities) : null,
+      lastRecited: lastRecitedArr.length > 0 ? lastRecitedArr[0].lastRecited : null,
+      nextDue: nextDueArr.length > 0 ? nextDueArr[0].dueDate : null,
+      totalMistakes: inScope.length > 0 ? totalMistakes : null,
+    });
+  }
+
+  res.json(ListRob3ProgressResponse.parse(list));
 });
 
 router.get("/progress/surah", async (req, res): Promise<void> => {
