@@ -100,9 +100,10 @@ export default function Reader() {
     setPageNumber(prev => (prev === n ? prev : n));
   }, [params.page]);
 
-  // Reset practice-mode state whenever the page changes
+  // Reset per-ayah marks & reveal progress on page change, but PRESERVE the
+  // user's hide-mode preference: if they were practicing (hide-mode on) the
+  // next page also starts hidden; if they were reading freely it stays free.
   useEffect(() => {
-    setHideMode(false);
     setRevealedCount(0);
     setMistakeAyahs(new Set());
     setClearedAyahs(new Set());
