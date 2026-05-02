@@ -22,7 +22,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronRight } from "lucide-react";
 import { SURAHS, ALL_ROB3S, ROB3S_PER_JUZ, JUZ_RANGES, getSurahsInPageRange } from "@/lib/quran-ref";
-import { getPageMeta } from "@/lib/page-names";
 
 export default function HomeworkList() {
   const { data: sessions, isLoading } = useListHomework();
@@ -306,13 +305,12 @@ function RangePickers({ testIdPrefix, onPick }: RangePickersProps) {
                   <SelectLabel>Juz {juz}</SelectLabel>
                   {parts.map(r => {
                     const range = r.startPage === r.endPage ? `p. ${r.startPage}` : `p. ${r.startPage}–${r.endPage}`;
-                    const meta = getPageMeta(r.startPage);
                     const surahsSpanned = getSurahsInPageRange(r.startPage, r.endPage);
                     const surahsLabel = surahsSpanned
                       .map(s => s.name)
                       .slice(0, 2)
                       .join(", ") + (surahsSpanned.length > 2 ? ` +${surahsSpanned.length - 2}` : "");
-                    const startSurah = meta ? SURAHS.find(s => s.number === meta.surah) : null;
+                    const startSurah = SURAHS.find(s => s.number === r.startSurah);
                     return (
                       <SelectItem
                         key={r.rob3}
@@ -327,14 +325,9 @@ function RangePickers({ testIdPrefix, onPick }: RangePickersProps) {
                           {surahsLabel ? (
                             <span className="text-[11px] text-muted-foreground">{surahsLabel}</span>
                           ) : null}
-                          {meta && startSurah ? (
+                          {startSurah ? (
                             <span className="text-[11px] text-muted-foreground">
-                              p.{r.startPage} opens with {startSurah.name} {meta.ayah}
-                            </span>
-                          ) : null}
-                          {meta?.text ? (
-                            <span className="text-[11px] text-muted-foreground truncate w-full" dir="rtl">
-                              {meta.text}
+                              starts at {startSurah.name} {r.startAyah} (p.{r.startPage})
                             </span>
                           ) : null}
                         </div>

@@ -25,7 +25,7 @@ A personal Quran memorization progress tracker. Tracks revision across multiple 
 - **Color-coded status**: Overdue (red), Due Soon (amber), On Track (green), Not Started (blue)
 - **Scope management**: Add/remove pages from memorization scope
 - **Batch recitation recording**: Record quality for page ranges
-- **Homework tracking**: Create bi-weekly sessions with memorize/revise pages. Create dialog includes Surah and Part dropdowns next to each input — selecting appends the page range (Surah shows arabic name + range; Part is grouped by Juz and shows "Part N/8 · p. start–end" with the first ayah snippet from `page-names.json`).
+- **Homework tracking**: Create bi-weekly sessions with memorize/revise pages. Create dialog includes Surah and Part dropdowns next to each input. Picking a Surah appends its page range AND filters the Parts dropdown to only Parts overlapping that Surah (with a "Show all Parts" affordance to clear). Each Part is grouped by Juz and labeled "Part N/8 · p. start–end" plus the surah(s) it spans plus its true start ayah ("starts at <Surah> <ayah> (p.X)"). Rub'-al-Hizb start positions come from authoritative data in `lib/rob3-boundaries.json` (240 entries, fetched from al-Quran Cloud's `hizbQuarter` endpoint and stored in repo). Both client (`lib/quran-ref.ts`) and server (`api-server/src/lib/quran-data.ts`) read from this same JSON so page→part and part→page math is consistent end-to-end.
 - **Activity feed**: Recent recitation history
 - **Streak counter**: Track consecutive days of revision
 - **Due pages dashboard section**: Pages requiring attention (overdue + due soon) sorted by due date, shown above the chart

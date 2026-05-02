@@ -166,28 +166,35 @@ export function getJuzForPage(pageNumber: number): number {
   return juz ? juz.juz : 1;
 }
 
+import rob3BoundariesData from "./rob3-boundaries.json";
+
+interface Rob3Boundary {
+  rob3: number;
+  surah: number;
+  ayah: number;
+  page: number;
+}
+
+const ROB3_BOUNDARIES = rob3BoundariesData as Rob3Boundary[];
+
 export function getRob3ForPage(pageNumber: number): number {
-  const juz = JUZ_PAGE_RANGES.find(j => pageNumber >= j.startPage && pageNumber <= j.endPage);
-  if (!juz) return 1;
-  const juzPages = juz.endPage - juz.startPage + 1;
-  const pageOffset = pageNumber - juz.startPage;
-  const pagesPerRob3 = juzPages / ROB3S_PER_JUZ;
-  const rob3InJuz = Math.min(Math.floor(pageOffset / pagesPerRob3), ROB3S_PER_JUZ - 1);
-  return (juz.juz - 1) * ROB3S_PER_JUZ + rob3InJuz + 1;
+  // Find the highest rob3 whose start page is <= pageNumber.
+  let result = 1;
+  for (const b of ROB3_BOUNDARIES) {
+    if (b.page <= pageNumber) result = b.rob3;
+    else break;
+  }
+  return result;
 }
 
 export function getRob3Range(rob3Number: number): { startPage: number; endPage: number; juzNumber: number } {
-  const juzIndex = Math.floor((rob3Number - 1) / ROB3S_PER_JUZ);
-  const rob3InJuz = (rob3Number - 1) % ROB3S_PER_JUZ;
-  const juz = JUZ_PAGE_RANGES[juzIndex];
-  if (!juz) return { startPage: 1, endPage: 1, juzNumber: 1 };
-  const juzPages = juz.endPage - juz.startPage + 1;
-  const pagesPerRob3 = juzPages / ROB3S_PER_JUZ;
-  const startPage = juz.startPage + Math.floor(rob3InJuz * pagesPerRob3);
-  const endPage = rob3InJuz === ROB3S_PER_JUZ - 1
-    ? juz.endPage
-    : juz.startPage + Math.floor((rob3InJuz + 1) * pagesPerRob3) - 1;
-  return { startPage, endPage, juzNumber: juz.juz };
+  const boundary = ROB3_BOUNDARIES[rob3Number - 1];
+  const next = ROB3_BOUNDARIES[rob3Number];
+  const juzNumber = Math.floor((rob3Number - 1) / ROB3S_PER_JUZ) + 1;
+  if (!boundary) return { startPage: 1, endPage: 1, juzNumber: 1 };
+  const startPage = boundary.page;
+  const endPage = next ? Math.max(startPage, next.page - 1) : TOTAL_PAGES;
+  return { startPage, endPage, juzNumber };
 }
 
 export function getSurahsForPage(pageNumber: number): string {

@@ -174,6 +174,18 @@ export function todayLocalISO(): string {
 
 export const ROB3S_PER_JUZ = 8;
 export const TOTAL_ROB3S = JUZ_RANGES.length * ROB3S_PER_JUZ;
+export const TOTAL_PAGES = 604;
+
+import rob3BoundariesData from "./rob3-boundaries.json";
+
+export interface Rob3Boundary {
+  rob3: number;
+  surah: number;
+  ayah: number;
+  page: number;
+}
+
+const ROB3_BOUNDARIES = rob3BoundariesData as Rob3Boundary[];
 
 export interface Rob3Range {
   rob3: number;
@@ -181,21 +193,42 @@ export interface Rob3Range {
   juz: number;
   startPage: number;
   endPage: number;
+  startSurah: number;
+  startAyah: number;
+}
+
+export function getRob3Boundary(rob3Number: number): Rob3Boundary | null {
+  return ROB3_BOUNDARIES[rob3Number - 1] ?? null;
 }
 
 export function getRob3Range(rob3Number: number): Rob3Range {
   const juzIndex = Math.floor((rob3Number - 1) / ROB3S_PER_JUZ);
   const rob3InJuz = (rob3Number - 1) % ROB3S_PER_JUZ;
   const juz = JUZ_RANGES[juzIndex];
-  if (!juz) return { rob3: rob3Number, rob3InJuz, juz: 1, startPage: 1, endPage: 1 };
-  const juzPages = juz.endPage - juz.startPage + 1;
-  const pagesPerRob3 = juzPages / ROB3S_PER_JUZ;
-  const startPage = juz.startPage + Math.floor(rob3InJuz * pagesPerRob3);
-  const endPage =
-    rob3InJuz === ROB3S_PER_JUZ - 1
-      ? juz.endPage
-      : juz.startPage + Math.floor((rob3InJuz + 1) * pagesPerRob3) - 1;
-  return { rob3: rob3Number, rob3InJuz, juz: juz.juz, startPage, endPage };
+  const boundary = getRob3Boundary(rob3Number);
+  const next = getRob3Boundary(rob3Number + 1);
+  if (!juz || !boundary) {
+    return {
+      rob3: rob3Number,
+      rob3InJuz,
+      juz: juz?.juz ?? 1,
+      startPage: 1,
+      endPage: 1,
+      startSurah: 1,
+      startAyah: 1,
+    };
+  }
+  const startPage = boundary.page;
+  const endPage = next ? Math.max(startPage, next.page - 1) : TOTAL_PAGES;
+  return {
+    rob3: rob3Number,
+    rob3InJuz,
+    juz: juz.juz,
+    startPage,
+    endPage,
+    startSurah: boundary.surah,
+    startAyah: boundary.ayah,
+  };
 }
 
 export const ALL_ROB3S: Rob3Range[] = Array.from({ length: TOTAL_ROB3S }, (_, i) =>
