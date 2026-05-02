@@ -168,6 +168,7 @@ function HomeRedirect() {
 
 function ProtectedApp() {
   const { isLoaded, isSignedIn } = useAuth();
+  console.log("[ProtectedApp] render", { isLoaded, isSignedIn, location: window.location.href });
   if (!isLoaded) return <AuthLoadingScreen />;
   if (!isSignedIn) return <Redirect to="/" />;
   return (

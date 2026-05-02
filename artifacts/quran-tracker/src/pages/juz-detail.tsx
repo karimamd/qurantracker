@@ -15,6 +15,7 @@ import { PageQualityButtons } from "@/components/page-quality-buttons";
 export default function JuzDetail() {
   const params = useParams<{ id: string }>();
   const juzNumber = parseInt(params.id || "1", 10);
+  console.log("[JuzDetail] render", { params, juzNumber, location: window.location.href });
   const { data: detail, isLoading } = useGetJuzDetail(juzNumber, {
     query: { enabled: !!juzNumber, queryKey: getGetJuzDetailQueryKey(juzNumber) },
   });
