@@ -54,7 +54,7 @@ The frontend is built with `React`, `Vite`, `Tailwind CSS`, and `shadcn/ui`, ens
 - **Undo Recitation**: Restores previous `page_progress` state.
 - **Guest Mode**: Full functionality without sign-up, with data migration to a Clerk profile upon registration.
 - **Welcome / Onboarding Tour**: Interactive tour for new users and public visitors.
-- **Personal preferences (Settings page)**: Configurable settings for language, Telawa pages per day, and reader font sizes.
+- **Personal preferences (Settings page)**: Configurable settings for language (en/ar), Telawa pages per day (1–604), `readerFontSize` (14–64 px) for the Mushaf page in the Reader, and `ayahViewFontSize` (14–96 px) for the single-ayah view at `/ayahs/:n`. The in-page +/- font controls on **both** the Reader and the Ayah detail screen write back to these same fields (debounced 400 ms, flushed on unmount) so a tweak made anywhere becomes the new saved default everywhere. Out-of-range values are silently dropped from the PATCH payload so a partial save never 400s the entire form.
 - **Per-ayah Tafsir & Word-by-Word**: Detail screen for ayahs including Tafsir Muyassar and Word-by-Word explanations, with offline-first caching.
 - **Backup & Restore**: Self-serve JSON import/export of all user data.
 

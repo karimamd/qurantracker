@@ -21,6 +21,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
   useGetSettings,
+  useUpdateSettings,
+  getGetSettingsQueryKey,
   useListActivePageMistakes,
   useAddActivePageMistake,
   useRemoveActivePageMistake,
@@ -126,8 +128,51 @@ export default function AyahDetail() {
     }
   }, [settings, target]);
 
+  // Persist in-page +/- tweaks back to settings.ayahViewFontSize so they
+  // become the new default the next time any ayah is opened — same
+  // pattern as the Reader's readerFontSize. Debounced so a burst of
+  // clicks coalesces into a single PATCH; flushed on unmount so a user
+  // who clicks "+" then navigates away within the debounce window
+  // doesn't silently lose that final write.
+  const updateSettings = useUpdateSettings();
+  const fontSizePersistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingFontSize = useRef<number | null>(null);
+  const flushFontSize = () => {
+    if (fontSizePersistTimer.current) {
+      clearTimeout(fontSizePersistTimer.current);
+      fontSizePersistTimer.current = null;
+    }
+    const size = pendingFontSize.current;
+    if (size == null) return;
+    pendingFontSize.current = null;
+    updateSettings.mutate(
+      { data: { ayahViewFontSize: size } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+        },
+      },
+    );
+  };
+  const persistFontSize = (size: number) => {
+    pendingFontSize.current = size;
+    if (fontSizePersistTimer.current) clearTimeout(fontSizePersistTimer.current);
+    fontSizePersistTimer.current = setTimeout(flushFontSize, 400);
+  };
+  useEffect(() => {
+    return () => {
+      // Unmount = navigation away or page close. Flush any pending
+      // tweak synchronously so it isn't lost.
+      flushFontSize();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const adjustFontSize = (delta: number) =>
-    setFontSize((prev) => Math.min(FONT_MAX, Math.max(FONT_MIN, prev + delta)));
+    setFontSize((prev) => {
+      const next = Math.min(FONT_MAX, Math.max(FONT_MIN, prev + delta));
+      if (next !== prev) persistFontSize(next);
+      return next;
+    });
 
   const pageNumber = ayah?.pageNumber ?? 0;
   const pageMistakesQuery = useListActivePageMistakes(pageNumber, {
