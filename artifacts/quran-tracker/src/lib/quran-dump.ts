@@ -21,6 +21,16 @@ interface DumpFile {
 
 let dumpPromise: Promise<DumpFile | null> | null = null;
 
+/**
+ * Drop the memoised promise so the next `getDump()` call retries the
+ * fetch. Used by `resetAyahIndex()` and any error UI that wants to give
+ * the user a "Retry" button after a transient failure (rather than
+ * forcing a full SPA reload).
+ */
+export function resetDumpCache(): void {
+  dumpPromise = null;
+}
+
 function dumpUrl(): string {
   // BASE_URL is injected by Vite and includes a trailing slash. Using it
   // means the dump is fetched relative to whatever path the artifact is
@@ -45,7 +55,20 @@ async function loadDump(): Promise<DumpFile | null> {
 }
 
 export function getDump(): Promise<DumpFile | null> {
-  if (!dumpPromise) dumpPromise = loadDump();
+  if (!dumpPromise) {
+    // Only memoise SUCCESSFUL loads. If the fetch fails (or returns a
+    // malformed body) we drop the cached promise so the next call can
+    // retry — otherwise one transient failure would poison the SPA
+    // until a full reload.
+    const p = loadDump().then((dump) => {
+      if (!dump) dumpPromise = null;
+      return dump;
+    }).catch((err) => {
+      dumpPromise = null;
+      throw err;
+    });
+    dumpPromise = p;
+  }
   return dumpPromise;
 }
 

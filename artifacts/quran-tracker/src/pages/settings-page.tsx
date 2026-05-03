@@ -78,9 +78,14 @@ export default function SettingsPage() {
         },
       },
       {
-        onSuccess: () => {
-          toast({ title: t("settings.intervals.saved") });
+        onSuccess: (data) => {
+          // Write the server response directly into the cache so any
+          // screen we navigate to next (Reader, Ayahs, etc.) reads the
+          // new values synchronously, without the brief window of stale
+          // data that an invalidate-then-refetch produces.
+          queryClient.setQueryData(getGetSettingsQueryKey(), data);
           queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+          toast({ title: t("settings.intervals.saved") });
         },
       }
     );

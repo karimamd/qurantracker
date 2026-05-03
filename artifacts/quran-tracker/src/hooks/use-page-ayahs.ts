@@ -44,7 +44,7 @@ import { stripTashkeel } from "@/lib/arabic-text";
 
 const BASMALA_BARE = "بسم الله الرحمن الرحيم";
 
-function stripBasmalaFromFirstAyah(ayahs: ApiAyah[]): ApiAyah[] {
+export function stripBasmalaFromFirstAyah(ayahs: ApiAyah[]): ApiAyah[] {
   return ayahs.map(a => {
     if (a.numberInSurah !== 1) return a;
     if (a.surah.number === 1 || a.surah.number === 9) return a;

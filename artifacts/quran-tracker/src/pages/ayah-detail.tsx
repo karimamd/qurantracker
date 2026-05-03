@@ -103,14 +103,19 @@ export default function AyahDetail() {
   // user navigates to a different ayah. We re-apply on every target change
   // so backing out to the list and opening another card always shows the
   // user's saved default rather than the previous session's tweaked size.
+  // Importantly, we DO NOT clobber the size while settings are still
+  // loading (data === undefined) — otherwise the brief gap between an
+  // invalidate-and-refetch on /settings and the next /ayahs navigation
+  // would flash the fallback before the saved value lands.
   useEffect(() => {
     const saved = settings?.ayahViewFontSize;
     if (saved && saved >= FONT_MIN && saved <= FONT_MAX) {
       setFontSize(saved);
-    } else {
+    } else if (settings) {
+      // Settings loaded but the field is missing/out-of-range — fall back.
       setFontSize(FONT_DEFAULT_FALLBACK);
     }
-  }, [settings?.ayahViewFontSize, target]);
+  }, [settings, target]);
 
   const adjustFontSize = (delta: number) =>
     setFontSize((prev) => Math.min(FONT_MAX, Math.max(FONT_MIN, prev + delta)));

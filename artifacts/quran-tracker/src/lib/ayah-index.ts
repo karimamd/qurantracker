@@ -7,10 +7,10 @@
  * so callers can do diacritic-insensitive substring search without
  * re-running the normalisation on every keystroke.
  */
-import { getDump } from "@/lib/quran-dump";
+import { getDump, resetDumpCache } from "@/lib/quran-dump";
 import { stripTashkeel } from "@/lib/arabic-text";
 import { JUZ_RANGES } from "@/lib/quran-ref";
-import type { ApiAyah } from "@/hooks/use-page-ayahs";
+import { stripBasmalaFromFirstAyah, type ApiAyah } from "@/hooks/use-page-ayahs";
 
 export interface AyahIndexEntry {
   /** Global ayah number, 1..6236. */
@@ -35,6 +35,9 @@ let indexPromise: Promise<AyahIndexEntry[]> | null = null;
  */
 export function resetAyahIndex(): void {
   indexPromise = null;
+  // Also drop the underlying dump cache so a transient fetch failure
+  // doesn't keep returning the cached null on retry.
+  resetDumpCache();
 }
 
 function juzForPage(pageNumber: number): number {
@@ -57,7 +60,13 @@ async function buildIndex(): Promise<AyahIndexEntry[]> {
     const pageNumber = parseInt(pageStr, 10);
     if (!Number.isFinite(pageNumber)) continue;
     const juzNumber = juzForPage(pageNumber);
-    for (const a of ayahs as ApiAyah[]) {
+    // Apply the same Basmala-stripping that the Reader applies to its
+    // page-level fetches, so the text shown on /ayahs/:n is byte-for-byte
+    // identical to what the Reader displays for the same global ayah.
+    // Without this, the dump's "بِسْمِ ... الٓمٓ" prefix on the first ayah
+    // of most surahs would surface in the Ayahs view but not the Reader.
+    const normalised = stripBasmalaFromFirstAyah(ayahs as ApiAyah[]);
+    for (const a of normalised) {
       entries.push({
         globalAyahNumber: a.number,
         text: a.text,
