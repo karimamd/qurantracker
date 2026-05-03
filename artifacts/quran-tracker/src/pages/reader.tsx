@@ -611,36 +611,36 @@ export default function Reader() {
 
       <Card className="border shadow-sm">
         <CardContent className="px-3 py-2 flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <div className="text-base font-semibold tabular-nums shrink-0" data-testid="reader-current-page">
               {pageNumber}
               <span className="text-xs font-normal text-muted-foreground"> / {TOTAL_PAGES}</span>
             </div>
             {arabicName && (
-              <span className="font-serif text-sm" dir="rtl" lang="ar" data-testid="reader-page-name">
+              <span className="font-serif text-sm truncate max-w-[40vw]" dir="rtl" lang="ar" data-testid="reader-page-name">
                 {arabicName}
               </span>
             )}
-            <span className="text-muted-foreground text-[11px]">
+            <span className="text-muted-foreground text-[11px] shrink-0">
               {t("reader.juzPart", { juz: juzNumber, rob3, idx: partInJuz })}
             </span>
             {surahsOnPage.map(s => (
               <span
                 key={s.number}
-                className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground"
+                className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground shrink-0"
                 data-testid={`reader-surah-tag-${s.number}`}
               >
                 {s.name}
               </span>
             ))}
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
             {pagesLoading ? (
               <Skeleton className="h-5 w-16 rounded" />
             ) : currentPage?.quality ? (
               <QualityBadge quality={currentPage.quality} effectiveQuality={currentPage.effectiveQuality} qualityDowngrades={currentPage.qualityDowngrades} />
             ) : null}
             {currentPage && <StatusBadge status={currentPage.status} />}
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end ms-auto">
             <Button
               type="button"
               size="sm"

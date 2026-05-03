@@ -62,12 +62,17 @@ async function ensureActiveKhatmah(tx: Tx, userId: string) {
   if (existingActive) return existingActive;
 
   // No active khatmah. Backfill from any pre-existing logs first.
+  // NOTE: pg returns timestamp aggregates (min/max) as ISO strings, not
+  // Date objects, even though the SQL template generic claims `Date`.
+  // We must wrap them in `new Date(...)` before passing them back into a
+  // Drizzle insert, otherwise PgTimestamp.mapToDriverValue will throw
+  // "value.toISOString is not a function".
   const cycleRows = await tx
     .select({
       cycleNumber: telawaLogTable.cycleNumber,
       count: sql<number>`count(*)::int`,
-      minRead: sql<Date>`min(${telawaLogTable.readAt})`,
-      maxRead: sql<Date>`max(${telawaLogTable.readAt})`,
+      minRead: sql<string>`min(${telawaLogTable.readAt})`,
+      maxRead: sql<string>`max(${telawaLogTable.readAt})`,
     })
     .from(telawaLogTable)
     .where(and(eq(telawaLogTable.userId, userId), isNull(telawaLogTable.khatmahId)))
@@ -80,14 +85,16 @@ async function ensureActiveKhatmah(tx: Tx, userId: string) {
     for (const c of cycleRows) {
       const isLatest = c.cycleNumber === maxCycle;
       const isFull = Number(c.count) >= TOTAL_PAGES;
+      const minReadDate = new Date(c.minRead);
+      const maxReadDate = new Date(c.maxRead);
       const [inserted] = await tx
         .insert(telawaKhatmahTable)
         .values({
           userId,
           startPage: 1,
           cycleNumber: c.cycleNumber,
-          startedAt: c.minRead,
-          completedAt: isLatest && !isFull ? null : c.maxRead,
+          startedAt: minReadDate,
+          completedAt: isLatest && !isFull ? null : maxReadDate,
         })
         .returning();
       await tx
