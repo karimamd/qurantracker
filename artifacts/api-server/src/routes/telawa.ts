@@ -94,9 +94,11 @@ router.post("/telawa/read", async (req, res): Promise<void> => {
   }
 
   // Wrap cursor read + insert in a transaction with a per-user advisory lock
-  // so concurrent reads cannot both observe the same count and double-advance
-  // (or both write the same page number).
-  const result = await db.transaction(async (tx) => {
+  // so concurrent reads cannot both observe the same count and the cycle
+  // number cannot drift relative to the inserted row.
+  // Reads may be recorded out of order: the suggested cursor (derived from
+  // total reads count) advances by one regardless of which page was logged.
+  await db.transaction(async (tx) => {
     await tx.execute(
       sql`select pg_advisory_xact_lock(${TELAWA_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
     );
@@ -106,28 +108,14 @@ router.post("/telawa/read", async (req, res): Promise<void> => {
       .from(telawaLogTable)
       .where(eq(telawaLogTable.userId, userId));
     const totalRead = Number(total ?? 0);
-    const nextPage = (totalRead % TOTAL_PAGES) + 1;
     const cycleNumber = Math.floor(totalRead / TOTAL_PAGES) + 1;
-
-    if (parsed.data.pageNumber !== nextPage) {
-      return { conflict: true as const, nextPage };
-    }
 
     await tx.insert(telawaLogTable).values({
       userId,
-      pageNumber: nextPage,
+      pageNumber: parsed.data.pageNumber,
       cycleNumber,
     });
-    return { conflict: false as const };
   });
-
-  if (result.conflict) {
-    res.status(409).json({
-      error: `Out of sequence. Next page is ${result.nextPage}.`,
-      nextPage: result.nextPage,
-    });
-    return;
-  }
 
   const today = await buildToday(userId);
   res.json(RecordTelawaReadResponse.parse(today));

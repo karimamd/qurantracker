@@ -190,9 +190,10 @@
       "totalRead": "Total reads",
       "totalDesc": "Pages read across all cycles"
     },
+    "openInReader": "Open in reader",
     "todayPlan": {
       "title": "Today's pages",
-      "description": "Read in order. Tap Read on the highlighted page to advance.",
+      "description": "Tap any page to open it in the reader, or tap Read to log it. Order is flexible.",
       "readToday": "Read today",
       "allDone_one": "Done for today — {{count}} page complete. You can keep reading or come back tomorrow.",
       "allDone_other": "Done for today — {{count}} pages complete. You can keep reading or come back tomorrow."
@@ -385,6 +386,9 @@
     "showAll": "Show all",
     "restart": "Restart",
     "restartTitle": "Re-hide all and clear marks",
+    "markTelawa": "Mark Telawa",
+    "markTelawaTitle": "Record this page as read in the Telawa rotation",
+    "telawaMarked": "Page {{page}} recorded as Telawa read",
     "revealed_one": "{{count}} / {{total}} ayah revealed",
     "revealed_other": "{{count}} / {{total}} ayahs revealed",
     "mistakes_one": "{{count}} mistake",

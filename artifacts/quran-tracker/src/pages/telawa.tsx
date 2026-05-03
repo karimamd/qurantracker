@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageLabel } from "@/components/page-label";
-import { BookOpen, Check, Undo2, RotateCcw, CheckCircle, Repeat } from "lucide-react";
+import { BookOpen, Check, Undo2, RotateCcw, CheckCircle, Repeat, ExternalLink } from "lucide-react";
+import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -192,18 +193,34 @@ export default function TelawaPage() {
                   >
                     {idx + 1}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <Link
+                    href={`/reader/${pageNumber}`}
+                    className="flex-1 min-w-0 hover:underline"
+                    data-testid={`telawa-open-reader-${pageNumber}`}
+                    title={t("telawa.openInReader")}
+                  >
                     <PageLabel
                       pageNumber={pageNumber}
                       customName={null}
                       prefixClassName="font-medium text-sm"
                       nameClassName="text-sm"
                     />
-                  </div>
+                  </Link>
+                  <Link href={`/reader/${pageNumber}`}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-foreground"
+                      title={t("telawa.openInReader")}
+                      data-testid={`telawa-open-reader-btn-${pageNumber}`}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Button>
+                  </Link>
                   <Button
                     size="sm"
                     variant={isCursor ? "default" : "outline"}
-                    disabled={!isCursor || recordRead.isPending}
+                    disabled={recordRead.isPending}
                     onClick={() => handleRead(pageNumber)}
                     data-testid={`telawa-read-${pageNumber}`}
                   >

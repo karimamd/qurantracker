@@ -631,7 +631,11 @@ paths:
     post:
       operationId: recordTelawaRead
       tags: [telawa]
-      summary: Mark the next page in the Telawa rotation as read
+      summary: Mark a page as read in the Telawa rotation
+      description: |
+        Records a Telawa read for any page (1..604). Reads do not need to be
+        sequential — the suggested cursor (derived from the total read count)
+        advances by one regardless of which page was logged.
       requestBody:
         required: true
         content:
@@ -645,8 +649,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TelawaToday"
-        "409":
-          description: Page is not the current cursor (out of sequence)
 
   /telawa/read/last:
     delete:

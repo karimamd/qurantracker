@@ -4,6 +4,9 @@ import {
   useListActivePageMistakes,
   useAddActivePageMistake,
   useRemoveActivePageMistake,
+  useRecordTelawaRead,
+  getGetTelawaTodayQueryKey,
+  getGetTelawaStatsQueryKey,
   getListPageProgressQueryKey,
   getGetProgressOverviewQueryKey,
   getListJuzProgressQueryKey,
@@ -27,7 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat } from "lucide-react";
 import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
@@ -91,8 +94,23 @@ export default function Reader() {
   const { data: activeMistakes } = useListActivePageMistakes(pageNumber);
   const addActiveMistake = useAddActivePageMistake();
   const removeActiveMistake = useRemoveActivePageMistake();
+  const recordTelawaRead = useRecordTelawaRead();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const handleMarkTelawa = () => {
+    recordTelawaRead.mutate(
+      { data: { pageNumber } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetTelawaTodayQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetTelawaStatsQueryKey() });
+          toast({ title: t("reader.telawaMarked", { page: pageNumber }) });
+        },
+        onError: () => toast({ title: t("telawa.recordFailed"), variant: "destructive" }),
+      },
+    );
+  };
 
   const {
     data: ayahs,
@@ -593,6 +611,19 @@ export default function Reader() {
               <QualityBadge quality={currentPage.quality} effectiveQuality={currentPage.effectiveQuality} qualityDowngrades={currentPage.qualityDowngrades} />
             ) : null}
             {currentPage && <StatusBadge status={currentPage.status} />}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleMarkTelawa}
+              disabled={recordTelawaRead.isPending}
+              data-testid="reader-mark-telawa"
+              title={t("reader.markTelawaTitle")}
+              className="h-7 px-2 text-xs"
+            >
+              <Repeat className="w-3.5 h-3.5 me-1" />
+              {t("reader.markTelawa")}
+            </Button>
           </div>
         </CardContent>
       </Card>

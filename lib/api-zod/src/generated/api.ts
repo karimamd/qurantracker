@@ -1120,7 +1120,11 @@ export const GetTelawaTodayResponse = zod.object({
 });
 
 /**
- * @summary Mark the next page in the Telawa rotation as read
+ * Records a Telawa read for any page (1..604). Reads do not need to be
+sequential — the suggested cursor (derived from the total read count)
+advances by one regardless of which page was logged.
+
+ * @summary Mark a page as read in the Telawa rotation
  */
 export const recordTelawaReadBodyPageNumberMax = 604;
 
