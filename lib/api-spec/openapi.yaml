@@ -474,6 +474,77 @@ paths:
                 items:
                   $ref: "#/components/schemas/ProgressChartEntry"
 
+  /progress/pages/{pageNumber}/active-mistakes:
+    get:
+      operationId: listActivePageMistakes
+      tags: [progress]
+      summary: List currently active (unresolved) per-ayah mistake marks for a page
+      parameters:
+        - name: pageNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Active marks for this page
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActiveAyahMistake"
+    post:
+      operationId: addActivePageMistake
+      tags: [progress]
+      summary: Mark an ayah on this page with a mistake (idempotent — re-applying does nothing)
+      parameters:
+        - name: pageNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AyahMistakeInput"
+      responses:
+        "200":
+          description: Updated active marks for this page
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActiveAyahMistake"
+    delete:
+      operationId: removeActivePageMistake
+      tags: [progress]
+      summary: Resolve (un-mark) an active per-ayah mistake on this page
+      parameters:
+        - name: pageNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemoveActiveMistakeBody"
+      responses:
+        "200":
+          description: Updated active marks for this page
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActiveAyahMistake"
+
   /progress/mistakes:
     get:
       operationId: getMistakes
@@ -1052,6 +1123,36 @@ components:
         - globalAyahNumber
         - mistakeType
         - recitedAt
+
+    ActiveAyahMistake:
+      type: object
+      properties:
+        surahNumber:
+          type: integer
+        ayahNumberInSurah:
+          type: integer
+        globalAyahNumber:
+          type: integer
+        mistakeType:
+          type: string
+          enum: [memorization, link]
+      required:
+        - surahNumber
+        - ayahNumberInSurah
+        - globalAyahNumber
+        - mistakeType
+
+    RemoveActiveMistakeBody:
+      type: object
+      properties:
+        globalAyahNumber:
+          type: integer
+        mistakeType:
+          type: string
+          enum: [memorization, link]
+      required:
+        - globalAyahNumber
+        - mistakeType
 
     MistakesSummary:
       type: object

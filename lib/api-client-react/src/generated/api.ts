@@ -17,7 +17,9 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  ActiveAyahMistake,
   ActivityEntry,
+  AyahMistakeInput,
   BatchRecitationBody,
   CreateHomeworkBody,
   DailyChartEntry,
@@ -38,6 +40,7 @@ import type {
   ProgressOverview,
   RecordRecitationBody,
   RecordTelawaReadBody,
+  RemoveActiveMistakeBody,
   RenamePageBody,
   Rob3ProgressItem,
   ScopeBody,
@@ -2022,6 +2025,282 @@ export function useGetProgressChart<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List currently active (unresolved) per-ayah mistake marks for a page
+ */
+export const getListActivePageMistakesUrl = (pageNumber: number) => {
+  return `/api/progress/pages/${pageNumber}/active-mistakes`;
+};
+
+export const listActivePageMistakes = async (
+  pageNumber: number,
+  options?: RequestInit,
+): Promise<ActiveAyahMistake[]> => {
+  return customFetch<ActiveAyahMistake[]>(
+    getListActivePageMistakesUrl(pageNumber),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListActivePageMistakesQueryKey = (pageNumber: number) => {
+  return [`/api/progress/pages/${pageNumber}/active-mistakes`] as const;
+};
+
+export const getListActivePageMistakesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listActivePageMistakes>>,
+  TError = ErrorType<unknown>,
+>(
+  pageNumber: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listActivePageMistakes>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListActivePageMistakesQueryKey(pageNumber);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listActivePageMistakes>>
+  > = ({ signal }) =>
+    listActivePageMistakes(pageNumber, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!pageNumber,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listActivePageMistakes>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListActivePageMistakesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listActivePageMistakes>>
+>;
+export type ListActivePageMistakesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List currently active (unresolved) per-ayah mistake marks for a page
+ */
+
+export function useListActivePageMistakes<
+  TData = Awaited<ReturnType<typeof listActivePageMistakes>>,
+  TError = ErrorType<unknown>,
+>(
+  pageNumber: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listActivePageMistakes>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListActivePageMistakesQueryOptions(
+    pageNumber,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Mark an ayah on this page with a mistake (idempotent — re-applying does nothing)
+ */
+export const getAddActivePageMistakeUrl = (pageNumber: number) => {
+  return `/api/progress/pages/${pageNumber}/active-mistakes`;
+};
+
+export const addActivePageMistake = async (
+  pageNumber: number,
+  ayahMistakeInput: AyahMistakeInput,
+  options?: RequestInit,
+): Promise<ActiveAyahMistake[]> => {
+  return customFetch<ActiveAyahMistake[]>(
+    getAddActivePageMistakeUrl(pageNumber),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(ayahMistakeInput),
+    },
+  );
+};
+
+export const getAddActivePageMistakeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addActivePageMistake>>,
+    TError,
+    { pageNumber: number; data: BodyType<AyahMistakeInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addActivePageMistake>>,
+  TError,
+  { pageNumber: number; data: BodyType<AyahMistakeInput> },
+  TContext
+> => {
+  const mutationKey = ["addActivePageMistake"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addActivePageMistake>>,
+    { pageNumber: number; data: BodyType<AyahMistakeInput> }
+  > = (props) => {
+    const { pageNumber, data } = props ?? {};
+
+    return addActivePageMistake(pageNumber, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddActivePageMistakeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addActivePageMistake>>
+>;
+export type AddActivePageMistakeMutationBody = BodyType<AyahMistakeInput>;
+export type AddActivePageMistakeMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark an ayah on this page with a mistake (idempotent — re-applying does nothing)
+ */
+export const useAddActivePageMistake = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addActivePageMistake>>,
+    TError,
+    { pageNumber: number; data: BodyType<AyahMistakeInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addActivePageMistake>>,
+  TError,
+  { pageNumber: number; data: BodyType<AyahMistakeInput> },
+  TContext
+> => {
+  return useMutation(getAddActivePageMistakeMutationOptions(options));
+};
+
+/**
+ * @summary Resolve (un-mark) an active per-ayah mistake on this page
+ */
+export const getRemoveActivePageMistakeUrl = (pageNumber: number) => {
+  return `/api/progress/pages/${pageNumber}/active-mistakes`;
+};
+
+export const removeActivePageMistake = async (
+  pageNumber: number,
+  removeActiveMistakeBody: RemoveActiveMistakeBody,
+  options?: RequestInit,
+): Promise<ActiveAyahMistake[]> => {
+  return customFetch<ActiveAyahMistake[]>(
+    getRemoveActivePageMistakeUrl(pageNumber),
+    {
+      ...options,
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(removeActiveMistakeBody),
+    },
+  );
+};
+
+export const getRemoveActivePageMistakeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeActivePageMistake>>,
+    TError,
+    { pageNumber: number; data: BodyType<RemoveActiveMistakeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeActivePageMistake>>,
+  TError,
+  { pageNumber: number; data: BodyType<RemoveActiveMistakeBody> },
+  TContext
+> => {
+  const mutationKey = ["removeActivePageMistake"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeActivePageMistake>>,
+    { pageNumber: number; data: BodyType<RemoveActiveMistakeBody> }
+  > = (props) => {
+    const { pageNumber, data } = props ?? {};
+
+    return removeActivePageMistake(pageNumber, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveActivePageMistakeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeActivePageMistake>>
+>;
+export type RemoveActivePageMistakeMutationBody =
+  BodyType<RemoveActiveMistakeBody>;
+export type RemoveActivePageMistakeMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Resolve (un-mark) an active per-ayah mistake on this page
+ */
+export const useRemoveActivePageMistake = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeActivePageMistake>>,
+    TError,
+    { pageNumber: number; data: BodyType<RemoveActiveMistakeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeActivePageMistake>>,
+  TError,
+  { pageNumber: number; data: BodyType<RemoveActiveMistakeBody> },
+  TContext
+> => {
+  return useMutation(getRemoveActivePageMistakeMutationOptions(options));
+};
 
 /**
  * @summary List per-ayah mistakes with summary analytics

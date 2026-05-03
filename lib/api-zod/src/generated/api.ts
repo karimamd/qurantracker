@@ -898,6 +898,73 @@ export const GetProgressChartResponseItem = zod.object({
 export const GetProgressChartResponse = zod.array(GetProgressChartResponseItem);
 
 /**
+ * @summary List currently active (unresolved) per-ayah mistake marks for a page
+ */
+export const ListActivePageMistakesParams = zod.object({
+  pageNumber: zod.coerce.number(),
+});
+
+export const ListActivePageMistakesResponseItem = zod.object({
+  surahNumber: zod.number(),
+  ayahNumberInSurah: zod.number(),
+  globalAyahNumber: zod.number(),
+  mistakeType: zod.enum(["memorization", "link"]),
+});
+export const ListActivePageMistakesResponse = zod.array(
+  ListActivePageMistakesResponseItem,
+);
+
+/**
+ * @summary Mark an ayah on this page with a mistake (idempotent — re-applying does nothing)
+ */
+export const AddActivePageMistakeParams = zod.object({
+  pageNumber: zod.coerce.number(),
+});
+
+export const AddActivePageMistakeBody = zod.object({
+  surahNumber: zod.number(),
+  ayahNumberInSurah: zod.number(),
+  globalAyahNumber: zod.number().describe("Quran-wide ayah ordinal (1..6236)"),
+  mistakeType: zod
+    .enum(["memorization", "link"])
+    .describe(
+      "memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one",
+    ),
+});
+
+export const AddActivePageMistakeResponseItem = zod.object({
+  surahNumber: zod.number(),
+  ayahNumberInSurah: zod.number(),
+  globalAyahNumber: zod.number(),
+  mistakeType: zod.enum(["memorization", "link"]),
+});
+export const AddActivePageMistakeResponse = zod.array(
+  AddActivePageMistakeResponseItem,
+);
+
+/**
+ * @summary Resolve (un-mark) an active per-ayah mistake on this page
+ */
+export const RemoveActivePageMistakeParams = zod.object({
+  pageNumber: zod.coerce.number(),
+});
+
+export const RemoveActivePageMistakeBody = zod.object({
+  globalAyahNumber: zod.number(),
+  mistakeType: zod.enum(["memorization", "link"]),
+});
+
+export const RemoveActivePageMistakeResponseItem = zod.object({
+  surahNumber: zod.number(),
+  ayahNumberInSurah: zod.number(),
+  globalAyahNumber: zod.number(),
+  mistakeType: zod.enum(["memorization", "link"]),
+});
+export const RemoveActivePageMistakeResponse = zod.array(
+  RemoveActivePageMistakeResponseItem,
+);
+
+/**
  * @summary List per-ayah mistakes with summary analytics
  */
 export const getMistakesQueryLimitDefault = 200;

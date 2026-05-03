@@ -11,11 +11,17 @@ export const ayahMistakesTable = pgTable("ayah_mistakes", {
   globalAyahNumber: integer("global_ayah_number").notNull(),
   mistakeType: text("mistake_type").notNull(),
   recitedAt: timestamp("recited_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   userIdx: index("ayah_mistakes_user_idx").on(table.userId),
   userRecitedIdx: index("ayah_mistakes_user_recited_idx").on(table.userId, table.recitedAt),
   userPageIdx: index("ayah_mistakes_user_page_idx").on(table.userId, table.pageNumber),
+  userPageResolvedIdx: index("ayah_mistakes_user_page_resolved_idx").on(
+    table.userId,
+    table.pageNumber,
+    table.resolvedAt,
+  ),
 }));
 
 export const insertAyahMistakeSchema = createInsertSchema(ayahMistakesTable).omit({ id: true, createdAt: true });

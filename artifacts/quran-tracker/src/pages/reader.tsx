@@ -1,6 +1,9 @@
 import {
   useListPageProgress,
   useUpdatePageProgress,
+  useListActivePageMistakes,
+  useAddActivePageMistake,
+  useRemoveActivePageMistake,
   getListPageProgressQueryKey,
   getGetProgressOverviewQueryKey,
   getListJuzProgressQueryKey,
@@ -11,8 +14,9 @@ import {
   getGetSurahDetailQueryKey,
   getListHomeworkQueryKey,
   getGetMistakesQueryKey,
+  getListActivePageMistakesQueryKey,
 } from "@workspace/api-client-react";
-import type { PageProgress } from "@workspace/api-client-react";
+import type { PageProgress, ActiveAyahMistake } from "@workspace/api-client-react";
 import { useParams, useLocation, useSearch } from "wouter";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -84,6 +88,9 @@ export default function Reader() {
 
   const { data: allPages, isLoading: pagesLoading } = useListPageProgress({});
   const updatePage = useUpdatePageProgress();
+  const { data: activeMistakes } = useListActivePageMistakes(pageNumber);
+  const addActiveMistake = useAddActivePageMistake();
+  const removeActiveMistake = useRemoveActivePageMistake();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -102,15 +109,29 @@ export default function Reader() {
     setPageNumber(prev => (prev === n ? prev : n));
   }, [params.page]);
 
-  // Reset per-ayah marks & reveal progress on page change, but PRESERVE the
-  // user's hide-mode preference: if they were practicing (hide-mode on) the
-  // next page also starts hidden; if they were reading freely it stays free.
+  // Reset reveal progress and transient "cleared" markers on page change.
+  // mistakeAyahs and linkAyahs are NOT reset here — they reflect the
+  // server-persisted active marks and are seeded by the effect below
+  // whenever the active-mistakes query result changes.
   useEffect(() => {
     setRevealedCount(0);
-    setMistakeAyahs(new Set());
     setClearedAyahs(new Set());
-    setLinkAyahs(new Set());
   }, [pageNumber]);
+
+  // Seed mistake/link marks from the server's persisted "active" set so they
+  // remain visible across navigation, refresh, and even fresh sessions until
+  // the user explicitly reverses them in the reader.
+  useEffect(() => {
+    if (!activeMistakes) return;
+    const m = new Set<number>();
+    const l = new Set<number>();
+    for (const am of activeMistakes as ActiveAyahMistake[]) {
+      if (am.mistakeType === "memorization") m.add(am.globalAyahNumber);
+      else if (am.mistakeType === "link") l.add(am.globalAyahNumber);
+    }
+    setMistakeAyahs(m);
+    setLinkAyahs(l);
+  }, [activeMistakes]);
 
   // Apply ?practice=<globalAyahNumber> — auto-enter hide-mode at the target ayah and scroll to it.
   useEffect(() => {
@@ -122,9 +143,8 @@ export default function Reader() {
     practiceAppliedRef.current = key;
     setHideMode(true);
     setRevealedCount(idx); // hide the target so the user can practice predicting it
-    setMistakeAyahs(new Set());
+    // Don't reset mistakeAyahs/linkAyahs — they reflect persisted active marks.
     setClearedAyahs(new Set());
-    setLinkAyahs(new Set());
     // Scroll the target placeholder/highlight into view shortly after render
     setTimeout(() => {
       const el = document.querySelector(
@@ -238,35 +258,12 @@ export default function Reader() {
   const handleQuality = (quality: Quality) => {
     const targetPage = pageNumber;
     const mistakes = mistakeAyahs.size;
-    const ayahsArr = ayahs ?? [];
-    const ayahMistakesPayload: {
-      surahNumber: number;
-      ayahNumberInSurah: number;
-      globalAyahNumber: number;
-      mistakeType: "memorization" | "link";
-    }[] = [];
-    for (const a of ayahsArr) {
-      if (mistakeAyahs.has(a.number)) {
-        ayahMistakesPayload.push({
-          surahNumber: a.surah.number,
-          ayahNumberInSurah: a.numberInSurah,
-          globalAyahNumber: a.number,
-          mistakeType: "memorization",
-        });
-      }
-      if (linkAyahs.has(a.number)) {
-        ayahMistakesPayload.push({
-          surahNumber: a.surah.number,
-          ayahNumberInSurah: a.numberInSurah,
-          globalAyahNumber: a.number,
-          mistakeType: "link",
-        });
-      }
-    }
-    const data: { quality: Quality; mistakes?: number; ayahMistakes?: typeof ayahMistakesPayload } = { quality };
-    if (mistakes > 0) data.mistakes = mistakes;
-    if (ayahMistakesPayload.length > 0) data.ayahMistakes = ayahMistakesPayload;
     const linkCount = linkAyahs.size;
+    // Per-ayah marks are persisted instantly via /active-mistakes endpoints,
+    // so we no longer ship them here. We still send the aggregate `mistakes`
+    // count so the page-level stats stay accurate.
+    const data: { quality: Quality; mistakes?: number } = { quality };
+    if (mistakes > 0) data.mistakes = mistakes;
     updatePage.mutate(
       { pageNumber: targetPage, data },
       {
@@ -281,13 +278,11 @@ export default function Reader() {
           });
           invalidateProgressData();
           queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
-          // Only clear practice-mode session state if the user is still on the same page.
-          // Otherwise (user navigated away mid-flight), the page-change effect already reset state and we'd risk wiping a fresh page's marks.
+          // Clear only transient cleared markers; mistake/link marks remain
+          // visible until the user explicitly reverses them in the reader.
           setPageNumber(currentPage => {
             if (currentPage === targetPage) {
-              setMistakeAyahs(new Set());
               setClearedAyahs(new Set());
-              setLinkAyahs(new Set());
             }
             return currentPage;
           });
@@ -300,9 +295,7 @@ export default function Reader() {
   const startHideMode = () => {
     setHideMode(true);
     setRevealedCount(0);
-    setMistakeAyahs(new Set());
     setClearedAyahs(new Set());
-    setLinkAyahs(new Set());
   };
 
   const showAllAyahs = () => {
@@ -315,39 +308,143 @@ export default function Reader() {
 
   const resetPractice = () => {
     setRevealedCount(0);
-    setMistakeAyahs(new Set());
     setClearedAyahs(new Set());
-    setLinkAyahs(new Set());
+  };
+
+  // Find the ayah's surah/numberInSurah from the loaded page so the server
+  // can persist a complete row.
+  const ayahMeta = (globalAyahNumber: number) => {
+    const a = ayahs?.find(x => x.number === globalAyahNumber);
+    if (!a) return null;
+    return { surahNumber: a.surah.number, ayahNumberInSurah: a.numberInSurah };
+  };
+
+  const persistAdd = (
+    globalAyahNumber: number,
+    mistakeType: "memorization" | "link",
+  ) => {
+    const meta = ayahMeta(globalAyahNumber);
+    if (!meta) return;
+    const targetPage = pageNumber;
+    addActiveMistake.mutate(
+      {
+        pageNumber: targetPage,
+        data: {
+          surahNumber: meta.surahNumber,
+          ayahNumberInSurah: meta.ayahNumberInSurah,
+          globalAyahNumber,
+          mistakeType,
+        },
+      },
+      {
+        onSuccess: (data) => {
+          // Authoritative server response — write directly to cache so the
+          // seeding effect never clobbers optimistic state with stale data.
+          queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
+        },
+        onError: () => {
+          // Roll back optimistic state on failure
+          if (mistakeType === "memorization") {
+            setMistakeAyahs(prev => {
+              const n = new Set(prev);
+              n.delete(globalAyahNumber);
+              return n;
+            });
+          } else {
+            setLinkAyahs(prev => {
+              const n = new Set(prev);
+              n.delete(globalAyahNumber);
+              return n;
+            });
+          }
+          toast({ title: t("reader.markFailed"), variant: "destructive" });
+        },
+      },
+    );
+  };
+
+  const persistRemove = (
+    globalAyahNumber: number,
+    mistakeType: "memorization" | "link",
+    rollback: () => void,
+  ) => {
+    const targetPage = pageNumber;
+    removeActiveMistake.mutate(
+      {
+        pageNumber: targetPage,
+        data: { globalAyahNumber, mistakeType },
+      },
+      {
+        onSuccess: (data) => {
+          queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
+        },
+        onError: () => {
+          rollback();
+          toast({ title: t("reader.markFailed"), variant: "destructive" });
+        },
+      },
+    );
   };
 
   const handleAyahLink = (ayahNumber: number) => {
-    setLinkAyahs(prev => {
-      const next = new Set(prev);
-      if (next.has(ayahNumber)) next.delete(ayahNumber);
-      else next.add(ayahNumber);
-      return next;
-    });
+    const isOn = linkAyahs.has(ayahNumber);
+    if (isOn) {
+      // Optimistic remove
+      setLinkAyahs(prev => {
+        const n = new Set(prev);
+        n.delete(ayahNumber);
+        return n;
+      });
+      persistRemove(ayahNumber, "link", () => {
+        setLinkAyahs(prev => {
+          const n = new Set(prev);
+          n.add(ayahNumber);
+          return n;
+        });
+      });
+    } else {
+      setLinkAyahs(prev => {
+        const n = new Set(prev);
+        n.add(ayahNumber);
+        return n;
+      });
+      persistAdd(ayahNumber, "link");
+    }
   };
 
   const handleAyahMark = (ayahNumber: number, mark: "clear" | "mistake", isLatest: boolean) => {
     if (mark === "clear") {
+      // The tick acts as a reversal of the X mark for this ayah.
       setClearedAyahs(prev => {
         const next = new Set(prev);
         next.add(ayahNumber);
         return next;
       });
-      setMistakeAyahs(prev => {
-        if (!prev.has(ayahNumber)) return prev;
-        const next = new Set(prev);
-        next.delete(ayahNumber);
-        return next;
-      });
+      const wasMistake = mistakeAyahs.has(ayahNumber);
+      if (wasMistake) {
+        setMistakeAyahs(prev => {
+          const next = new Set(prev);
+          next.delete(ayahNumber);
+          return next;
+        });
+        persistRemove(ayahNumber, "memorization", () => {
+          setMistakeAyahs(prev => {
+            const next = new Set(prev);
+            next.add(ayahNumber);
+            return next;
+          });
+        });
+      }
     } else {
-      setMistakeAyahs(prev => {
-        const next = new Set(prev);
-        next.add(ayahNumber);
-        return next;
-      });
+      const wasMistake = mistakeAyahs.has(ayahNumber);
+      if (!wasMistake) {
+        setMistakeAyahs(prev => {
+          const next = new Set(prev);
+          next.add(ayahNumber);
+          return next;
+        });
+        persistAdd(ayahNumber, "memorization");
+      }
       setClearedAyahs(prev => {
         if (!prev.has(ayahNumber)) return prev;
         const next = new Set(prev);

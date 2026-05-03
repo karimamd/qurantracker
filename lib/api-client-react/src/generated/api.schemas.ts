@@ -293,6 +293,34 @@ export interface Mistake {
   recitedAt: string;
 }
 
+export type ActiveAyahMistakeMistakeType =
+  (typeof ActiveAyahMistakeMistakeType)[keyof typeof ActiveAyahMistakeMistakeType];
+
+export const ActiveAyahMistakeMistakeType = {
+  memorization: "memorization",
+  link: "link",
+} as const;
+
+export interface ActiveAyahMistake {
+  surahNumber: number;
+  ayahNumberInSurah: number;
+  globalAyahNumber: number;
+  mistakeType: ActiveAyahMistakeMistakeType;
+}
+
+export type RemoveActiveMistakeBodyMistakeType =
+  (typeof RemoveActiveMistakeBodyMistakeType)[keyof typeof RemoveActiveMistakeBodyMistakeType];
+
+export const RemoveActiveMistakeBodyMistakeType = {
+  memorization: "memorization",
+  link: "link",
+} as const;
+
+export interface RemoveActiveMistakeBody {
+  globalAyahNumber: number;
+  mistakeType: RemoveActiveMistakeBodyMistakeType;
+}
+
 export interface MistakesSummary {
   total: number;
   memorizationCount: number;

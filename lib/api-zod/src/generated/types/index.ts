@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./activeAyahMistake";
+export * from "./activeAyahMistakeMistakeType";
 export * from "./activityEntry";
 export * from "./activityEntryQuality";
 export * from "./ayahMistakeInput";
@@ -43,6 +45,8 @@ export * from "./progressOverview";
 export * from "./recordRecitationBody";
 export * from "./recordRecitationBodyQuality";
 export * from "./recordTelawaReadBody";
+export * from "./removeActiveMistakeBody";
+export * from "./removeActiveMistakeBodyMistakeType";
 export * from "./renamePageBody";
 export * from "./rob3Progress";
 export * from "./rob3ProgressItem";

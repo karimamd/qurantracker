@@ -425,8 +425,9 @@
     "mistakeTitleLatest": "Mistake (reveals next)",
     "mistakeTitle": "Mark mistake",
     "ariaMarkMistake": "Mark ayah {{n}} as mistake",
-    "mistakesTooltip": "Mistakes will be recorded with your next quality rating",
-    "linkTooltip": "Link issues will be recorded with your next quality rating"
+    "mistakesTooltip": "Saved automatically — tap the tick on an ayah to reverse it",
+    "linkTooltip": "Saved automatically — tap the link button again to reverse it",
+    "markFailed": "Couldn't save mark — please try again"
   },
   "mistakes": {
     "title": "Mistakes",

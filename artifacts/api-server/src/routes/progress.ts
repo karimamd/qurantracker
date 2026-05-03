@@ -34,6 +34,14 @@ import {
   ListRob3ProgressResponse,
   GetMistakesQueryParams,
   GetMistakesResponse,
+  ListActivePageMistakesParams,
+  ListActivePageMistakesResponse,
+  AddActivePageMistakeParams,
+  AddActivePageMistakeBody,
+  AddActivePageMistakeResponse,
+  RemoveActivePageMistakeParams,
+  RemoveActivePageMistakeBody,
+  RemoveActivePageMistakeResponse,
 } from "@workspace/api-zod";
 import {
   TOTAL_PAGES,
@@ -454,6 +462,10 @@ router.patch("/progress/pages/:pageNumber", async (req, res): Promise<void> => {
     recitedAt,
   });
 
+  // NOTE: per-ayah mistake marks are now persisted instantly via the
+  // /progress/pages/:pageNumber/active-mistakes endpoints. The legacy
+  // ayahMistakes payload on this PATCH is accepted for backward compatibility
+  // but the reader no longer sends it.
   const ayahMistakes = parsed.data.ayahMistakes ?? [];
   if (ayahMistakes.length > 0) {
     await db.insert(ayahMistakesTable).values(
@@ -471,6 +483,156 @@ router.patch("/progress/pages/:pageNumber", async (req, res): Promise<void> => {
 
   const enrichedResult = enrichPageProgress(updated);
   res.json(UpdatePageProgressResponse.parse(enrichedResult));
+});
+
+// ---------- Active per-ayah mistake marks (instant persistence) ----------
+
+const ACTIVE_MISTAKE_LOCK_NAMESPACE = 0x61_79_61_68; // "ayah"
+
+async function listActiveMistakesForPage(
+  userId: string,
+  pageNumber: number,
+): Promise<{
+  surahNumber: number;
+  ayahNumberInSurah: number;
+  globalAyahNumber: number;
+  mistakeType: "memorization" | "link";
+}[]> {
+  const rows = await db
+    .select({
+      surahNumber: ayahMistakesTable.surahNumber,
+      ayahNumberInSurah: ayahMistakesTable.ayahNumberInSurah,
+      globalAyahNumber: ayahMistakesTable.globalAyahNumber,
+      mistakeType: ayahMistakesTable.mistakeType,
+    })
+    .from(ayahMistakesTable)
+    .where(
+      and(
+        eq(ayahMistakesTable.userId, userId),
+        eq(ayahMistakesTable.pageNumber, pageNumber),
+        sql`${ayahMistakesTable.resolvedAt} is null`,
+      ),
+    );
+
+  // Dedupe — multiple historical rows for the same (ayah,type) collapse to one mark.
+  const seen = new Set<string>();
+  const unique: {
+    surahNumber: number;
+    ayahNumberInSurah: number;
+    globalAyahNumber: number;
+    mistakeType: "memorization" | "link";
+  }[] = [];
+  for (const r of rows) {
+    if (r.mistakeType !== "memorization" && r.mistakeType !== "link") continue;
+    const k = `${r.globalAyahNumber}|${r.mistakeType}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    unique.push({
+      surahNumber: r.surahNumber,
+      ayahNumberInSurah: r.ayahNumberInSurah,
+      globalAyahNumber: r.globalAyahNumber,
+      mistakeType: r.mistakeType,
+    });
+  }
+  return unique;
+}
+
+router.get("/progress/pages/:pageNumber/active-mistakes", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const params = ListActivePageMistakesParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const list = await listActiveMistakesForPage(userId, params.data.pageNumber);
+  res.json(ListActivePageMistakesResponse.parse(list));
+});
+
+router.post("/progress/pages/:pageNumber/active-mistakes", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const params = AddActivePageMistakeParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const body = AddActivePageMistakeBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const pageNumber = params.data.pageNumber;
+  if (pageNumber < 1 || pageNumber > TOTAL_PAGES) {
+    res.status(400).json({ error: "Invalid page number" });
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    // Per-user advisory lock so concurrent toggles can't race and create duplicates.
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(${ACTIVE_MISTAKE_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
+    );
+    const existing = await tx
+      .select({ id: ayahMistakesTable.id })
+      .from(ayahMistakesTable)
+      .where(
+        and(
+          eq(ayahMistakesTable.userId, userId),
+          eq(ayahMistakesTable.globalAyahNumber, body.data.globalAyahNumber),
+          eq(ayahMistakesTable.mistakeType, body.data.mistakeType),
+          sql`${ayahMistakesTable.resolvedAt} is null`,
+        ),
+      )
+      .limit(1);
+    if (existing.length === 0) {
+      await tx.insert(ayahMistakesTable).values({
+        userId,
+        pageNumber,
+        surahNumber: body.data.surahNumber,
+        ayahNumberInSurah: body.data.ayahNumberInSurah,
+        globalAyahNumber: body.data.globalAyahNumber,
+        mistakeType: body.data.mistakeType,
+      });
+    }
+  });
+
+  const list = await listActiveMistakesForPage(userId, pageNumber);
+  res.json(AddActivePageMistakeResponse.parse(list));
+});
+
+router.delete("/progress/pages/:pageNumber/active-mistakes", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const params = RemoveActivePageMistakeParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const body = RemoveActivePageMistakeBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const pageNumber = params.data.pageNumber;
+
+  await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(${ACTIVE_MISTAKE_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
+    );
+    await tx
+      .update(ayahMistakesTable)
+      .set({ resolvedAt: new Date() })
+      .where(
+        and(
+          eq(ayahMistakesTable.userId, userId),
+          eq(ayahMistakesTable.pageNumber, pageNumber),
+          eq(ayahMistakesTable.globalAyahNumber, body.data.globalAyahNumber),
+          eq(ayahMistakesTable.mistakeType, body.data.mistakeType),
+          sql`${ayahMistakesTable.resolvedAt} is null`,
+        ),
+      );
+  });
+
+  const list = await listActiveMistakesForPage(userId, pageNumber);
+  res.json(RemoveActivePageMistakeResponse.parse(list));
 });
 
 router.get("/progress/mistakes", async (req, res): Promise<void> => {
