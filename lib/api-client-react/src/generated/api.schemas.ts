@@ -26,6 +26,8 @@ export interface Settings {
   language: SettingsLanguage;
   /** Number of pages per day for the recurring Telawa (read-only) rotation. Default 5. */
   telawaPagesPerDay: number;
+  /** Font size in pixels used for the Quran page text in the Reader. Default 24. */
+  readerFontSize: number;
 }
 
 export type UpdateSettingsBodyLanguage =
@@ -47,6 +49,11 @@ export interface UpdateSettingsBody {
    * @maximum 604
    */
   telawaPagesPerDay?: number;
+  /**
+   * @minimum 14
+   * @maximum 64
+   */
+  readerFontSize?: number;
 }
 
 export interface ProgressOverview {

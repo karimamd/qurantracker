@@ -169,6 +169,11 @@
       "label": "Telawa pages per day",
       "description": "How many pages to recite each day in the recurring rotation across all 604 pages.",
       "pagesUnit": "pages"
+    },
+    "readerFontSize": {
+      "label": "Quran text size",
+      "description": "Font size used for the Quran page text in the Reader.",
+      "unit": "px"
     }
   },
   "telawa": {
@@ -422,6 +427,9 @@
     "juzPart": "Juz {{juz}} · Part {{rob3}} ({{idx}}/8)",
     "hideAll": "Hide all ayahs",
     "showAll": "Show all",
+    "fontSize": "Text size",
+    "fontSizeIncrease": "Increase text size",
+    "fontSizeDecrease": "Decrease text size",
     "restart": "Restart",
     "restartTitle": "Re-hide all and clear marks",
     "markTelawa": "Mark Telawa",

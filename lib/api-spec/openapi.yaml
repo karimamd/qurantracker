@@ -755,6 +755,9 @@ components:
         telawaPagesPerDay:
           type: integer
           description: Number of pages per day for the recurring Telawa (read-only) rotation. Default 5.
+        readerFontSize:
+          type: integer
+          description: Font size in pixels used for the Quran page text in the Reader. Default 24.
       required:
         - id
         - excellentDays
@@ -763,6 +766,7 @@ components:
         - relearnDays
         - language
         - telawaPagesPerDay
+        - readerFontSize
 
     UpdateSettingsBody:
       type: object
@@ -782,6 +786,10 @@ components:
           type: integer
           minimum: 1
           maximum: 604
+        readerFontSize:
+          type: integer
+          minimum: 14
+          maximum: 64
 
     ProgressOverview:
       type: object

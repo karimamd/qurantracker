@@ -27,6 +27,9 @@ import {
   useRemoveActivePageMistake,
   useRecordTelawaRead,
   useStartKhatmah,
+  useGetSettings,
+  useUpdateSettings,
+  getGetSettingsQueryKey,
   getGetTelawaTodayQueryKey,
   getGetTelawaStatsQueryKey,
   getListPageProgressQueryKey,
@@ -43,7 +46,7 @@ import {
 } from "@workspace/api-client-react";
 import type { PageProgress, ActiveAyahMistake } from "@workspace/api-client-react";
 import { useParams, useLocation, useSearch } from "wouter";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,7 +55,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat, Sparkles, Minus, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
@@ -569,6 +572,71 @@ export default function Reader() {
     ? format(new Date(currentPage.lastRecited), "MMM d, yyyy")
     : null;
 
+  // ─── Reader font size ──────────────────────────────────────────────
+  // The Quran page text in the Reader is resizable. The chosen pixel size
+  // is persisted on the user's settings row so it carries across pages and
+  // devices. We keep a local copy so the +/- buttons feel instant, and
+  // debounce the PATCH so a flurry of clicks collapses into one request.
+  // Bounds match the OpenAPI schema (14-64) to avoid the server rejecting
+  // an out-of-range value.
+  const READER_FONT_MIN = 14;
+  const READER_FONT_MAX = 64;
+  const READER_FONT_STEP = 2;
+  const READER_FONT_DEFAULT = 24;
+  const { data: settings } = useGetSettings();
+  const updateSettings = useUpdateSettings();
+  const [readerFontSize, setReaderFontSize] = useState<number>(READER_FONT_DEFAULT);
+  const fontSizePersistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync local state when settings load or change from elsewhere (e.g.,
+  // the Settings page). Only overwrite if the server value differs from
+  // what the user is actively editing here.
+  useEffect(() => {
+    if (settings?.readerFontSize && settings.readerFontSize !== readerFontSize) {
+      setReaderFontSize(settings.readerFontSize);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings?.readerFontSize]);
+
+  const persistFontSize = (size: number) => {
+    if (fontSizePersistTimer.current) clearTimeout(fontSizePersistTimer.current);
+    fontSizePersistTimer.current = setTimeout(() => {
+      updateSettings.mutate(
+        { data: { readerFontSize: size } },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+          },
+        },
+      );
+    }, 400);
+  };
+
+  const adjustFontSize = (delta: number) => {
+    setReaderFontSize(prev => {
+      const next = Math.min(READER_FONT_MAX, Math.max(READER_FONT_MIN, prev + delta));
+      if (next !== prev) persistFontSize(next);
+      return next;
+    });
+  };
+
+  // Cleanup any pending debounce on unmount so we don't fire after the
+  // page is gone (and to avoid React's "set state on unmounted" warning
+  // chains in dev).
+  useEffect(() => {
+    return () => {
+      if (fontSizePersistTimer.current) clearTimeout(fontSizePersistTimer.current);
+    };
+  }, []);
+
+  const ayahTextStyle: CSSProperties = {
+    wordSpacing: "0.1em",
+    fontSize: `${readerFontSize}px`,
+  };
+  const bismillahStyle: CSSProperties = {
+    fontSize: `${Math.round(readerFontSize * 1.05)}px`,
+  };
+
   return (
     <div className="space-y-4 max-w-4xl mx-auto" data-testid="reader-page">
       <div className="flex items-end justify-between gap-3 flex-wrap">
@@ -577,6 +645,49 @@ export default function Reader() {
           <p className="text-sm text-muted-foreground mt-1">{t("reader.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end ms-auto">
+          {ayahs && !ayahsError ? (
+            <div
+              className="inline-flex items-center rounded-md border bg-background"
+              dir="ltr"
+              data-testid="reader-font-size-controls"
+              role="group"
+              aria-label={t("reader.fontSize")}
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 rounded-e-none"
+                onClick={() => adjustFontSize(-READER_FONT_STEP)}
+                disabled={readerFontSize <= READER_FONT_MIN}
+                aria-label={t("reader.fontSizeDecrease")}
+                title={t("reader.fontSizeDecrease")}
+                data-testid="btn-font-size-decrease"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </Button>
+              <span
+                className="px-2 text-xs tabular-nums text-muted-foreground select-none border-x min-w-[3ch] text-center"
+                data-testid="reader-font-size-value"
+                aria-live="polite"
+              >
+                {readerFontSize}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 rounded-s-none"
+                onClick={() => adjustFontSize(READER_FONT_STEP)}
+                disabled={readerFontSize >= READER_FONT_MAX}
+                aria-label={t("reader.fontSizeIncrease")}
+                title={t("reader.fontSizeIncrease")}
+                data-testid="btn-font-size-increase"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          ) : null}
           {ayahs && !ayahsError ? (
             !hideMode ? (
               <Button
@@ -876,9 +987,10 @@ export default function Reader() {
                       </div>
                       {group.surahNumber !== 1 && group.surahNumber !== 9 && (
                         <div
-                          className="text-center font-serif text-2xl sm:text-3xl py-2"
+                          className="text-center font-serif py-2"
                           dir="rtl"
                           lang="ar"
+                          style={bismillahStyle}
                           data-testid={`reader-bismillah-${group.surahNumber}`}
                         >
                           بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
@@ -886,7 +998,7 @@ export default function Reader() {
                       )}
                     </>
                   )}
-                  <p className="font-serif text-2xl sm:text-3xl leading-loose text-justify" style={{ wordSpacing: "0.1em" }}>
+                  <p className="font-serif leading-loose text-justify" style={ayahTextStyle}>
                     {group.ayahs.map((a, i) => {
                       const globalIndex = ayahIndexMap.get(a.number) ?? 0;
                       const isVisible = !hideMode || globalIndex < revealedCount;

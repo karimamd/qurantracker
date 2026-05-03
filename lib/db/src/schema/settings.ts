@@ -26,6 +26,10 @@ export const settingsTable = pgTable("settings", {
   relearnDays: integer("relearn_days").notNull().default(3),
   language: text("language").notNull().default("en"),
   telawaPagesPerDay: integer("telawa_pages_per_day").notNull().default(5),
+  // Font size in pixels for the Quran page text in the Reader. Persisted
+  // per user so adjustments stick across devices. Bounded client-side to
+  // keep page text readable and avoid extreme layouts.
+  readerFontSize: integer("reader_font_size").notNull().default(24),
 }, (table) => ({
   userIdUnique: uniqueIndex("settings_user_id_unique").on(table.userId),
 }));

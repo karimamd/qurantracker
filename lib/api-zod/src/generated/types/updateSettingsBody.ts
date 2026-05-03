@@ -18,4 +18,9 @@ export interface UpdateSettingsBody {
    * @maximum 604
    */
   telawaPagesPerDay?: number;
+  /**
+   * @minimum 14
+   * @maximum 64
+   */
+  readerFontSize?: number;
 }

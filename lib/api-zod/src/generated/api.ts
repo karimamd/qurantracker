@@ -30,12 +30,20 @@ export const GetSettingsResponse = zod.object({
     .describe(
       "Number of pages per day for the recurring Telawa (read-only) rotation. Default 5.",
     ),
+  readerFontSize: zod
+    .number()
+    .describe(
+      "Font size in pixels used for the Quran page text in the Reader. Default 24.",
+    ),
 });
 
 /**
  * @summary Update user settings
  */
 export const updateSettingsBodyTelawaPagesPerDayMax = 604;
+
+export const updateSettingsBodyReaderFontSizeMin = 14;
+export const updateSettingsBodyReaderFontSizeMax = 64;
 
 export const UpdateSettingsBody = zod.object({
   excellentDays: zod.number().optional(),
@@ -47,6 +55,11 @@ export const UpdateSettingsBody = zod.object({
     .number()
     .min(1)
     .max(updateSettingsBodyTelawaPagesPerDayMax)
+    .optional(),
+  readerFontSize: zod
+    .number()
+    .min(updateSettingsBodyReaderFontSizeMin)
+    .max(updateSettingsBodyReaderFontSizeMax)
     .optional(),
 });
 
@@ -61,6 +74,11 @@ export const UpdateSettingsResponse = zod.object({
     .number()
     .describe(
       "Number of pages per day for the recurring Telawa (read-only) rotation. Default 5.",
+    ),
+  readerFontSize: zod
+    .number()
+    .describe(
+      "Font size in pixels used for the Quran page text in the Reader. Default 24.",
     ),
 });
 
