@@ -757,7 +757,7 @@ export default function Reader() {
                             isMistake
                               ? "text-rose-600 dark:text-rose-400"
                               : isLatest
-                              ? "bg-amber-100/40 dark:bg-amber-500/10 rounded px-0.5"
+                              ? "bg-amber-200/80 dark:bg-amber-400/30 ring-1 ring-amber-400/70 dark:ring-amber-300/50 rounded px-1 py-0.5"
                               : ""
                           }
                           data-testid={`reader-ayah-${a.number}`}
