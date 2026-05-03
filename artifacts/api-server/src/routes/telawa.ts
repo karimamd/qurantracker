@@ -80,6 +80,11 @@ router.get("/telawa/today", async (req, res): Promise<void> => {
   res.json(GetTelawaTodayResponse.parse(today));
 });
 
+// Stable per-user advisory-lock key. We use a fixed namespace int (chosen
+// arbitrarily for "telawa") plus hashtext(userId) so different features can
+// take different advisory locks for the same user without colliding.
+const TELAWA_LOCK_NAMESPACE = 0x74_6c_77_61; // "tlwa"
+
 router.post("/telawa/read", async (req, res): Promise<void> => {
   const userId = req.userId!;
   const parsed = RecordTelawaReadBody.safeParse(req.body);
@@ -88,9 +93,14 @@ router.post("/telawa/read", async (req, res): Promise<void> => {
     return;
   }
 
-  // Compute current cursor inside a transaction so concurrent reads can't
-  // double-advance.
+  // Wrap cursor read + insert in a transaction with a per-user advisory lock
+  // so concurrent reads cannot both observe the same count and double-advance
+  // (or both write the same page number).
   const result = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(${TELAWA_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
+    );
+
     const [{ total }] = await tx
       .select({ total: sql<number>`count(*)::int` })
       .from(telawaLogTable)
@@ -125,17 +135,29 @@ router.post("/telawa/read", async (req, res): Promise<void> => {
 
 router.delete("/telawa/read/last", async (req, res): Promise<void> => {
   const userId = req.userId!;
-  const [last] = await db
-    .select()
-    .from(telawaLogTable)
-    .where(eq(telawaLogTable.userId, userId))
-    .orderBy(desc(telawaLogTable.readAt), desc(telawaLogTable.id))
-    .limit(1);
-  if (!last) {
+  const undone = await db.transaction(async (tx) => {
+    // Take the same per-user advisory lock used by /telawa/read so that
+    // "undo last" can never race with a concurrent insert and remove a row
+    // that is no longer the latest.
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(${TELAWA_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
+    );
+
+    const [last] = await tx
+      .select()
+      .from(telawaLogTable)
+      .where(eq(telawaLogTable.userId, userId))
+      .orderBy(desc(telawaLogTable.readAt), desc(telawaLogTable.id))
+      .limit(1);
+    if (!last) return false;
+    await tx.delete(telawaLogTable).where(eq(telawaLogTable.id, last.id));
+    return true;
+  });
+
+  if (!undone) {
     res.status(404).json({ error: "Nothing to undo" });
     return;
   }
-  await db.delete(telawaLogTable).where(eq(telawaLogTable.id, last.id));
   const today = await buildToday(userId);
   res.json(UndoTelawaReadResponse.parse(today));
 });
