@@ -15,7 +15,7 @@
  *     page with the ?practice=<global> deep-link, exactly like the
  *     /mistakes feed entries.
  */
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useLocation, useParams } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -241,13 +241,30 @@ export default function AyahDetail() {
     };
   }, [ayah]);
 
+  // Anchor we scroll to whenever the user advances/retreats by an ayah,
+  // whether via the top nav, the bottom nav, or keyboard arrows. We
+  // pin it to the top nav row (just above the ayah text) so both the
+  // controls and the new ayah are visible after the scroll. The
+  // surrounding Card stays mounted across navigations, so scrolling
+  // the same element on every nav is reliable.
+  const ayahScrollRef = useRef<HTMLDivElement>(null);
+  const scrollToAyahTop = () => {
+    // rAF gives the SPA router one frame to commit the new URL/state
+    // before we measure-and-scroll, so the new ayah is the one in
+    // view rather than the previous one's position.
+    requestAnimationFrame(() => {
+      ayahScrollRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
   const goPrev = () => {
     if (target == null || target <= 1) return;
     setLocation(`/ayahs/${target - 1}`);
+    scrollToAyahTop();
   };
   const goNext = () => {
     if (target == null || target >= TOTAL_AYAHS) return;
     setLocation(`/ayahs/${target + 1}`);
+    scrollToAyahTop();
   };
 
   // Keyboard arrows for prev/next nav (skip when typing in inputs).
@@ -354,6 +371,41 @@ export default function AyahDetail() {
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
+            </div>
+
+            {/* Top prev/next bar — mirrors the bottom nav so the user
+                can advance ayahs without scrolling all the way down,
+                especially after expanding Tafsir or Word-by-Word. The
+                scroll anchor lives here so clicks always bring the
+                fresh ayah's top edge into view. */}
+            <div
+              ref={ayahScrollRef}
+              className="flex items-center justify-between gap-2 scroll-mt-4"
+              data-testid="ayah-detail-nav-top"
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goPrev}
+                disabled={target <= 1}
+                data-testid="ayah-detail-prev-top"
+              >
+                <ChevronLeft className="w-4 h-4 me-1 rtl:rotate-180" />
+                {t("ayahDetail.previous")}
+              </Button>
+              <span className="text-xs text-muted-foreground tabular-nums" aria-hidden>
+                {target} / {TOTAL_AYAHS}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goNext}
+                disabled={target >= TOTAL_AYAHS}
+                data-testid="ayah-detail-next-top"
+              >
+                {t("ayahDetail.next")}
+                <ChevronRight className="w-4 h-4 ms-1 rtl:rotate-180" />
+              </Button>
             </div>
 
             <div
