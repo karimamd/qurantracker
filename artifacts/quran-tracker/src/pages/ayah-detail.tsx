@@ -31,13 +31,21 @@ import type { ActiveAyahMistake } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   BookMarked,
+  BookOpen,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Languages,
   Link2,
   Minus,
   Plus,
@@ -45,6 +53,8 @@ import {
   X,
 } from "lucide-react";
 import { getAyahIndex, type AyahIndexEntry } from "@/lib/ayah-index";
+import { getAyahTafsir } from "@/lib/tafsir";
+import { getAyahWbw, type WbwWord } from "@/lib/wbw";
 
 // Bounds mirror the OpenAPI schema for settings.ayahViewFontSize so a
 // user's saved default is always honoured (e.g. 14 stays 14, never falls
@@ -182,6 +192,55 @@ export default function AyahDetail() {
     );
   };
 
+  // ── Tafsir Muyassar (collapsed by default) ────────────────────────
+  // Lazy-loaded via the offline-first chain in lib/tafsir.ts: per-ayah
+  // IDB cache → bundled local dump → alquran.cloud per-ayah fallback.
+  // We start the fetch as soon as the target ayah is known (not gated
+  // on the user expanding the section) so opening the section is
+  // instant on warm IDB and only ever waits for the network on a cold
+  // first-ever load with no bundle.
+  const [tafsir, setTafsir] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (target == null) return;
+    let cancelled = false;
+    setTafsir(undefined);
+    getAyahTafsir(target)
+      .then((t) => {
+        if (!cancelled) setTafsir(t);
+      })
+      .catch(() => {
+        if (!cancelled) setTafsir(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [target]);
+
+  // ── Word-by-word (collapsed by default) ───────────────────────────
+  // Same offline-first chain in lib/wbw.ts. Needs surah + ayah-in-surah
+  // for the quran.com fallback verse_key, so we wait for `ayah` (the
+  // index entry) instead of just `target`.
+  const [wbw, setWbw] = useState<WbwWord[] | null | undefined>(undefined);
+  useEffect(() => {
+    if (!ayah) return;
+    let cancelled = false;
+    setWbw(undefined);
+    getAyahWbw({
+      globalAyahNumber: ayah.globalAyahNumber,
+      surahNumber: ayah.surahNumber,
+      ayahNumberInSurah: ayah.numberInSurah,
+    })
+      .then((w) => {
+        if (!cancelled) setWbw(w);
+      })
+      .catch(() => {
+        if (!cancelled) setWbw(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ayah]);
+
   const goPrev = () => {
     if (target == null || target <= 1) return;
     setLocation(`/ayahs/${target - 1}`);
@@ -306,6 +365,112 @@ export default function AyahDetail() {
                 {ayah.text}
               </p>
             </div>
+
+            {/* Tafsir Muyassar — collapsed by default. */}
+            <Collapsible data-testid="ayah-detail-tafsir">
+              <CollapsibleTrigger
+                className="flex w-full items-center justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm font-medium hover:bg-muted/70 transition-colors group"
+                data-testid="ayah-detail-tafsir-trigger"
+              >
+                <span className="flex items-center gap-2 text-start">
+                  <BookOpen className="w-4 h-4 text-primary shrink-0" />
+                  <span className="flex flex-col">
+                    <span>{t("ayahDetail.tafsirTitle")}</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {t("ayahDetail.tafsirSubtitle")}
+                    </span>
+                  </span>
+                </span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 shrink-0" />
+              </CollapsibleTrigger>
+              <CollapsibleContent
+                className="rounded-md border border-t-0 px-4 py-3 -mt-px bg-background"
+                data-testid="ayah-detail-tafsir-content"
+              >
+                {tafsir === undefined ? (
+                  <Skeleton className="h-16 w-full" />
+                ) : tafsir === null || tafsir.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("ayahDetail.tafsirUnavailable")}
+                  </p>
+                ) : (
+                  <p
+                    dir="rtl"
+                    className="text-base leading-loose text-right text-foreground"
+                    style={{ fontFamily: "'Noto Naskh Arabic', 'Amiri', serif" }}
+                    data-testid="ayah-detail-tafsir-text"
+                  >
+                    {tafsir}
+                  </p>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Word-by-word — collapsed by default. */}
+            <Collapsible data-testid="ayah-detail-wbw">
+              <CollapsibleTrigger
+                className="flex w-full items-center justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm font-medium hover:bg-muted/70 transition-colors group"
+                data-testid="ayah-detail-wbw-trigger"
+              >
+                <span className="flex items-center gap-2 text-start">
+                  <Languages className="w-4 h-4 text-primary shrink-0" />
+                  <span className="flex flex-col">
+                    <span>{t("ayahDetail.wbwTitle")}</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {t("ayahDetail.wbwSubtitle")}
+                    </span>
+                  </span>
+                </span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 shrink-0" />
+              </CollapsibleTrigger>
+              <CollapsibleContent
+                className="rounded-md border border-t-0 px-3 py-3 -mt-px bg-background"
+                data-testid="ayah-detail-wbw-content"
+              >
+                {wbw === undefined ? (
+                  <Skeleton className="h-20 w-full" />
+                ) : wbw === null || wbw.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("ayahDetail.wbwUnavailable")}
+                  </p>
+                ) : (
+                  // Mushaf reading order is right-to-left, so we render
+                  // the cards in RTL flow and let flex-wrap stack rows
+                  // top-to-bottom. Each card stacks: Arabic word →
+                  // transliteration → English gloss.
+                  <div
+                    dir="rtl"
+                    className="flex flex-wrap gap-2"
+                    data-testid="ayah-detail-wbw-list"
+                  >
+                    {wbw.map((w, i) => (
+                      <div
+                        key={i}
+                        className="flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-md border bg-muted/30 min-w-[80px]"
+                        data-testid={`ayah-detail-wbw-word-${i}`}
+                      >
+                        <span
+                          className="text-xl leading-tight"
+                          style={{ fontFamily: "'Noto Naskh Arabic', 'Amiri', serif" }}
+                        >
+                          {w.ar}
+                        </span>
+                        {w.tr && (
+                          <span dir="ltr" className="text-[10px] italic text-muted-foreground leading-tight">
+                            {w.tr}
+                          </span>
+                        )}
+                        {w.en && (
+                          <span dir="ltr" className="text-xs text-foreground/80 text-center leading-tight">
+                            {w.en}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
 
             <div className="flex items-center justify-center gap-2 flex-wrap" data-testid="ayah-detail-actions">
               <Button

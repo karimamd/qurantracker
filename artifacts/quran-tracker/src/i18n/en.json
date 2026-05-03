@@ -388,7 +388,15 @@
     "previous": "Previous",
     "next": "Next",
     "openInReader": "Open page {{page}} in Reader",
-    "invalid": "That ayah doesn't exist. Pick one from the Ayahs page."
+    "invalid": "That ayah doesn't exist. Pick one from the Ayahs page.",
+    "tafsirTitle": "Tafsir Muyassar",
+    "tafsirSubtitle": "Concise modern Arabic tafsir",
+    "tafsirLoading": "Loading tafsir…",
+    "tafsirUnavailable": "Tafsir unavailable for this ayah right now.",
+    "wbwTitle": "Word by word",
+    "wbwSubtitle": "Per-word Arabic with English gloss",
+    "wbwLoading": "Loading word-by-word…",
+    "wbwUnavailable": "Word-by-word unavailable for this ayah right now."
   },
   "telawa": {
     "title": "Telawa",
