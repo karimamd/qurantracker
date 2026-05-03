@@ -460,6 +460,7 @@ router.patch("/progress/pages/:pageNumber", async (req, res): Promise<void> => {
     quality: parsed.data.quality,
     mistakes: parsed.data.mistakes ?? null,
     recitedAt,
+    dueDate,
   });
 
   // NOTE: per-ayah mistake marks are now persisted instantly via the
@@ -762,6 +763,7 @@ router.post("/progress/recite-batch", async (req, res): Promise<void> => {
       quality: parsed.data.quality,
       mistakes: parsed.data.mistakes ?? null,
       recitedAt,
+      dueDate,
     });
 
     results.push(enrichPageProgress(updated));
@@ -1050,7 +1052,11 @@ router.delete("/progress/activity/:id", async (req, res): Promise<void> => {
 
     let nextPage;
     if (mostRecent) {
-      const dueDate = calculateDueDate(mostRecent.recitedAt, mostRecent.quality, settings);
+      // Restore the page's previous due date verbatim from the prior log row.
+      // For legacy rows recorded before due_date was persisted, fall back to
+      // recomputing from current settings + the prior recitation.
+      const dueDate = mostRecent.dueDate
+        ?? calculateDueDate(mostRecent.recitedAt, mostRecent.quality, settings);
       [nextPage] = await tx
         .update(pageProgressTable)
         .set({

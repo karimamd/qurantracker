@@ -353,6 +353,7 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
       pageNumber: item.pageNumber,
       quality: parsed.data.quality,
       recitedAt: now,
+      dueDate,
     });
   }
 
