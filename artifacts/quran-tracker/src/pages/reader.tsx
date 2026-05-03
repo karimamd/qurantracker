@@ -598,18 +598,34 @@ export default function Reader() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings?.readerFontSize]);
 
-  const persistFontSize = (size: number) => {
-    if (fontSizePersistTimer.current) clearTimeout(fontSizePersistTimer.current);
-    fontSizePersistTimer.current = setTimeout(() => {
-      updateSettings.mutate(
-        { data: { readerFontSize: size } },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
-          },
+  // Track the latest pending size separately from the debounce handle so
+  // we can flush it on unmount — otherwise a user who clicks "+" then
+  // navigates away within the 400ms window would silently lose that
+  // final write.
+  const pendingFontSize = useRef<number | null>(null);
+
+  const flushFontSize = () => {
+    if (fontSizePersistTimer.current) {
+      clearTimeout(fontSizePersistTimer.current);
+      fontSizePersistTimer.current = null;
+    }
+    const size = pendingFontSize.current;
+    if (size == null) return;
+    pendingFontSize.current = null;
+    updateSettings.mutate(
+      { data: { readerFontSize: size } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
         },
-      );
-    }, 400);
+      },
+    );
+  };
+
+  const persistFontSize = (size: number) => {
+    pendingFontSize.current = size;
+    if (fontSizePersistTimer.current) clearTimeout(fontSizePersistTimer.current);
+    fontSizePersistTimer.current = setTimeout(flushFontSize, 400);
   };
 
   const adjustFontSize = (delta: number) => {
@@ -620,13 +636,14 @@ export default function Reader() {
     });
   };
 
-  // Cleanup any pending debounce on unmount so we don't fire after the
-  // page is gone (and to avoid React's "set state on unmounted" warning
-  // chains in dev).
+  // On unmount, flush any pending change rather than just clearing the
+  // timer so the last adjustment isn't lost when the user navigates
+  // away inside the 400ms debounce window.
   useEffect(() => {
     return () => {
-      if (fontSizePersistTimer.current) clearTimeout(fontSizePersistTimer.current);
+      flushFontSize();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const ayahTextStyle: CSSProperties = {
