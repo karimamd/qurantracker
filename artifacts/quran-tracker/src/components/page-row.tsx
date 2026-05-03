@@ -97,8 +97,8 @@ export function PageRow({
       className={`px-4 py-3 transition-colors relative ${bgClass}`}
       data-testid={`${testIdPrefix}-${tid}`}
     >
-      <div className="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
-        <div className="flex items-start gap-3 min-w-0 flex-1">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
+        <div className="flex items-start gap-3 min-w-0 flex-1 w-full">
           {/* Status / completion dot */}
           <div
             className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
@@ -169,20 +169,23 @@ export function PageRow({
               </div>
             )}
 
-            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
-              {surahLabel && <span className="truncate">{surahLabel}</span>}
+            <div className="flex items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-1 flex-wrap">
+              {surahLabel && <span className="whitespace-nowrap truncate max-w-full">{surahLabel}</span>}
               {lastRecitedAt && (
-                <span data-testid={`${testIdPrefix}-last-recited-${tid}`}>
+                <span
+                  className="whitespace-nowrap"
+                  data-testid={`${testIdPrefix}-last-recited-${tid}`}
+                >
                   {t("common.lastRecited")}: {lastRecitedAt}
                 </span>
               )}
-              {!inScope && <span className="italic">{t("status.out_of_scope")}</span>}
+              {!inScope && <span className="italic whitespace-nowrap">{t("status.out_of_scope")}</span>}
             </div>
           </div>
         </div>
 
         {/* Actions: Read button, Quality picker, extras */}
-        <div className="flex items-center gap-1 shrink-0 ms-auto flex-wrap justify-end">
+        <div className="flex items-center gap-1 shrink-0 flex-wrap justify-start sm:justify-end sm:ms-auto ps-8 sm:ps-0">
           <button
             type="button"
             onClick={() => setLocation(`/reader/${pageNumber}`)}
