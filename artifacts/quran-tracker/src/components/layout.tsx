@@ -9,19 +9,24 @@ import { isGuestMode, exitGuestMode } from "@/lib/guest-mode";
 
 const navItems = [
   { href: "/homework", key: "homework", testId: "homework", icon: ClipboardList },
-  { href: "/", key: "dashboard", testId: "dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", key: "dashboard", testId: "dashboard", icon: LayoutDashboard },
   { href: "/telawa", key: "telawa", testId: "telawa", icon: Repeat },
   { href: "/reader", key: "reader", testId: "reader", icon: BookMarked },
+  { href: "/mistakes", key: "mistakes", testId: "mistakes", icon: AlertTriangle },
   { href: "/juz", key: "juz", testId: "juz", icon: Layers },
   { href: "/rub", key: "rub", testId: "rub'", icon: Grid3x3 },
   { href: "/surah", key: "surah", testId: "surah", icon: BookOpen },
   { href: "/pages", key: "pages", testId: "pages", icon: FileText },
   { href: "/recite", key: "recite", testId: "recite", icon: PenLine },
-  { href: "/mistakes", key: "mistakes", testId: "mistakes", icon: AlertTriangle },
   { href: "/settings", key: "settings", testId: "settings", icon: Settings },
 ] as const;
 
-const bottomNavItems = navItems.slice(0, 5);
+// Mobile bottom-nav surfaces the five most-used screens; everything else
+// lives in the burger drawer (which still renders the full `navItems`).
+const BOTTOM_NAV_KEYS = ["homework", "dashboard", "telawa", "reader", "mistakes"] as const;
+const bottomNavItems = BOTTOM_NAV_KEYS.map(
+  k => navItems.find(n => n.key === k)!,
+);
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
