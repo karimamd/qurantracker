@@ -24,6 +24,7 @@ export default function SettingsPage() {
   const [relearnDays, setRelearnDays] = useState("");
   const [telawaPagesPerDay, setTelawaPagesPerDay] = useState("");
   const [readerFontSize, setReaderFontSize] = useState("");
+  const [ayahViewFontSize, setAyahViewFontSize] = useState("");
   const [language, setLanguageState] = useState<SupportedLanguage>("en");
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function SettingsPage() {
       setRelearnDays(String(settings.relearnDays));
       setTelawaPagesPerDay(String(settings.telawaPagesPerDay));
       setReaderFontSize(String(settings.readerFontSize));
+      setAyahViewFontSize(String(settings.ayahViewFontSize));
       const lang = settings.language === "ar" ? "ar" : "en";
       setLanguageState(lang);
     }
@@ -57,6 +59,7 @@ export default function SettingsPage() {
   const handleSave = () => {
     const tppd = parseInt(telawaPagesPerDay, 10);
     const rfs = parseInt(readerFontSize, 10);
+    const avfs = parseInt(ayahViewFontSize, 10);
     updateSettings.mutate(
       {
         data: {
@@ -69,6 +72,9 @@ export default function SettingsPage() {
           // the user typed something out of range so the server keeps the
           // existing value rather than 400'ing the whole save.
           readerFontSize: Number.isFinite(rfs) && rfs >= 14 && rfs <= 64 ? rfs : undefined,
+          // Same out-of-range fallback strategy as readerFontSize. Bounds
+          // mirror the OpenAPI schema for ayahViewFontSize (14-96).
+          ayahViewFontSize: Number.isFinite(avfs) && avfs >= 14 && avfs <= 96 ? avfs : undefined,
         },
       },
       {
@@ -186,6 +192,26 @@ export default function SettingsPage() {
                 data-testid="input-reader-font-size"
               />
               <span className="text-sm text-muted-foreground">{t("settings.readerFontSize.unit")}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-lg border-s-4 border-l-primary bg-muted/30" data-testid="setting-ayah-view-font-size">
+            <div>
+              <div className="font-medium text-sm">{t("settings.ayahViewFontSize.label")}</div>
+              <div className="text-xs text-muted-foreground">{t("settings.ayahViewFontSize.description")}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={14}
+                max={96}
+                step={2}
+                className="w-20 text-center"
+                value={ayahViewFontSize}
+                onChange={(e) => setAyahViewFontSize(e.target.value)}
+                data-testid="input-ayah-view-font-size"
+              />
+              <span className="text-sm text-muted-foreground">{t("settings.ayahViewFontSize.unit")}</span>
             </div>
           </div>
 

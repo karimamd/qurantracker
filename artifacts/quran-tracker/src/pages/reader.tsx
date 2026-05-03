@@ -237,6 +237,12 @@ export default function Reader() {
     if (clamped === pageNumber) return;
     setPageNumber(clamped);
     setLocation(`/reader/${clamped}`);
+    // Reset scroll to the top so the reader always starts at the first
+    // ayah of the new page instead of inheriting the previous page's
+    // scroll offset (which forced the user to scroll back up manually).
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
   };
 
   // Keyboard navigation

@@ -16,7 +16,7 @@
  * cold.
  */
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info, AlertTriangle, Repeat } from "lucide-react";
+import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info, AlertTriangle, Repeat, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { UserButton, useUser, useClerk, useAuth } from "@clerk/react";
@@ -34,6 +34,7 @@ const navItems = [
   { href: "/rub", key: "rub", testId: "rub'", icon: Grid3x3 },
   { href: "/surah", key: "surah", testId: "surah", icon: BookOpen },
   { href: "/pages", key: "pages", testId: "pages", icon: FileText },
+  { href: "/ayahs", key: "ayahs", testId: "ayahs", icon: Sparkles },
   { href: "/recite", key: "recite", testId: "recite", icon: PenLine },
   { href: "/settings", key: "settings", testId: "settings", icon: Settings },
 ] as const;

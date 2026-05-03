@@ -43,6 +43,8 @@ import { usePrefetchAllPages } from "@/hooks/use-prefetch-all-pages";
 import SurahList from "@/pages/surah-list";
 import SurahDetail from "@/pages/surah-detail";
 import PageList from "@/pages/page-list";
+import AyahsList from "@/pages/ayahs-list";
+import AyahDetail from "@/pages/ayah-detail";
 import Recite from "@/pages/recite";
 import HomeworkList from "@/pages/homework-list";
 import TelawaPage from "@/pages/telawa";
@@ -281,6 +283,8 @@ function ProtectedApp() {
           <Route path="/surah" component={SurahList} />
           <Route path="/surah/:id" component={SurahDetail} />
           <Route path="/pages" component={PageList} />
+          <Route path="/ayahs" component={AyahsList} />
+          <Route path="/ayahs/:globalAyahNumber" component={AyahDetail} />
           <Route path="/reader" component={Reader} />
           <Route path="/reader/:page" component={Reader} />
           <Route path="/recite" component={Recite} />

@@ -12,6 +12,7 @@
     "rub": "Rub'",
     "surah": "Surah",
     "pages": "Pages",
+    "ayahs": "Ayahs",
     "recite": "Recite",
     "mistakes": "Mistakes",
     "settings": "Settings",
@@ -174,7 +175,42 @@
       "label": "Quran text size",
       "description": "Font size used for the Quran page text in the Reader.",
       "unit": "px"
+    },
+    "ayahViewFontSize": {
+      "label": "Ayah view default size",
+      "description": "Default font size used when opening a single ayah on the Ayahs page. Adjustments inside the ayah view itself are session-only.",
+      "unit": "px"
     }
+  },
+  "ayahsList": {
+    "title": "Ayahs",
+    "subtitle": "Browse and search every ayah of the Quran. Tap a card to open the focused single-ayah view.",
+    "searchPlaceholder": "Search Arabic text (diacritics ignored)…",
+    "allSurah": "All surahs",
+    "allJuz": "All juz",
+    "pages": "Pages",
+    "from": "From",
+    "to": "To",
+    "toSep": "–",
+    "matchCount_one": "{{count}} ayah",
+    "matchCount_other": "{{count}} ayahs",
+    "loadMore": "Load more ({{remaining}} left)",
+    "empty": "No ayahs match these filters",
+    "emptyHint": "Try clearing the search or widening the page range.",
+    "loadError": "Could not load the Quran text. Please refresh the page."
+  },
+  "ayahDetail": {
+    "title": "Ayah {{n}}",
+    "backToList": "Back to ayahs",
+    "decreaseFont": "Decrease text size",
+    "increaseFont": "Increase text size",
+    "markClear": "Clear",
+    "markMistake": "Mistake",
+    "markLink": "Link mistake",
+    "previous": "Previous",
+    "next": "Next",
+    "openInReader": "Open page {{page}} in Reader",
+    "invalid": "That ayah doesn't exist. Pick one from the Ayahs page."
   },
   "telawa": {
     "title": "Telawa",
