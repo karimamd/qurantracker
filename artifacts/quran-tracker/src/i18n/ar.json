@@ -336,6 +336,10 @@
       "allJuz": "جميع الأجزاء",
       "allStatus": "جميع الحالات",
       "allScope": "جميع النطاقات",
+      "allSurah": "جميع السور",
+      "surahLabel": "{{n}}. {{name}}",
+      "surahSearchPlaceholder": "ابحث عن سورة بالاسم أو الرقم...",
+      "surahNoMatch": "لا توجد سورة مطابقة.",
       "inScope": "ضمن النطاق",
       "notInScope": "خارج النطاق",
       "juzN": "جزء {{n}}"

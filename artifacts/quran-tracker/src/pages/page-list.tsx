@@ -11,14 +11,25 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Minus, LayoutGrid, LayoutList } from "lucide-react";
+import { Plus, Minus, LayoutGrid, LayoutList, Check, ChevronsUpDown, X } from "lucide-react";
 import { format } from "date-fns";
 import { PageLabel } from "@/components/page-label";
 import { PageQualityButtons } from "@/components/page-quality-buttons";
 import { useTranslation } from "react-i18next";
+import { SURAHS } from "@/lib/quran-ref";
+import { cn } from "@/lib/utils";
 
 function formatDate(d: Date | string | null | undefined): string {
   if (!d) return "—";
@@ -36,6 +47,8 @@ export default function PageList() {
     return t("pageList.dueIn.inDays", { count: daysUntilDue });
   };
   const [juzFilter, setJuzFilter] = useState<string>("all");
+  const [surahFilter, setSurahFilter] = useState<string>("all");
+  const [surahPickerOpen, setSurahPickerOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [scopeFilter, setScopeFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -43,10 +56,16 @@ export default function PageList() {
   const params = useMemo<ListPageProgressParams>(() => {
     const p: ListPageProgressParams = {};
     if (juzFilter !== "all") p.juz = parseInt(juzFilter, 10);
+    if (surahFilter !== "all") p.surah = parseInt(surahFilter, 10);
     if (statusFilter !== "all") p.status = statusFilter as ListPageProgressStatus;
     if (scopeFilter !== "all") p.inScope = scopeFilter === "true";
     return p;
-  }, [juzFilter, statusFilter, scopeFilter]);
+  }, [juzFilter, surahFilter, statusFilter, scopeFilter]);
+
+  const selectedSurah = useMemo(
+    () => (surahFilter === "all" ? null : SURAHS.find((s) => s.number === parseInt(surahFilter, 10)) ?? null),
+    [surahFilter],
+  );
 
   const { data: pages, isLoading } = useListPageProgress(params);
   const addToScope = useAddToScope();
@@ -120,6 +139,111 @@ export default function PageList() {
             ))}
           </SelectContent>
         </Select>
+
+        <Popover open={surahPickerOpen} onOpenChange={setSurahPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={surahPickerOpen}
+              className="w-52 justify-between font-normal"
+              data-testid="filter-surah"
+            >
+              <span className="truncate">
+                {selectedSurah
+                  ? t("pageList.filters.surahLabel", {
+                      n: selectedSurah.number,
+                      name: selectedSurah.name,
+                    })
+                  : t("pageList.filters.allSurah")}
+              </span>
+              <div className="flex items-center gap-1 shrink-0">
+                {selectedSurah && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label={t("common.clear")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSurahFilter("all");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSurahFilter("all");
+                      }
+                    }}
+                    className="hover:text-foreground text-muted-foreground"
+                    data-testid="filter-surah-clear"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </span>
+                )}
+                <ChevronsUpDown className="w-3.5 h-3.5 opacity-50" />
+              </div>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-0" align="start">
+            <Command
+              filter={(value, search) => {
+                if (!search) return 1;
+                return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
+              }}
+            >
+              <CommandInput
+                placeholder={t("pageList.filters.surahSearchPlaceholder")}
+                data-testid="filter-surah-search"
+              />
+              <CommandList>
+                <CommandEmpty>{t("pageList.filters.surahNoMatch")}</CommandEmpty>
+                <CommandGroup>
+                  <CommandItem
+                    value="__all__ all surah"
+                    onSelect={() => {
+                      setSurahFilter("all");
+                      setSurahPickerOpen(false);
+                    }}
+                    data-testid="filter-surah-option-all"
+                  >
+                    <Check
+                      className={cn(
+                        "me-2 h-4 w-4",
+                        surahFilter === "all" ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    {t("pageList.filters.allSurah")}
+                  </CommandItem>
+                  {SURAHS.map((s) => (
+                    <CommandItem
+                      key={s.number}
+                      value={`${s.number} ${s.name} ${s.arabic}`}
+                      onSelect={() => {
+                        setSurahFilter(String(s.number));
+                        setSurahPickerOpen(false);
+                      }}
+                      data-testid={`filter-surah-option-${s.number}`}
+                    >
+                      <Check
+                        className={cn(
+                          "me-2 h-4 w-4",
+                          surahFilter === String(s.number) ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <span className="tabular-nums text-muted-foreground me-2 text-xs w-6 text-end">
+                        {s.number}
+                      </span>
+                      <span className="flex-1 truncate">{s.name}</span>
+                      <span className="text-xs text-muted-foreground ms-2 shrink-0" dir="rtl">
+                        {s.arabic}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-36" data-testid="filter-status">

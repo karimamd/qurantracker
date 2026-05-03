@@ -316,6 +316,10 @@
       "allJuz": "All Juz",
       "allStatus": "All Status",
       "allScope": "All Scope",
+      "allSurah": "All Surahs",
+      "surahLabel": "{{n}}. {{name}}",
+      "surahSearchPlaceholder": "Search surah by name or number...",
+      "surahNoMatch": "No surah matches.",
       "inScope": "In Scope",
       "notInScope": "Not in Scope",
       "juzN": "Juz {{n}}"
