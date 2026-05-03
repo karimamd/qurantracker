@@ -466,6 +466,7 @@
     "ariaLinkMistake": "تسجيل خطأ ربط قبل الآية {{n}}",
     "clearTitleLatest": "صحيحة (إظهار التالية)",
     "clearTitle": "تسجيل صحيحة",
+    "ariaSelectAyah": "تحديد الآية {{n}}",
     "ariaMarkClear": "تسجيل الآية {{n}} صحيحة",
     "mistakeTitleLatest": "خطأ (إظهار التالية)",
     "mistakeTitle": "تسجيل خطأ",

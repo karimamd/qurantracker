@@ -89,6 +89,9 @@ export default function Reader() {
   const [mistakeAyahs, setMistakeAyahs] = useState<Set<number>>(new Set());
   const [clearedAyahs, setClearedAyahs] = useState<Set<number>>(new Set());
   const [linkAyahs, setLinkAyahs] = useState<Set<number>>(new Set());
+  // In "Show all" view, clicking an ayah selects it and reveals its mark
+  // buttons (clear / mistake / link). Click again to deselect.
+  const [selectedAyahShowAll, setSelectedAyahShowAll] = useState<number | null>(null);
 
   const { data: allPages, isLoading: pagesLoading } = useListPageProgress({});
   const updatePage = useUpdatePageProgress();
@@ -154,7 +157,14 @@ export default function Reader() {
   useEffect(() => {
     setRevealedCount(0);
     setClearedAyahs(new Set());
+    setSelectedAyahShowAll(null);
   }, [pageNumber]);
+
+  // Clear show-all selection when entering hide mode (where buttons are
+  // always visible per-ayah and selection has no meaning).
+  useEffect(() => {
+    if (hideMode) setSelectedAyahShowAll(null);
+  }, [hideMode]);
 
   // Seed mistake/link marks from the server's persisted "active" set so they
   // remain visible across navigation, refresh, and even fresh sessions until
@@ -814,23 +824,32 @@ export default function Reader() {
                         group.isFirstAyah && i === 0 && group.surahNumber !== 1 ? "" : "$&",
                       );
 
+                      const isSelectedShowAll = !hideMode && selectedAyahShowAll === a.number;
+                      const showMarkButtons = hideMode || isSelectedShowAll;
+                      const handleAyahBodyClick = () => {
+                        if (hideMode) return;
+                        setSelectedAyahShowAll(prev => (prev === a.number ? null : a.number));
+                      };
+                      const stopBubble = (e: React.MouseEvent) => e.stopPropagation();
+
                       return (
                         <span
                           key={a.number}
                           className={
                             isMistake
                               ? "text-rose-600 dark:text-rose-400"
-                              : isLatest
+                              : isLatest || isSelectedShowAll
                               ? "bg-amber-200/80 dark:bg-amber-400/30 ring-1 ring-amber-400/70 dark:ring-amber-300/50 rounded px-1 py-0.5"
                               : ""
                           }
                           data-testid={`reader-ayah-${a.number}`}
+                          data-selected={isSelectedShowAll ? "true" : undefined}
                           style={isLink ? { textDecoration: "underline wavy", textDecorationColor: "#d97706", textDecorationThickness: "2px" } : undefined}
                         >
-                          {hideMode && canLink && (
+                          {showMarkButtons && canLink && (
                             <button
                               type="button"
-                              onClick={() => handleAyahLink(a.number)}
+                              onClick={(e) => { stopBubble(e); handleAyahLink(a.number); }}
                               dir="ltr"
                               className={`inline-flex items-center justify-center mx-1 w-6 h-6 rounded border align-middle font-sans transition-colors ${
                                 isLink
@@ -845,24 +864,39 @@ export default function Reader() {
                               <Link2 className="w-3 h-3" />
                             </button>
                           )}
-                          {cleanedText}
                           <span
-                            className={`inline-flex items-center justify-center mx-1 w-7 h-7 text-xs rounded-full border align-middle font-sans ${
-                              isMistake
-                                ? "border-rose-400 bg-rose-100 text-rose-700"
-                                : isClear
-                                ? "border-emerald-400 bg-emerald-50 text-emerald-700"
-                                : "border-stone-400/60 text-stone-600 dark:text-stone-300"
-                            }`}
-                            aria-hidden="true"
+                            onClick={hideMode ? undefined : handleAyahBodyClick}
+                            role={hideMode ? undefined : "button"}
+                            tabIndex={hideMode ? undefined : 0}
+                            onKeyDown={hideMode ? undefined : (e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleAyahBodyClick();
+                              }
+                            }}
+                            className={hideMode ? undefined : "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 rounded"}
+                            aria-label={hideMode ? undefined : t("reader.ariaSelectAyah", { n: a.numberInSurah })}
+                            aria-pressed={hideMode ? undefined : isSelectedShowAll}
                           >
-                            {arabicNumeral(a.numberInSurah)}
+                            {cleanedText}
+                            <span
+                              className={`inline-flex items-center justify-center mx-1 w-7 h-7 text-xs rounded-full border align-middle font-sans ${
+                                isMistake
+                                  ? "border-rose-400 bg-rose-100 text-rose-700"
+                                  : isClear
+                                  ? "border-emerald-400 bg-emerald-50 text-emerald-700"
+                                  : "border-stone-400/60 text-stone-600 dark:text-stone-300"
+                              }`}
+                              aria-hidden="true"
+                            >
+                              {arabicNumeral(a.numberInSurah)}
+                            </span>
                           </span>
-                          {hideMode && (
+                          {showMarkButtons && (
                             <span className="inline-flex items-center gap-0.5 mx-1 align-middle" dir="ltr">
                               <button
                                 type="button"
-                                onClick={() => handleAyahMark(a.number, "clear", isLatest)}
+                                onClick={(e) => { stopBubble(e); handleAyahMark(a.number, "clear", isLatest); }}
                                 className={`w-6 h-6 inline-flex items-center justify-center rounded border text-xs transition-colors ${
                                   isClear
                                     ? "bg-emerald-500 border-emerald-500 text-white"
@@ -877,7 +911,7 @@ export default function Reader() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleAyahMark(a.number, "mistake", isLatest)}
+                                onClick={(e) => { stopBubble(e); handleAyahMark(a.number, "mistake", isLatest); }}
                                 className={`w-6 h-6 inline-flex items-center justify-center rounded border text-xs transition-colors ${
                                   isMistake
                                     ? "bg-rose-500 border-rose-500 text-white"

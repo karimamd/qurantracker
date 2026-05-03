@@ -446,6 +446,7 @@
     "ariaLinkMistake": "Mark link mistake before ayah {{n}}",
     "clearTitleLatest": "Clear (reveals next)",
     "clearTitle": "Mark clear",
+    "ariaSelectAyah": "Select ayah {{n}}",
     "ariaMarkClear": "Mark ayah {{n}} as clear",
     "mistakeTitleLatest": "Mistake (reveals next)",
     "mistakeTitle": "Mark mistake",
