@@ -26,4 +26,18 @@ export interface Settings {
    * @maxItems 5
    */
   bottomNavKeys: SettingsBottomNavKeysItem[];
+  /** When true, the server automatically records a page recitation once every ayah on that page has been marked (cleared or with mistake types) today. Default false. */
+  autoAssignPageFromAyahs: boolean;
+  /**
+   * Inclusive max total page mistakes (across all ayahs that day) that still maps to "good" when auto-assign runs. 0 always maps to "excellent". Default 2.
+   * @minimum 0
+   * @maximum 100
+   */
+  mistakesGoodMax: number;
+  /**
+   * Inclusive max total page mistakes that still maps to "hard"; anything above maps to "relearn". Must be ≥ mistakesGoodMax. Default 6.
+   * @minimum 0
+   * @maximum 100
+   */
+  mistakesHardMax: number;
 }

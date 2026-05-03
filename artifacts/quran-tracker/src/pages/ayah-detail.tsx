@@ -557,7 +557,14 @@ export default function AyahDetail() {
                             {w.tr}
                           </span>
                         )}
-                        {w.en && (
+                        {w.en && i18n.language !== "ar" && (
+                          // No public Arabic per-word gloss dataset is available
+                          // (quran.com's wbw catalog covers en/ur/id/bn/tr/fa/hi/ta
+                          // but not Arabic, and the alquran.cloud editions tagged
+                          // ar are actually English text). Until we ship a real
+                          // Arabic dataset, hide the English gloss in AR mode
+                          // rather than showing English text inside an otherwise
+                          // Arabic UI — the Arabic word + transliteration remain.
                           <span dir="ltr" className="text-xs text-foreground/80 text-center leading-tight">
                             {w.en}
                           </span>

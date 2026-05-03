@@ -31,4 +31,15 @@ export interface UpdateSettingsBody {
   ayahViewFontSize?: number;
   /** @maxItems 5 */
   bottomNavKeys?: UpdateSettingsBodyBottomNavKeysItem[];
+  autoAssignPageFromAyahs?: boolean;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  mistakesGoodMax?: number;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  mistakesHardMax?: number;
 }

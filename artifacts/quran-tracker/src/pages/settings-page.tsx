@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,15 @@ export default function SettingsPage() {
   // normaliser the Layout uses so the picker and the live bar always agree
   // on what's "selected" even when the server returns unknown/legacy keys.
   const [bottomNavKeys, setBottomNavKeys] = useState<BottomNavKey[]>([]);
+  // Auto-assign page recitation from same-day ayah marks. Persisted in
+  // settings.autoAssignPageFromAyahs and toggled instantly (separate
+  // mutation, no Save button needed) so the user gets immediate feedback.
+  const [autoAssign, setAutoAssign] = useState(false);
+  // Thresholds (inclusive) feeding the auto-assign quality bucketing.
+  // Saved together with the day-buffer settings via the page-level Save
+  // button so users see one confirmation toast for the whole card.
+  const [mistakesGoodMax, setMistakesGoodMax] = useState("");
+  const [mistakesHardMax, setMistakesHardMax] = useState("");
 
   useEffect(() => {
     if (settings) {
@@ -58,10 +68,32 @@ export default function SettingsPage() {
       setReaderFontSize(String(settings.readerFontSize));
       setAyahViewFontSize(String(settings.ayahViewFontSize));
       setBottomNavKeys([...resolveBottomNavKeys(settings.bottomNavKeys)]);
+      setAutoAssign(settings.autoAssignPageFromAyahs);
+      setMistakesGoodMax(String(settings.mistakesGoodMax));
+      setMistakesHardMax(String(settings.mistakesHardMax));
       const lang = settings.language === "ar" ? "ar" : "en";
       setLanguageState(lang);
     }
   }, [settings]);
+
+  const handleToggleAutoAssign = (next: boolean) => {
+    // Optimistic so the switch animates smoothly even on slow networks.
+    setAutoAssign(next);
+    updateSettings.mutate(
+      { data: { autoAssignPageFromAyahs: next } },
+      {
+        onSuccess: (data) => {
+          queryClient.setQueryData(getGetSettingsQueryKey(), data);
+          queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+        },
+        onError: () => {
+          // Roll back the local toggle if the mutation failed so the UI
+          // doesn't lie about the persisted state.
+          setAutoAssign(!next);
+        },
+      }
+    );
+  };
 
   const handleLanguageChange = (value: string) => {
     const lang: SupportedLanguage = value === "ar" ? "ar" : "en";
@@ -82,6 +114,17 @@ export default function SettingsPage() {
     const tppd = parseInt(telawaPagesPerDay, 10);
     const rfs = parseInt(readerFontSize, 10);
     const avfs = parseInt(ayahViewFontSize, 10);
+    const mgm = parseInt(mistakesGoodMax, 10);
+    const mhm = parseInt(mistakesHardMax, 10);
+    // Both thresholds are required to be in 0..100 AND hard ≥ good.
+    // If either is out of range or the ordering inverts we surface a
+    // toast and bail rather than half-saving the form.
+    const goodValid = Number.isFinite(mgm) && mgm >= 0 && mgm <= 100;
+    const hardValid = Number.isFinite(mhm) && mhm >= 0 && mhm <= 100;
+    if (goodValid && hardValid && mhm < mgm) {
+      toast({ title: t("settings.mistakeThresholds.hardBelowGood"), variant: "destructive" });
+      return;
+    }
     updateSettings.mutate(
       {
         data: {
@@ -98,6 +141,8 @@ export default function SettingsPage() {
           // mirror the OpenAPI schema for ayahViewFontSize (14-96).
           ayahViewFontSize: Number.isFinite(avfs) && avfs >= 14 && avfs <= 96 ? avfs : undefined,
           bottomNavKeys: bottomNavKeys.slice(0, MAX_BOTTOM_NAV_ITEMS),
+          mistakesGoodMax: goodValid ? mgm : undefined,
+          mistakesHardMax: hardValid ? mhm : undefined,
         },
       },
       {
@@ -247,6 +292,64 @@ export default function SettingsPage() {
             <Save className="w-4 h-4 me-2" />
             {updateSettings.isPending ? t("common.saving") : t("settings.intervals.save")}
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border shadow-sm" data-testid="settings-auto-assign-card">
+        <CardHeader>
+          <CardTitle className="text-base">{t("settings.autoAssign.title")}</CardTitle>
+          <CardDescription>{t("settings.autoAssign.description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-3 p-3 rounded-lg border-s-4 border-l-primary bg-muted/30" data-testid="setting-auto-assign-toggle">
+            <div className="text-sm font-medium">{t("settings.autoAssign.label")}</div>
+            <Switch
+              checked={autoAssign}
+              onCheckedChange={handleToggleAutoAssign}
+              data-testid="switch-auto-assign-page"
+              aria-label={t("settings.autoAssign.label")}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("settings.mistakeThresholds.title")}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t("settings.mistakeThresholds.description")}
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg border-s-4 border-l-teal-500 bg-muted/30" data-testid="setting-mistakes-good-max">
+              <div className="font-medium text-sm">{t("settings.mistakeThresholds.goodLabel")}</div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="w-20 text-center"
+                  value={mistakesGoodMax}
+                  onChange={(e) => setMistakesGoodMax(e.target.value)}
+                  data-testid="input-mistakes-good-max"
+                />
+                <span className="text-sm text-muted-foreground">{t("settings.mistakeThresholds.mistakesUnit")}</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border-s-4 border-l-amber-500 bg-muted/30" data-testid="setting-mistakes-hard-max">
+              <div className="font-medium text-sm">{t("settings.mistakeThresholds.hardLabel")}</div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="w-20 text-center"
+                  value={mistakesHardMax}
+                  onChange={(e) => setMistakesHardMax(e.target.value)}
+                  data-testid="input-mistakes-hard-max"
+                />
+                <span className="text-sm text-muted-foreground">{t("settings.mistakeThresholds.mistakesUnit")}</span>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

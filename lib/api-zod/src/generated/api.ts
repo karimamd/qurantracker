@@ -20,6 +20,12 @@ export const HealthCheckResponse = zod.object({
  */
 export const getSettingsResponseBottomNavKeysMax = 5;
 
+export const getSettingsResponseMistakesGoodMaxMin = 0;
+export const getSettingsResponseMistakesGoodMaxMax = 100;
+
+export const getSettingsResponseMistakesHardMaxMin = 0;
+export const getSettingsResponseMistakesHardMaxMax = 100;
+
 export const GetSettingsResponse = zod.object({
   id: zod.number(),
   excellentDays: zod.number(),
@@ -64,6 +70,25 @@ export const GetSettingsResponse = zod.object({
     .describe(
       "Ordered list of nav-item keys shown in the mobile bottom-tab bar. Empty\/unknown entries are ignored client-side and the historical default applies.",
     ),
+  autoAssignPageFromAyahs: zod
+    .boolean()
+    .describe(
+      "When true, the server automatically records a page recitation once every ayah on that page has been marked (cleared or with mistake types) today. Default false.",
+    ),
+  mistakesGoodMax: zod
+    .number()
+    .min(getSettingsResponseMistakesGoodMaxMin)
+    .max(getSettingsResponseMistakesGoodMaxMax)
+    .describe(
+      'Inclusive max total page mistakes (across all ayahs that day) that still maps to \"good\" when auto-assign runs. 0 always maps to \"excellent\". Default 2.',
+    ),
+  mistakesHardMax: zod
+    .number()
+    .min(getSettingsResponseMistakesHardMaxMin)
+    .max(getSettingsResponseMistakesHardMaxMax)
+    .describe(
+      'Inclusive max total page mistakes that still maps to \"hard\"; anything above maps to \"relearn\". Must be ≥ mistakesGoodMax. Default 6.',
+    ),
 });
 
 /**
@@ -78,6 +103,12 @@ export const updateSettingsBodyAyahViewFontSizeMin = 14;
 export const updateSettingsBodyAyahViewFontSizeMax = 96;
 
 export const updateSettingsBodyBottomNavKeysMax = 5;
+
+export const updateSettingsBodyMistakesGoodMaxMin = 0;
+export const updateSettingsBodyMistakesGoodMaxMax = 100;
+
+export const updateSettingsBodyMistakesHardMaxMin = 0;
+export const updateSettingsBodyMistakesHardMaxMax = 100;
 
 export const UpdateSettingsBody = zod.object({
   excellentDays: zod.number().optional(),
@@ -120,9 +151,26 @@ export const UpdateSettingsBody = zod.object({
     )
     .max(updateSettingsBodyBottomNavKeysMax)
     .optional(),
+  autoAssignPageFromAyahs: zod.boolean().optional(),
+  mistakesGoodMax: zod
+    .number()
+    .min(updateSettingsBodyMistakesGoodMaxMin)
+    .max(updateSettingsBodyMistakesGoodMaxMax)
+    .optional(),
+  mistakesHardMax: zod
+    .number()
+    .min(updateSettingsBodyMistakesHardMaxMin)
+    .max(updateSettingsBodyMistakesHardMaxMax)
+    .optional(),
 });
 
 export const updateSettingsResponseBottomNavKeysMax = 5;
+
+export const updateSettingsResponseMistakesGoodMaxMin = 0;
+export const updateSettingsResponseMistakesGoodMaxMax = 100;
+
+export const updateSettingsResponseMistakesHardMaxMin = 0;
+export const updateSettingsResponseMistakesHardMaxMax = 100;
 
 export const UpdateSettingsResponse = zod.object({
   id: zod.number(),
@@ -167,6 +215,25 @@ export const UpdateSettingsResponse = zod.object({
     .max(updateSettingsResponseBottomNavKeysMax)
     .describe(
       "Ordered list of nav-item keys shown in the mobile bottom-tab bar. Empty\/unknown entries are ignored client-side and the historical default applies.",
+    ),
+  autoAssignPageFromAyahs: zod
+    .boolean()
+    .describe(
+      "When true, the server automatically records a page recitation once every ayah on that page has been marked (cleared or with mistake types) today. Default false.",
+    ),
+  mistakesGoodMax: zod
+    .number()
+    .min(updateSettingsResponseMistakesGoodMaxMin)
+    .max(updateSettingsResponseMistakesGoodMaxMax)
+    .describe(
+      'Inclusive max total page mistakes (across all ayahs that day) that still maps to \"good\" when auto-assign runs. 0 always maps to \"excellent\". Default 2.',
+    ),
+  mistakesHardMax: zod
+    .number()
+    .min(updateSettingsResponseMistakesHardMaxMin)
+    .max(updateSettingsResponseMistakesHardMaxMax)
+    .describe(
+      'Inclusive max total page mistakes that still maps to \"hard\"; anything above maps to \"relearn\". Must be ≥ mistakesGoodMax. Default 6.',
     ),
 });
 

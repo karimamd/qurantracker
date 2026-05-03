@@ -14,7 +14,7 @@
  *     per active Khatmah via telawa_khatmah.pages_per_day (NULL = inherit).
  */
 import { sql } from "drizzle-orm";
-import { pgTable, serial, integer, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -46,6 +46,23 @@ export const settingsTable = pgTable("settings", {
     .array()
     .notNull()
     .default(sql`ARRAY['homework','dashboard','telawa','reader','mistakes']::text[]`),
+  // When true, every time a per-ayah mark is added/removed from the Reader
+  // or the Ayah view, the server checks if EVERY ayah on that page has been
+  // marked TODAY (cleared or one/two mistake types). If it has, the server
+  // computes the page's quality from the day's mistake total using the
+  // mistakesGoodMax / mistakesHardMax thresholds below and records a new
+  // recitation_log row — but only if the resulting quality differs from
+  // any recitation already logged today for that page (no duplicate logs
+  // when toggling marks back and forth). Default off so existing users
+  // don't see surprise auto-recordings after deploy.
+  autoAssignPageFromAyahs: boolean("auto_assign_page_from_ayahs").notNull().default(false),
+  // Inclusive upper bound on total active page mistakes that still maps to
+  // "good"; 0 always maps to "excellent". Anything above mistakesHardMax
+  // maps to "relearn". The two thresholds together fully define the
+  // 4-bucket excellent/good/hard/relearn ladder used by the auto-assign
+  // feature above. Defaults match the spec: Good ≤ 2, Hard ≤ 6.
+  mistakesGoodMax: integer("mistakes_good_max").notNull().default(2),
+  mistakesHardMax: integer("mistakes_hard_max").notNull().default(6),
 }, (table) => ({
   userIdUnique: uniqueIndex("settings_user_id_unique").on(table.userId),
 }));

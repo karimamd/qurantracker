@@ -96,6 +96,7 @@ import {
   ROB3S_PER_JUZ,
 } from "../lib/quran-data";
 import { enrichPageProgress, getSettings, calculateDueDate, ensurePageExists, getDefaultPageName, aggregateQuality } from "../lib/progress-helpers";
+import { maybeAutoAssignPageRecitation } from "../lib/auto-assign-page";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -664,6 +665,13 @@ router.post("/progress/pages/:pageNumber/active-mistakes", async (req, res): Pro
     }
   });
 
+  // Now that the user's mark is committed, give the auto-assign feature
+  // (settings.autoAssignPageFromAyahs) a chance to record a page-level
+  // recitation if every ayah on the page has been marked today. The
+  // helper is a no-op when the flag is off and swallows its own errors
+  // so it can never block the active-mistake response.
+  await maybeAutoAssignPageRecitation(userId, pageNumber);
+
   const list = await listActiveMistakesForPage(userId, pageNumber);
   res.json(AddActivePageMistakeResponse.parse(list));
 });
@@ -699,6 +707,11 @@ router.delete("/progress/pages/:pageNumber/active-mistakes", async (req, res): P
         ),
       );
   });
+
+  // Removing a mark can also push the page across a quality threshold —
+  // e.g. the user clears a mistake and the page now ticks below the
+  // Good cap. Same swallow-and-warn semantics as the POST handler.
+  await maybeAutoAssignPageRecitation(userId, pageNumber);
 
   const list = await listActiveMistakesForPage(userId, pageNumber);
   res.json(RemoveActivePageMistakeResponse.parse(list));

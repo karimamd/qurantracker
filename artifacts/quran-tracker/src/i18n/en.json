@@ -331,6 +331,19 @@
       "description": "Default font size used when opening a single ayah on the Ayahs page. Adjustments inside the ayah view itself are session-only.",
       "unit": "px"
     },
+    "autoAssign": {
+      "title": "Auto-record page recitations",
+      "description": "When every ayah on a page has been marked today (cleared or with mistakes), automatically record a recitation for the whole page. The quality is computed from the day's total mistakes using the thresholds below. A new recitation is only logged when the resulting quality differs from any recitation already recorded today for the same page.",
+      "label": "Auto-record from ayah marks"
+    },
+    "mistakeThresholds": {
+      "title": "Mistake thresholds",
+      "description": "How many total page mistakes map to each quality. Excellent is always 0 mistakes. Anything above the Hard threshold is recorded as Relearn.",
+      "goodLabel": "Good — up to",
+      "hardLabel": "Hard — up to",
+      "mistakesUnit": "mistakes",
+      "hardBelowGood": "Hard threshold must be at least the Good threshold."
+    },
     "bottomNav": {
       "title": "Bottom tab bar",
       "description": "Pick which pages appear in the bottom tab bar on mobile and the order they show in. Up to 5.",

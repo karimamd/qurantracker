@@ -789,6 +789,19 @@ components:
           items:
             type: string
             enum: [homework, dashboard, telawa, reader, mistakes, juz, rub, surah, pages, ayahs, recite, welcome, settings]
+        autoAssignPageFromAyahs:
+          type: boolean
+          description: When true, the server automatically records a page recitation once every ayah on that page has been marked (cleared or with mistake types) today. Default false.
+        mistakesGoodMax:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Inclusive max total page mistakes (across all ayahs that day) that still maps to "good" when auto-assign runs. 0 always maps to "excellent". Default 2.
+        mistakesHardMax:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Inclusive max total page mistakes that still maps to "hard"; anything above maps to "relearn". Must be ≥ mistakesGoodMax. Default 6.
       required:
         - id
         - excellentDays
@@ -800,6 +813,9 @@ components:
         - readerFontSize
         - ayahViewFontSize
         - bottomNavKeys
+        - autoAssignPageFromAyahs
+        - mistakesGoodMax
+        - mistakesHardMax
 
     UpdateSettingsBody:
       type: object
@@ -833,6 +849,16 @@ components:
           items:
             type: string
             enum: [homework, dashboard, telawa, reader, mistakes, juz, rub, surah, pages, ayahs, recite, welcome, settings]
+        autoAssignPageFromAyahs:
+          type: boolean
+        mistakesGoodMax:
+          type: integer
+          minimum: 0
+          maximum: 100
+        mistakesHardMax:
+          type: integer
+          minimum: 0
+          maximum: 100
 
     ProgressOverview:
       type: object

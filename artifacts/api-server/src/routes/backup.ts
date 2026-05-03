@@ -91,6 +91,12 @@ const SettingsImport = z.object({
     )
     .max(5)
     .optional(),
+  // All three optional for backward compatibility with backups taken
+  // before the auto-assign-from-ayahs feature shipped — older files
+  // simply restore as the schema defaults (false / 2 / 6).
+  autoAssignPageFromAyahs: z.boolean().optional(),
+  mistakesGoodMax: z.number().int().min(0).max(100).optional(),
+  mistakesHardMax: z.number().int().min(0).max(100).optional(),
 });
 
 const PageProgressImport = z.object({
@@ -197,6 +203,9 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       readerFontSize: settings.readerFontSize,
       ayahViewFontSize: settings.ayahViewFontSize,
       bottomNavKeys: settings.bottomNavKeys,
+      autoAssignPageFromAyahs: settings.autoAssignPageFromAyahs,
+      mistakesGoodMax: settings.mistakesGoodMax,
+      mistakesHardMax: settings.mistakesHardMax,
     },
     pageProgress: pageProgress.map((r) => ({
       pageNumber: r.pageNumber,
