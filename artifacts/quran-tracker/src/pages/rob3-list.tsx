@@ -12,10 +12,19 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { QualityBadge, getQualityColor } from "@/components/quality-badge";
 import { Rob3FirstAyahPreview } from "@/components/rob3-first-ayah-preview";
 import { useToast } from "@/hooks/use-toast";
 import { Search } from "lucide-react";
+import { SURAHS, JUZ_RANGES } from "@/lib/quran-ref";
 
 type Quality = "excellent" | "good" | "hard" | "relearn";
 
@@ -39,19 +48,44 @@ export default function Rob3List() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
+  const [surahFilter, setSurahFilter] = useState<string>("all");
+  const [juzFilter, setJuzFilter] = useState<string>("all");
   const [pendingRob3, setPendingRob3] = useState<number | null>(null);
 
   const filtered = useMemo(() => {
     if (!rob3s) return [];
     const q = search.trim().toLowerCase();
-    if (!q) return rob3s;
-    return rob3s.filter(r =>
-      r.rob3Number.toString() === q ||
-      r.juzNumber.toString() === q ||
-      r.juzName.toLowerCase().includes(q) ||
-      r.startSurahName.toLowerCase().includes(q)
-    );
-  }, [rob3s, search]);
+
+    let result = rob3s;
+
+    if (surahFilter !== "all") {
+      const surahNum = parseInt(surahFilter, 10);
+      const surah = SURAHS.find(s => s.number === surahNum);
+      if (surah) {
+        result = result.filter(r =>
+          r.startPage <= surah.endPage && r.endPage >= surah.startPage
+        );
+      }
+    }
+
+    if (juzFilter !== "all") {
+      const juzNum = parseInt(juzFilter, 10);
+      result = result.filter(r => r.juzNumber === juzNum);
+    }
+
+    if (q) {
+      result = result.filter(r =>
+        r.rob3Number.toString() === q ||
+        r.juzNumber.toString() === q ||
+        r.juzName.toLowerCase().includes(q) ||
+        r.startSurahName.toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }, [rob3s, search, surahFilter, juzFilter]);
+
+  const hasActiveFilter = surahFilter !== "all" || juzFilter !== "all" || search.trim() !== "";
 
   const handleRate = (rob3: NonNullable<typeof rob3s>[number], quality: Quality) => {
     const pageNumbers: number[] = [];
@@ -98,16 +132,61 @@ export default function Rob3List() {
         </p>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search by part #, juz, or surah..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="pl-9"
-          data-testid="rob3-search"
-        />
+      <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+        <div className="relative sm:max-w-xs flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search by part #, juz, or surah..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9"
+            data-testid="rob3-search"
+          />
+        </div>
+
+        <Select value={surahFilter} onValueChange={setSurahFilter}>
+          <SelectTrigger className="sm:w-56" data-testid="rob3-filter-surah">
+            <SelectValue placeholder="Filter by Surah" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Surahs</SelectItem>
+            {SURAHS.map(s => (
+              <SelectItem key={s.number} value={s.number.toString()}>
+                {s.number}. {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={juzFilter} onValueChange={setJuzFilter}>
+          <SelectTrigger className="sm:w-44" data-testid="rob3-filter-juz">
+            <SelectValue placeholder="Filter by Juz" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Juz</SelectItem>
+            {JUZ_RANGES.map(j => (
+              <SelectItem key={j.juz} value={j.juz.toString()}>
+                Juz {j.juz}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {hasActiveFilter && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSearch("");
+              setSurahFilter("all");
+              setJuzFilter("all");
+            }}
+            data-testid="rob3-filter-clear"
+          >
+            Clear
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -178,8 +257,8 @@ export default function Rob3List() {
       </div>
 
       {filtered.length === 0 && (
-        <div className="text-center text-sm text-muted-foreground py-12">
-          No parts match "{search}".
+        <div className="text-center text-sm text-muted-foreground py-12" data-testid="rob3-empty">
+          No parts match the current filters.
         </div>
       )}
     </div>
