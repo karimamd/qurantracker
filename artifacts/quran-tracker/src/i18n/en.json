@@ -15,6 +15,7 @@
     "ayahs": "Ayahs",
     "recite": "Recite",
     "mistakes": "Mistakes",
+    "welcome": "Tour",
     "settings": "Settings",
     "openMenu": "Open menu",
     "closeMenu": "Close menu"
@@ -44,6 +45,155 @@
     "tryGuest": "Try it now — no sign up",
     "createAccount": "Create your account",
     "guestNote": "Guest mode saves your progress on this device. Sign up any time to keep it across devices — your guest data carries over automatically."
+  },
+  "welcome": {
+    "backToDashboard": "Back to my dashboard",
+    "highlights": {
+      "pages": "Mushaf pages",
+      "ayahs": "Ayahs indexed",
+      "languages": "Languages",
+      "offline": "Works offline",
+      "offlineValue": "Yes"
+    },
+    "how": {
+      "title": "How it works",
+      "subtitle": "Three simple loops keep your hifz alive — without spreadsheets, without nagging.",
+      "mark": {
+        "title": "1. Mark as you recite",
+        "body": "Tap an ayah on the Reader to flag a mistake, link a tricky transition, or confirm a clean pass."
+      },
+      "schedule": {
+        "title": "2. We schedule the next review",
+        "body": "Each page picks up an Excellent / Good / Hard / Relearn rating that maps to a personal day-buffer in your Settings."
+      },
+      "review": {
+        "title": "3. Come back when it's due",
+        "body": "Your Dashboard surfaces what's due today, what's slipping, and your daily Telawa rotation across all 604 pages."
+      }
+    },
+    "features": {
+      "reader": {
+        "tag": "Reader",
+        "title": "A focused Mushaf with one-tap marking",
+        "body": "Read full Mushaf pages in the same script you memorize from. Tap any ayah to mark a mistake, a link, or a clear pass — every mark is stored per-page so you can revisit and clean up later.",
+        "bullets": {
+          "0": "Mistake / Link / Clear marks compose visually so you see exactly what tripped you",
+          "1": "Resizable text saved to your settings, so the page looks the same on every device",
+          "2": "One button to clear every mark on the current page when you want a fresh start"
+        }
+      },
+      "dashboard": {
+        "tag": "Dashboard",
+        "title": "See where you stand at a glance",
+        "body": "Total memorized pages, what's due today, your active streak, and a single progress bar across the whole Mushaf — every time you open the app.",
+        "bullets": {
+          "0": "Live counts for memorized, due, and at-risk pages",
+          "1": "Per-Juz progress so you always know what's next",
+          "2": "Streak tracking that respects guest mode and signed-in accounts equally"
+        }
+      },
+      "ayahs": {
+        "tag": "Ayahs",
+        "title": "Browse and search every single ayah",
+        "body": "All 6,236 ayahs in one searchable grid. Diacritic-insensitive Arabic search, surah / juz / page filters, and a focused single-ayah view with the same marks the Reader uses.",
+        "bullets": {
+          "0": "Search ignores tashkeel — type 'الرحمن' or 'الرحمٰن' and both match",
+          "1": "Detail view jumps straight back to the Reader with the practice ayah pre-selected",
+          "2": "Per-ayah font size that's saved to your settings for study sessions"
+        }
+      },
+      "mistakes": {
+        "tag": "Mistakes",
+        "title": "Every slip becomes a study list",
+        "body": "Marks made in any view stream into a single Mistakes feed, sorted so the freshest pain points stay at the top. Open one to drill the exact ayah in the Reader.",
+        "bullets": {
+          "0": "One unified feed across Reader, Ayahs, and Pages",
+          "1": "Filter by mistake vs link to focus your session",
+          "2": "Resolve a mark and it disappears from the feed automatically"
+        }
+      },
+      "telawa": {
+        "tag": "Telawa",
+        "title": "Daily rotation across the whole Mushaf",
+        "body": "Set a daily page goal and the app rotates through all 604 pages so the parts you don't actively review still get visited. Recite, tap done, move on.",
+        "bullets": {
+          "0": "Configurable pages-per-day target in Settings",
+          "1": "Rolling history so you can see the last week at a glance",
+          "2": "Independent of memorization status — every page gets revisited"
+        }
+      },
+      "pages": {
+        "tag": "Pages",
+        "title": "Every page, every status, every due date",
+        "body": "The full Mushaf as a list. See the quality of your last review, when it's next due, and jump straight into the page to recite or re-rate.",
+        "bullets": {
+          "0": "Status pills colour-coded by quality (Excellent → Relearn)",
+          "1": "Sorted by next-due date so urgent reviews surface first",
+          "2": "Filter by Juz, Surah, or status to narrow your session"
+        }
+      }
+    },
+    "bilingual": {
+      "title": "Built for Arabic and English, side by side",
+      "body": "The whole UI flips to RTL when you switch to Arabic — including the Mushaf controls, search, and filters. Pick whichever feels natural; switch any time."
+    },
+    "cta": {
+      "title": "Start your hifz tracker today",
+      "body": "No setup, no spreadsheets. Try it as a guest — your progress saves on this device and carries over the moment you create an account."
+    },
+    "mocks": {
+      "reader": "Reader",
+      "dashboard": "Dashboard",
+      "ayahs": "Ayahs",
+      "mistakes": "Mistakes",
+      "telawa": "Telawa",
+      "pages": "Pages",
+      "surahLabel": "Al-Faatiha",
+      "pageOf": "Page {{n}} / {{total}}",
+      "markClear": "Clear",
+      "markMistake": "Mistake",
+      "markLink": "Link",
+      "statMemorized": "Memorized",
+      "statDue": "Due",
+      "statStreak": "Streak",
+      "overall": "Overall",
+      "juzCount": "{{n}} juz",
+      "pageCount": "{{n}} pages",
+      "searchExample": "ٱلرَّحْمَٰن",
+      "ayahN": "Ayah {{n}}",
+      "pageShort": "p. {{n}}",
+      "streakDays": "Streak (days)",
+      "ago": {
+        "hours": "Marked {{n}}h ago",
+        "days": "Marked {{n}}d ago"
+      },
+      "surah": {
+        "rahman": "Ar-Rahman",
+        "sharh": "Ash-Sharh",
+        "baqarah": "Al-Baqarah",
+        "nisa": "An-Nisa",
+        "maidah": "Al-Maidah"
+      },
+      "dailyGoal": "Daily goal",
+      "pagesPerDay": "{{n}} pages / day",
+      "thisWeek": "This week",
+      "dueIn": "Due in {{n}}d",
+      "status": {
+        "excellent": "Excellent",
+        "good": "Good",
+        "hard": "Hard",
+        "relearn": "Relearn"
+      },
+      "dayShort": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      }
+    }
   },
   "common": {
     "save": "Save",

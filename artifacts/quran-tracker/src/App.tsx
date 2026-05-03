@@ -21,19 +21,17 @@
  *     leaking into the next session in the same browser tab.
  */
 import { useEffect, useRef } from "react";
-import { Switch, Route, Router as WouterRouter, useLocation, Redirect, Link } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { ClerkProvider, SignIn, SignUp, useAuth, useClerk } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { useTranslation } from "react-i18next";
 import { useGetSettings, getGetSettingsQueryKey } from "@workspace/api-client-react";
-import { setLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/i18n";
+import { setLanguage, type SupportedLanguage } from "@/i18n";
 import Dashboard from "@/pages/dashboard";
 import JuzList from "@/pages/juz-list";
 import JuzDetail from "@/pages/juz-detail";
@@ -51,9 +49,9 @@ import TelawaPage from "@/pages/telawa";
 import HomeworkDetail from "@/pages/homework-detail";
 import MistakesPage from "@/pages/mistakes";
 import SettingsPage from "@/pages/settings-page";
+import Welcome from "@/pages/welcome";
 import NotFound from "@/pages/not-found";
-import { BookOpen, ArrowRight } from "lucide-react";
-import { enterGuestMode, isGuestMode } from "@/lib/guest-mode";
+import { isGuestMode } from "@/lib/guest-mode";
 
 const queryClient = new QueryClient();
 
@@ -141,100 +139,8 @@ function SignUpPage() {
   );
 }
 
-function LandingLanguageToggle() {
-  const { t, i18n } = useTranslation();
-  const current = (i18n.language?.startsWith("ar") ? "ar" : "en") as SupportedLanguage;
-  return (
-    <div
-      role="group"
-      aria-label={t("settings.language.label")}
-      className="inline-flex items-center rounded-full border border-border bg-background/70 p-0.5 text-xs"
-      data-testid="landing-language-toggle"
-    >
-      {SUPPORTED_LANGUAGES.map((lang) => {
-        const active = current === lang;
-        const label = lang === "ar" ? t("settings.language.arabic") : t("settings.language.english");
-        return (
-          <button
-            key={lang}
-            type="button"
-            onClick={() => setLanguage(lang)}
-            aria-pressed={active}
-            data-testid={`landing-lang-${lang}`}
-            className={`px-2.5 py-1 rounded-full font-medium transition-colors ${
-              active
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 function Landing() {
-  const [, setLocation] = useLocation();
-  const { t } = useTranslation();
-  const handleTryAsGuest = () => {
-    enterGuestMode();
-    setLocation("/dashboard");
-  };
-  return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-background via-card to-[hsl(168_25%_94%)]">
-      <header className="px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
-          <img src={`${basePath}/logo.svg`} alt="Logo" className="h-9 w-9" />
-          <span className="font-semibold text-foreground text-lg">{t("app.name")}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <LandingLanguageToggle />
-          <Link href="/sign-in">
-            <Button variant="ghost" size="sm" data-testid="link-sign-in">{t("auth.signIn")}</Button>
-          </Link>
-          <Link href="/sign-up">
-            <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="link-sign-up">{t("auth.getStarted")}</Button>
-          </Link>
-        </div>
-      </header>
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-20 sm:pb-24 text-center">
-        <div className="inline-flex items-center gap-2 bg-primary/10 text-primary text-xs font-medium px-3 py-1 rounded-full mb-6">
-          <BookOpen className="w-3.5 h-3.5" />
-          {t("landing.badge")}
-        </div>
-        <h1 className="text-3xl sm:text-5xl font-bold text-foreground tracking-tight mb-4">
-          {t("landing.title")}
-        </h1>
-        <p className="text-base sm:text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
-          {t("landing.subtitle")}
-        </p>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
-          <Button
-            size="lg"
-            variant="outline"
-            onClick={handleTryAsGuest}
-            data-testid="cta-try-guest"
-            className="border-primary text-primary hover:bg-primary/10"
-          >
-            {t("landing.tryGuest")} <ArrowRight className="w-4 h-4 ml-2 rtl:rotate-180" />
-          </Button>
-          <Link href="/sign-up">
-            <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto" data-testid="cta-sign-up">
-              {t("landing.createAccount")}
-            </Button>
-          </Link>
-          <Link href="/sign-in">
-            <Button size="lg" variant="ghost" data-testid="cta-sign-in">{t("auth.signIn")}</Button>
-          </Link>
-        </div>
-        <p className="text-xs text-muted-foreground mt-6 max-w-md mx-auto">
-          {t("landing.guestNote")}
-        </p>
-      </main>
-    </div>
-  );
+  return <Welcome withAuthChrome={true} />;
 }
 
 /** Sync the user's persisted language preference into i18n + <html dir/lang>. */
@@ -277,6 +183,7 @@ function ProtectedApp() {
       <ErrorBoundary>
         <Switch>
           <Route path="/dashboard" component={Dashboard} />
+          <Route path="/welcome">{() => <Welcome withAuthChrome={false} />}</Route>
           <Route path="/juz" component={JuzList} />
           <Route path="/juz/:id" component={JuzDetail} />
           <Route path="/rub" component={Rob3List} />
