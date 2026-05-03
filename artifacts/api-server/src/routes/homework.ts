@@ -58,13 +58,29 @@ router.get("/homework", async (req, res): Promise<void> => {
     .orderBy(homeworkSessionsTable.createdAt);
   const now = new Date();
 
+  // Derive "completed" from the live pageProgressTable.quality (good or
+  // excellent) rather than the historical `homeworkItemsTable.completed`
+  // flag. The flag only flips when the user picks a quality from the
+  // homework detail page; reciting the same page in the Reader updates
+  // pageProgressTable but leaves the flag stale, which used to cause the
+  // homework list progress bar to stay at 0/N. Joining here keeps the
+  // list view consistent with what /homework/:id already returns.
   const itemCounts = await db
     .select({
       homeworkId: homeworkItemsTable.homeworkId,
       totalItems: count(),
-      completedItems: count(sql`CASE WHEN ${homeworkItemsTable.completed} = true THEN 1 END`),
+      completedItems: count(
+        sql`CASE WHEN ${pageProgressTable.quality} IN ('good', 'excellent') THEN 1 END`,
+      ),
     })
     .from(homeworkItemsTable)
+    .leftJoin(
+      pageProgressTable,
+      and(
+        eq(pageProgressTable.userId, userId),
+        eq(pageProgressTable.pageNumber, homeworkItemsTable.pageNumber),
+      ),
+    )
     .where(eq(homeworkItemsTable.userId, userId))
     .groupBy(homeworkItemsTable.homeworkId);
 
