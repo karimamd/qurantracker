@@ -14,6 +14,63 @@ interface ApiPageResponse {
   data: { number: number; ayahs: ApiAyah[] };
 }
 
+// The alquran.cloud Uthmani edition prefixes the Basmala onto the text of
+// the first ayah of every surah except Al-Fatiha (where Basmala IS ayah 1)
+// and At-Tawbah (which has no Basmala). Strip it so the displayed ayah
+// matches the standard Mushaf — the Basmala header is shown separately by
+// the reader UI.
+//
+// Matching is done on a tashkeel-stripped copy because the source text uses
+// inconsistent combining-mark order (e.g. shadda before vs after fatha) that
+// makes a literal regex brittle.
+const TASHKEEL_AND_INVISIBLES =
+  /[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\uFEFF\u200B-\u200F\u202A-\u202E]/g;
+
+const BASMALA_BARE = "بسم الله الرحمن الرحيم";
+
+function stripTashkeel(s: string): string {
+  return s.replace(TASHKEEL_AND_INVISIBLES, "").replace(/ٱ/g, "ا");
+}
+
+function stripBasmalaFromFirstAyah(ayahs: ApiAyah[]): ApiAyah[] {
+  return ayahs.map(a => {
+    if (a.numberInSurah !== 1) return a;
+    if (a.surah.number === 1 || a.surah.number === 9) return a;
+
+    // Walk the original text and find how many original characters correspond
+    // to the bare-Basmala prefix plus a trailing space.
+    const original = a.text;
+    let i = 0;
+    let bareIdx = 0;
+    // Skip a leading BOM if present
+    while (i < original.length && /[\uFEFF]/.test(original[i])) i++;
+    while (i < original.length && bareIdx < BASMALA_BARE.length) {
+      const ch = original[i];
+      const stripped = stripTashkeel(ch);
+      if (stripped === "") {
+        i++;
+        continue;
+      }
+      if (stripped === BASMALA_BARE[bareIdx]) {
+        i++;
+        bareIdx++;
+        continue;
+      }
+      // Mismatch — not a Basmala prefix; bail out unchanged.
+      return a;
+    }
+    if (bareIdx < BASMALA_BARE.length) return a;
+    // Consume any trailing tashkeel/invisibles attached to the final consonant
+    // of the Basmala (e.g. the kasra on the last mim).
+    while (i < original.length && stripTashkeel(original[i]) === "") i++;
+    // Consume one or more whitespace separators between Basmala and the ayah.
+    while (i < original.length && /\s/.test(original[i])) i++;
+    if (i >= original.length) return a;
+
+    return { ...a, text: original.slice(i) };
+  });
+}
+
 export async function fetchPageAyahs(pageNumber: number, signal?: AbortSignal): Promise<ApiAyah[]> {
   const res = await fetch(
     `https://api.alquran.cloud/v1/page/${pageNumber}/quran-uthmani`,
@@ -22,7 +79,7 @@ export async function fetchPageAyahs(pageNumber: number, signal?: AbortSignal): 
   if (!res.ok) throw new Error(`Failed to load page ${pageNumber}: ${res.status}`);
   const json = (await res.json()) as ApiPageResponse;
   if (json.code !== 200 || !json.data?.ayahs) throw new Error(`Invalid response for page ${pageNumber}`);
-  return json.data.ayahs;
+  return stripBasmalaFromFirstAyah(json.data.ayahs);
 }
 
 export function pageAyahsQueryKey(pageNumber: number) {
