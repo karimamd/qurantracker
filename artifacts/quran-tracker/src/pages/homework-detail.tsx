@@ -1,5 +1,6 @@
 import {
   useGetHomework,
+  useUpdateHomework,
   useUpdateHomeworkItem,
   useListActivePageMistakes,
   getGetHomeworkQueryKey,
@@ -13,14 +14,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useQueryClient, useQueries } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Check, X } from "lucide-react";
+import { ArrowLeft, Check, X, Pencil } from "lucide-react";
 import { PageRow } from "@/components/page-row";
 import { type Quality, QUALITIES } from "@/lib/quality";
 import { fetchPageAyahs, pageAyahsQueryKey, type ApiAyah } from "@/hooks/use-page-ayahs";
+import { HomeworkRangePickers } from "@/components/homework-range-pickers";
+import { parsePageRange, appendPageRange, compressPages } from "@/lib/homework-pages";
 import { useTranslation } from "react-i18next";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 /**
  * Per-page ayah coverage summary derived from two server-cached sources:
@@ -105,8 +111,70 @@ export default function HomeworkDetail() {
     query: { enabled: !!homeworkId, queryKey: getGetHomeworkQueryKey(homeworkId) },
   });
   const updateItem = useUpdateHomeworkItem();
+  const updateHomework = useUpdateHomework();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Edit dialog state — pre-populated from `detail` whenever the dialog is
+  // opened so the user sees their current title / due date / page lists,
+  // not stale values from a previous open.
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editMemorizeRange, setEditMemorizeRange] = useState("");
+  const [editReviseRange, setEditReviseRange] = useState("");
+
+  const openEdit = () => {
+    if (!detail) return;
+    setEditTitle(detail.title);
+    // Due dates are stored / transmitted as UTC midnight (the create flow
+    // uses `new Date("YYYY-MM-DD").toISOString()` which parses the bare
+    // date string as UTC). Read them back with UTC getters so users west
+    // of UTC don't see the previous day in the date input — which would
+    // otherwise silently shift the due date earlier by one day every
+    // time they re-saved without changing the field.
+    const d = new Date(detail.dueDate);
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    setEditDueDate(`${yyyy}-${mm}-${dd}`);
+    setEditMemorizeRange(compressPages(detail.items.filter(i => i.type === "memorize").map(i => i.pageNumber)));
+    setEditReviseRange(compressPages(detail.items.filter(i => i.type === "revise").map(i => i.pageNumber)));
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!detail) return;
+    if (!editTitle || !editDueDate) {
+      toast({ title: t("homework.requiredFields"), variant: "destructive" });
+      return;
+    }
+    updateHomework.mutate(
+      {
+        id: homeworkId,
+        data: {
+          title: editTitle,
+          // Match the create flow's UTC-midnight semantics: anchor the
+          // user-picked calendar date to UTC so the round-trip with
+          // openEdit() above is stable across timezones.
+          dueDate: new Date(`${editDueDate}T00:00:00.000Z`).toISOString(),
+          memorizePages: parsePageRange(editMemorizeRange),
+          revisePages: parsePageRange(editReviseRange),
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: t("homework.updated") });
+          setEditOpen(false);
+          // Refetch detail + list so the new pages and progress show up.
+          queryClient.invalidateQueries({ queryKey: getGetHomeworkQueryKey(homeworkId) });
+          queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
+        },
+        onError: () => toast({ title: t("homework.updateFailed"), variant: "destructive" }),
+      },
+    );
+  };
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetHomeworkQueryKey(homeworkId) });
@@ -280,12 +348,79 @@ export default function HomeworkDetail() {
             <ArrowLeft className="w-4 h-4 me-1 rtl:rotate-180" /> {t("common.back")}
           </Button>
         </Link>
-        <div>
+        <div className="flex-1">
           <h2 className="text-2xl font-semibold">{detail.title}</h2>
           <p className="text-sm text-muted-foreground">
             {t("common.due")}: {new Date(detail.dueDate).toLocaleDateString()}
           </p>
         </div>
+        <Dialog open={editOpen} onOpenChange={(o) => (o ? openEdit() : setEditOpen(false))}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" data-testid="btn-edit-homework">
+              <Pencil className="w-3.5 h-3.5 me-1" /> {t("homework.editButton")}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("homework.editSession")}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div>
+                <Label>{t("homework.form.title")}</Label>
+                <Input
+                  value={editTitle}
+                  onChange={e => setEditTitle(e.target.value)}
+                  data-testid="input-hw-edit-title"
+                />
+              </div>
+              <div>
+                <Label>{t("homework.form.dueDate")}</Label>
+                <Input
+                  type="date"
+                  value={editDueDate}
+                  onChange={e => setEditDueDate(e.target.value)}
+                  data-testid="input-hw-edit-due"
+                />
+              </div>
+              <div>
+                <Label>{t("homework.form.memorize")}</Label>
+                <Input
+                  value={editMemorizeRange}
+                  onChange={e => setEditMemorizeRange(e.target.value)}
+                  placeholder={t("homework.form.memorizePlaceholder")}
+                  data-testid="input-hw-edit-memorize"
+                />
+                <HomeworkRangePickers
+                  testIdPrefix="edit-memorize"
+                  onPick={(start, end) => setEditMemorizeRange(appendPageRange(editMemorizeRange, start, end))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">{t("homework.form.rangeHint")}</p>
+              </div>
+              <div>
+                <Label>{t("homework.form.revise")}</Label>
+                <Input
+                  value={editReviseRange}
+                  onChange={e => setEditReviseRange(e.target.value)}
+                  placeholder={t("homework.form.revisePlaceholder")}
+                  data-testid="input-hw-edit-revise"
+                />
+                <HomeworkRangePickers
+                  testIdPrefix="edit-revise"
+                  onPick={(start, end) => setEditReviseRange(appendPageRange(editReviseRange, start, end))}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("homework.editPreserveHint")}</p>
+              <Button
+                onClick={handleSaveEdit}
+                disabled={updateHomework.isPending}
+                className="w-full"
+                data-testid="btn-submit-edit-homework"
+              >
+                {updateHomework.isPending ? t("common.saving") : t("common.save")}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {renderItems(memorizeItems, t("homework.pagesToMemorize"))}

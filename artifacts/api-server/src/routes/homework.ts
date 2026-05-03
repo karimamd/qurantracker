@@ -265,15 +265,78 @@ router.patch("/homework/:id", async (req, res): Promise<void> => {
   if (parsed.data.title !== undefined) updateData.title = parsed.data.title;
   if (parsed.data.dueDate !== undefined) updateData.dueDate = new Date(parsed.data.dueDate);
 
-  const [updated] = await db
-    .update(homeworkSessionsTable)
-    .set(updateData)
-    .where(and(eq(homeworkSessionsTable.userId, userId), eq(homeworkSessionsTable.id, params.data.id)))
-    .returning();
-
-  if (!updated) {
+  // Confirm the session belongs to this user before touching items, even
+  // when no session-level fields changed (the page-list fields below
+  // mutate child rows independently and need the same authz check).
+  const [existingSession] = await db
+    .select()
+    .from(homeworkSessionsTable)
+    .where(and(eq(homeworkSessionsTable.userId, userId), eq(homeworkSessionsTable.id, params.data.id)));
+  if (!existingSession) {
     res.status(404).json({ error: "Homework session not found" });
     return;
+  }
+
+  let updated = existingSession;
+  if (Object.keys(updateData).length > 0) {
+    const [row] = await db
+      .update(homeworkSessionsTable)
+      .set(updateData)
+      .where(and(eq(homeworkSessionsTable.userId, userId), eq(homeworkSessionsTable.id, params.data.id)))
+      .returning();
+    if (!row) {
+      res.status(404).json({ error: "Homework session not found" });
+      return;
+    }
+    updated = row;
+  }
+
+  // Reconcile a single page-type's items against the desired list:
+  //   - delete items whose pageNumber dropped out of the list (this only
+  //     removes the homework association — the underlying pageProgress
+  //     row, recitation log entries, and ayah marks all stay intact);
+  //   - insert items for pageNumbers that weren't there before, calling
+  //     ensurePageExists so the new pages have a pageProgress row;
+  //   - leave surviving items untouched so their quality / completed
+  //     state is preserved across edits.
+  const reconcileItems = async (type: "memorize" | "revise", desiredPages: number[]): Promise<void> => {
+    const desired = Array.from(new Set(desiredPages.filter(p => Number.isInteger(p) && p > 0)));
+    const existing = await db
+      .select()
+      .from(homeworkItemsTable)
+      .where(and(
+        eq(homeworkItemsTable.userId, userId),
+        eq(homeworkItemsTable.homeworkId, updated.id),
+        eq(homeworkItemsTable.type, type),
+      ));
+    const existingPages = new Set(existing.map(i => i.pageNumber));
+    const desiredSet = new Set(desired);
+
+    const toDeleteIds = existing.filter(i => !desiredSet.has(i.pageNumber)).map(i => i.id);
+    const toAdd = desired.filter(p => !existingPages.has(p));
+
+    if (toDeleteIds.length > 0) {
+      await db.delete(homeworkItemsTable).where(and(
+        eq(homeworkItemsTable.userId, userId),
+        inArray(homeworkItemsTable.id, toDeleteIds),
+      ));
+    }
+    for (const pageNumber of toAdd) {
+      await ensurePageExists(userId, pageNumber);
+      await db.insert(homeworkItemsTable).values({
+        userId,
+        homeworkId: updated.id,
+        pageNumber,
+        type,
+      });
+    }
+  };
+
+  if (parsed.data.memorizePages !== undefined) {
+    await reconcileItems("memorize", parsed.data.memorizePages);
+  }
+  if (parsed.data.revisePages !== undefined) {
+    await reconcileItems("revise", parsed.data.revisePages);
   }
 
   const items = await db.select().from(homeworkItemsTable)

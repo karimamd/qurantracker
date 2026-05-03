@@ -803,6 +803,16 @@ export const UpdateHomeworkParams = zod.object({
 export const UpdateHomeworkBody = zod.object({
   title: zod.string().optional(),
   dueDate: zod.coerce.date().optional(),
+  memorizePages: zod
+    .array(zod.number())
+    .optional()
+    .describe(
+      "If provided, fully replaces the set of memorize-type pages on this homework. Items whose pageNumber is no longer in the list are deleted; new pageNumbers are inserted. Surviving items keep their existing quality \/ completed state.",
+    ),
+  revisePages: zod
+    .array(zod.number())
+    .optional()
+    .describe("Same semantics as memorizePages, for revise-type items."),
 });
 
 export const UpdateHomeworkResponse = zod.object({

@@ -7,22 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Link } from "wouter";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronRight } from "lucide-react";
-import { SURAHS, ALL_ROB3S, ROB3S_PER_JUZ, JUZ_RANGES, getSurahsInPageRange } from "@/lib/quran-ref";
-import { Rob3FirstAyahPreview } from "@/components/rob3-first-ayah-preview";
+import { HomeworkRangePickers } from "@/components/homework-range-pickers";
+import { parsePageRange, appendPageRange } from "@/lib/homework-pages";
 import { useTranslation } from "react-i18next";
 
 export default function HomeworkList() {
@@ -39,33 +30,6 @@ export default function HomeworkList() {
   const [memorizeRange, setMemorizeRange] = useState("");
   const [reviseRange, setReviseRange] = useState("");
 
-  const appendRange = (current: string, startPage: number, endPage: number): string => {
-    const fragment = startPage === endPage ? `${startPage}` : `${startPage}-${endPage}`;
-    const trimmed = current.trim();
-    if (!trimmed) return fragment;
-    return `${trimmed.replace(/,\s*$/, "")}, ${fragment}`;
-  };
-
-  const parseRange = (rangeStr: string): number[] => {
-    if (!rangeStr.trim()) return [];
-    const seen = new Set<number>();
-    const parts = rangeStr.split(",").map(p => p.trim());
-    for (const part of parts) {
-      if (part.includes("-")) {
-        const [s, e] = part.split("-").map(n => parseInt(n.trim(), 10));
-        if (!isNaN(s) && !isNaN(e)) {
-          const lo = Math.min(s, e);
-          const hi = Math.max(s, e);
-          for (let i = lo; i <= hi; i++) seen.add(i);
-        }
-      } else {
-        const n = parseInt(part, 10);
-        if (!isNaN(n)) seen.add(n);
-      }
-    }
-    return Array.from(seen).sort((a, b) => a - b);
-  };
-
   const handleCreate = () => {
     if (!title || !dueDate) {
       toast({ title: t("homework.requiredFields"), variant: "destructive" });
@@ -77,8 +41,8 @@ export default function HomeworkList() {
         data: {
           title,
           dueDate: new Date(dueDate).toISOString(),
-          memorizePages: parseRange(memorizeRange),
-          revisePages: parseRange(reviseRange),
+          memorizePages: parsePageRange(memorizeRange),
+          revisePages: parsePageRange(reviseRange),
         },
       },
       {
@@ -147,18 +111,18 @@ export default function HomeworkList() {
               <div>
                 <Label>{t("homework.form.memorize")}</Label>
                 <Input value={memorizeRange} onChange={e => setMemorizeRange(e.target.value)} placeholder={t("homework.form.memorizePlaceholder")} data-testid="input-hw-memorize" />
-                <RangePickers
+                <HomeworkRangePickers
                   testIdPrefix="memorize"
-                  onPick={(start, end) => setMemorizeRange(appendRange(memorizeRange, start, end))}
+                  onPick={(start, end) => setMemorizeRange(appendPageRange(memorizeRange, start, end))}
                 />
                 <p className="text-xs text-muted-foreground mt-1">{t("homework.form.rangeHint")}</p>
               </div>
               <div>
                 <Label>{t("homework.form.revise")}</Label>
                 <Input value={reviseRange} onChange={e => setReviseRange(e.target.value)} placeholder={t("homework.form.revisePlaceholder")} data-testid="input-hw-revise" />
-                <RangePickers
+                <HomeworkRangePickers
                   testIdPrefix="revise"
-                  onPick={(start, end) => setReviseRange(appendRange(reviseRange, start, end))}
+                  onPick={(start, end) => setReviseRange(appendPageRange(reviseRange, start, end))}
                 />
               </div>
               <Button onClick={handleCreate} disabled={createHomework.isPending} className="w-full" data-testid="btn-submit-homework">
@@ -225,150 +189,5 @@ export default function HomeworkList() {
   );
 }
 
-interface RangePickersProps {
-  testIdPrefix: string;
-  onPick: (startPage: number, endPage: number) => void;
-}
-
-function RangePickers({ testIdPrefix, onPick }: RangePickersProps) {
-  const [surahKey, setSurahKey] = useState(0);
-  const [partKey, setPartKey] = useState(0);
-  const [filterSurah, setFilterSurah] = useState<number | null>(null);
-
-  const handleSurah = (value: string) => {
-    const n = parseInt(value, 10);
-    const s = SURAHS.find(x => x.number === n);
-    if (s) {
-      onPick(s.startPage, s.endPage);
-      setFilterSurah(n);
-    }
-    setSurahKey(k => k + 1);
-  };
-
-  const handlePart = (value: string) => {
-    const n = parseInt(value, 10);
-    const r = ALL_ROB3S.find(x => x.rob3 === n);
-    if (r) onPick(r.startPage, r.endPage);
-    setPartKey(k => k + 1);
-  };
-
-  const filterSurahData = filterSurah !== null
-    ? SURAHS.find(s => s.number === filterSurah) ?? null
-    : null;
-
-  const visibleParts = filterSurahData
-    ? ALL_ROB3S.filter(
-        r => r.startPage <= filterSurahData.endPage && r.endPage >= filterSurahData.startPage,
-      )
-    : ALL_ROB3S;
-
-  const partsByJuz = JUZ_RANGES.map(juz => ({
-    juz: juz.juz,
-    parts: visibleParts.filter(r => r.juz === juz.juz),
-  })).filter(g => g.parts.length > 0);
-
-  const partPlaceholder = filterSurahData ? `Part of ${filterSurahData.name}…` : "Add Part…";
-
-  return (
-    <div className="space-y-2 mt-2" data-testid={`range-pickers-${testIdPrefix}`}>
-      <div className="grid grid-cols-2 gap-2">
-        <Select key={`surah-${surahKey}`} onValueChange={handleSurah}>
-          <SelectTrigger data-testid={`select-surah-${testIdPrefix}`}>
-            <SelectValue placeholder="Add Surah…" />
-          </SelectTrigger>
-          <SelectContent className="max-h-72">
-            {SURAHS.map(s => {
-              const range = s.startPage === s.endPage ? `p. ${s.startPage}` : `p. ${s.startPage}–${s.endPage}`;
-              return (
-                <SelectItem
-                  key={s.number}
-                  value={String(s.number)}
-                  data-testid={`opt-surah-${testIdPrefix}-${s.number}`}
-                >
-                  <div className="flex flex-col items-start gap-0 py-0.5">
-                    <span className="text-sm">
-                      {s.number}. {s.name}
-                      <span className="ml-2 text-muted-foreground" dir="rtl">{s.arabic}</span>
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">{range}</span>
-                  </div>
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
-
-        <Select key={`part-${partKey}`} onValueChange={handlePart}>
-          <SelectTrigger data-testid={`select-part-${testIdPrefix}`}>
-            <SelectValue placeholder={partPlaceholder} />
-          </SelectTrigger>
-          <SelectContent className="max-h-72">
-            {partsByJuz.length === 0 ? (
-              <div className="px-2 py-3 text-xs text-muted-foreground">
-                No Parts overlap the selected Surah.
-              </div>
-            ) : (
-              partsByJuz.map(({ juz, parts }) => (
-                <SelectGroup key={juz}>
-                  <SelectLabel>Juz {juz}</SelectLabel>
-                  {parts.map(r => {
-                    const range = r.startPage === r.endPage ? `p. ${r.startPage}` : `p. ${r.startPage}–${r.endPage}`;
-                    const surahsSpanned = getSurahsInPageRange(r.startPage, r.endPage);
-                    const surahsLabel = surahsSpanned
-                      .map(s => s.name)
-                      .slice(0, 2)
-                      .join(", ") + (surahsSpanned.length > 2 ? ` +${surahsSpanned.length - 2}` : "");
-                    const startSurah = SURAHS.find(s => s.number === r.startSurah);
-                    return (
-                      <SelectItem
-                        key={r.rob3}
-                        value={String(r.rob3)}
-                        data-testid={`opt-part-${testIdPrefix}-${r.rob3}`}
-                      >
-                        <div className="flex flex-col items-start gap-0.5 py-0.5 max-w-[280px]">
-                          <span className="text-sm">
-                            Part {r.rob3InJuz + 1}/{ROB3S_PER_JUZ}
-                            <span className="ml-2 text-muted-foreground">· {range}</span>
-                          </span>
-                          {surahsLabel ? (
-                            <span className="text-[11px] text-muted-foreground">{surahsLabel}</span>
-                          ) : null}
-                          {startSurah ? (
-                            <span className="text-[11px] text-muted-foreground">
-                              starts at {startSurah.name} {r.startAyah} (p.{r.startPage})
-                            </span>
-                          ) : null}
-                          <Rob3FirstAyahPreview
-                            rob3Number={r.rob3}
-                            className="block text-[12px] mt-0.5 max-w-full"
-                            wordCount={6}
-                          />
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectGroup>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {filterSurahData ? (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>
-            Showing Parts in <span className="font-medium text-foreground">{filterSurahData.name}</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setFilterSurah(null)}
-            className="text-teal-700 hover:text-teal-800 underline"
-            data-testid={`clear-surah-filter-${testIdPrefix}`}
-          >
-            Show all Parts
-          </button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
+// Note: the RangePickers UI moved to `@/components/homework-range-pickers`
+// so the Edit homework dialog on the detail page can reuse it. The parse /

@@ -1387,6 +1387,16 @@ components:
         dueDate:
           type: string
           format: date-time
+        memorizePages:
+          type: array
+          items:
+            type: integer
+          description: "If provided, fully replaces the set of memorize-type pages on this homework. Items whose pageNumber is no longer in the list are deleted; new pageNumbers are inserted. Surviving items keep their existing quality / completed state."
+        revisePages:
+          type: array
+          items:
+            type: integer
+          description: "Same semantics as memorizePages, for revise-type items."
 
     HomeworkSessionDetail:
       type: object

@@ -415,6 +415,10 @@ export interface CreateHomeworkBody {
 export interface UpdateHomeworkBody {
   title?: string;
   dueDate?: string;
+  /** If provided, fully replaces the set of memorize-type pages on this homework. Items whose pageNumber is no longer in the list are deleted; new pageNumbers are inserted. Surviving items keep their existing quality / completed state. */
+  memorizePages?: number[];
+  /** Same semantics as memorizePages, for revise-type items. */
+  revisePages?: number[];
 }
 
 export type HomeworkItemType =

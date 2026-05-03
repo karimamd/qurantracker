@@ -267,6 +267,10 @@
       "submit": "Create Session"
     },
     "created": "Homework session created",
+    "updated": "Homework updated",
+    "editButton": "Edit",
+    "editSession": "Edit Homework Session",
+    "editPreserveHint": "Pages already in this session keep their progress. Pages you remove are detached but their reading history is preserved.",
     "deleted": "Homework deleted",
     "requiredFields": "Title and due date are required",
     "noSessions": "No homework sessions yet. Create one to start tracking your assignments.",
