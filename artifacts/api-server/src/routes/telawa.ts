@@ -1,3 +1,17 @@
+/**
+ * /api/telawa/* — Khatmah ("complete read-through") tracking.
+ *
+ * Distinct from memorization (routes/progress.ts): a Khatmah is a linear
+ * walk through the Mushaf 1→604. Each Khatmah row in telawa_khatmah is a
+ * single attempt; pages read against it accumulate in telawa_log. Only
+ * one Khatmah per user is active at a time (`completedAt IS NULL`).
+ *
+ * The "next page to read" cursor is computed by counting telawa_log rows
+ * for the active Khatmah — there is no stored cursor column. To prevent
+ * races on rapid taps, mutations that depend on the cursor (mark-page-read,
+ * undo) wrap the recompute + insert/delete in a transaction guarded by a
+ * Postgres advisory lock keyed on the user id.
+ */
 import { Router, type IRouter } from "express";
 import { db, telawaLogTable, telawaKhatmahTable } from "@workspace/db";
 import { eq, and, desc, gte, sql, isNull } from "drizzle-orm";

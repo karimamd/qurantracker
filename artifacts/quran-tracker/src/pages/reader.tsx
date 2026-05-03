@@ -1,3 +1,24 @@
+/**
+ * Reader page (/reader, /reader/:page).
+ *
+ * The single most interactive screen: lays out a Mushaf page's ayahs in
+ * traditional RTL with tap-to-mark mistake interaction.
+ *
+ * Data flow:
+ *   - Ayah text comes from usePageAyahs (IndexedDB → bundled dump → API).
+ *   - Page state (quality, dueDate, customName, scope) comes from
+ *     useListPageProgress in batches; we update via useUpdatePageProgress
+ *     which optimistically refreshes the dashboard cache.
+ *   - Active per-ayah mistakes (memorization vs link) are managed by the
+ *     useListActivePageMistakes / useAddActivePageMistake /
+ *     useRemoveActivePageMistake trio. The server advisory-locks each
+ *     mutation so rapid double-taps can't double-insert.
+ *
+ * URL params:
+ *   - :page (1..604) — selected page
+ *   - ?practice=<globalAyah> — opens with a specific ayah focused, used by
+ *     the /mistakes page deep-link
+ */
 import {
   useListPageProgress,
   useUpdatePageProgress,

@@ -1,3 +1,14 @@
+/**
+ * Shared visual + semantic vocabulary for the four memorization qualities.
+ *
+ * The quality enum is the SAME on the server (lib/progress-helpers.ts
+ * QUALITY_LADDER) — keep both in sync. The mapping from "quality" to
+ * "completed" matches the server's homework completion derivation:
+ * good/excellent count as done, hard/relearn don't.
+ *
+ * Tailwind class maps live here (rather than in each consumer) so the
+ * dashboard, reader, mistakes page and recite page stay color-consistent.
+ */
 export type Quality = "excellent" | "good" | "hard" | "relearn";
 
 export interface QualityDef {

@@ -1,3 +1,16 @@
+/**
+ * telawa_log — append-only log of every page READ during a Khatmah cycle.
+ *
+ * Telawa ("recitation as worship") is separate from memorization revision:
+ * it tracks linear page-by-page reads through the Mushaf (1→604, then
+ * looping back to 1 for the next cycle). The cursor for "what page is next"
+ * is computed by counting telawa_log rows in the active Khatmah — that's
+ * why the active-mistake/cursor mutations in routes/telawa.ts run inside
+ * advisory-locked transactions (counting rows is otherwise racy).
+ *
+ * See lib/db/src/schema/telawa-khatmah.ts for the Khatmah header table and
+ * docs/business-logic.md → "Telawa & Khatmah".
+ */
 import { pgTable, serial, integer, text, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";

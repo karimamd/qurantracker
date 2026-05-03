@@ -1,3 +1,25 @@
+/**
+ * ayah_mistakes — append-only log of per-ayah error marks made in the Reader.
+ *
+ * Two `mistakeType`s, both surfaced in the Reader's tap-to-mark UI and on the
+ * /mistakes page:
+ *   - "memorization" → user blanked / forgot the ayah's text
+ *   - "link"         → user knew the ayah but stumbled on the transition
+ *                      from the previous one
+ *
+ * Resolution model: rows are NOT deleted when a mistake is "fixed". Instead
+ * `resolvedAt` is stamped, leaving the row available for any future
+ * historical reporting. Today every read path (the per-page active list,
+ * the GET /progress/mistakes feed used by pages/mistakes.tsx, and the
+ * resolve mutation) filters on `resolvedAt IS NULL`, so the table is
+ * effectively used as the "currently unresolved" set. See routes/progress.ts
+ * active-mistakes endpoints (advisory-locked to prevent duplicate inserts
+ * on rapid toggles).
+ *
+ * `globalAyahNumber` (1..6236) is the canonical de-dup key — (surah, ayah)
+ * pairs alone aren't sufficient because the same surah-ayah could plausibly
+ * appear twice during transcription pipelines.
+ */
 import { pgTable, serial, integer, text, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";

@@ -1,3 +1,16 @@
+/**
+ * Mistakes page (/mistakes) — feed of currently UNRESOLVED per-ayah
+ * mistakes the user has marked while reciting (the server filters
+ * `resolvedAt IS NULL`; resolving an active mistake in the Reader removes
+ * it from this feed).
+ *
+ * Source: GET /api/progress/mistakes (returns up to 200 active rows plus
+ * a summary). Filter chip narrows by mistakeType ("memorization" | "link");
+ * group-by toggle reorganizes the same set into Day / Surah / Juz buckets
+ * purely client-side. Each row deep-links into the Reader at
+ * /reader/:page?practice=<globalAyahNumber> so the user can immediately
+ * revisit the verse.
+ */
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { useGetMistakes } from "@workspace/api-client-react";

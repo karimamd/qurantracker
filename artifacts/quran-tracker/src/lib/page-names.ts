@@ -1,3 +1,12 @@
+/**
+ * Default per-page display names sourced from the FIRST AYAH on each
+ * Mushaf page. The map is generated and shipped as page-names.json
+ * (mirrored on the server at artifacts/api-server/src/lib/page-names.json).
+ *
+ * Users can override with a per-page customName via PATCH
+ * /api/progress/pages/:n/rename — page_progress.custom_name takes
+ * precedence whenever non-empty (see getPageDisplayName).
+ */
 import pageNamesData from "./page-names.json";
 
 const PAGE_NAMES = pageNamesData as Record<string, { surah: number; ayah: number; text: string }>;

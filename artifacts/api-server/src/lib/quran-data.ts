@@ -1,3 +1,20 @@
+/**
+ * Static Quran reference data and lookup helpers (server-side).
+ *
+ * Mirrors artifacts/quran-tracker/src/lib/quran-ref.ts on the client — kept
+ * as two separate copies so api-server has zero dependency on the SPA bundle.
+ * If you change one, change the other.
+ *
+ * Coverage:
+ *   - Mushaf layout: 604 pages, 30 Juz, 240 Rub' (8 per Juz), 114 Surahs.
+ *   - Page → Juz / Rub' / Surah lookups used by progress route aggregations
+ *     and by enrichPageProgress() in lib/progress-helpers.ts.
+ *
+ * Rub' (quarter-Juz) boundaries are loaded from `rob3-boundaries.json`,
+ * which lists each Rub's starting (page, surah, ayah). Adjacent Rubs
+ * commonly meet mid-page, so the boundary page is treated as belonging to
+ * BOTH Rubs — see getRob3Range below for the overlap rule.
+ */
 export interface SurahInfo {
   number: number;
   name: string;

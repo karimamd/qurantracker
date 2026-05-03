@@ -1,3 +1,25 @@
+/**
+ * Top-level SPA shell.
+ *
+ * Responsibilities:
+ *   - Wire wouter routing under the artifact's base path (Vite BASE_URL),
+ *     which differs in dev vs deployment.
+ *   - Configure ClerkProvider with appearance + per-host publishableKey.
+ *     The proxyUrl env var is set in production so Clerk Frontend API
+ *     traffic flows through /api/__clerk on our domain (see
+ *     artifacts/api-server/src/middlewares/clerkProxyMiddleware.ts).
+ *   - Provide React Query and a Toaster.
+ *   - Gate routes:
+ *       /                 → Landing OR redirect to /dashboard if signed in
+ *                           OR a guest session exists (lib/guest-mode.ts)
+ *       /sign-in, /sign-up→ Clerk-hosted forms
+ *       everything else   → ProtectedApp (Layout + page routes)
+ *   - LanguageSync reads the user's saved settings.language and pushes it
+ *     into the i18n runtime so language preference persists across devices.
+ *   - ClerkQueryClientCacheInvalidator wipes the React Query cache when the
+ *     signed-in user id changes, preventing the previous user's data from
+ *     leaking into the next session in the same browser tab.
+ */
 import { useEffect, useRef } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect, Link } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";

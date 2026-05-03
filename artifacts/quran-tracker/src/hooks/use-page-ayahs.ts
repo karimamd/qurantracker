@@ -1,3 +1,17 @@
+/**
+ * usePageAyahs — three-tier read-through cache for a single Mushaf page.
+ *
+ * Lookup order, in priority:
+ *   1. IndexedDB (lib/quran-page-cache.ts) — hot path; same-origin and
+ *      survives reloads / offline use.
+ *   2. Bundled dump (lib/quran-dump.ts) — same-origin static JSON; warmed
+ *      into IndexedDB by usePrefetchAllPages on app boot.
+ *   3. Remote alquran.cloud API — last-resort fallback so the app still
+ *      works on a fresh deploy where the dump is missing.
+ *
+ * Successful tier-2/3 hits are written back into IndexedDB AND React Query
+ * (via pageAyahsQueryKey) so the next call resolves synchronously.
+ */
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCachedPage, setCachedPage } from "@/lib/quran-page-cache";

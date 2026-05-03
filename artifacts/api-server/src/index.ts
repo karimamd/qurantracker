@@ -1,3 +1,9 @@
+/**
+ * Server entrypoint. PORT is injected by the Replit workflow runner — the
+ * value differs between dev and production but the binary doesn't care.
+ * See artifacts/api-server/.replit-artifact/artifact.toml for how the
+ * shared reverse proxy maps localhost:PORT → /api.
+ */
 import app from "./app";
 import { logger } from "./lib/logger";
 

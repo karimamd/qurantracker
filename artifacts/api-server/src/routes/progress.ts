@@ -1,3 +1,41 @@
+/**
+ * /api/progress/* — the central memorization-progress API surface.
+ *
+ * Mounted under /api by routes/index.ts and protected by `requireAuth`
+ * (Clerk for signed-in users, `guest_id` cookie for guests). Every query
+ * in this file MUST filter by `req.userId` — there is no row-level
+ * security.
+ *
+ * Endpoint groups (verb-prefixed, exact paths):
+ *   - GET    /progress/overview                          — dashboard top-line counts + streak
+ *   - GET    /progress/juz, /progress/juz/:juzNumber     — per-Juz aggregation + detail w/ Rubs
+ *   - GET    /progress/rob3                              — flat list of all 240 Rubs
+ *   - GET    /progress/surah, /progress/surah/:n         — per-Surah aggregation + detail
+ *   - GET    /progress/pages                             — full 1..604 list with filter chips
+ *   - PATCH  /progress/pages/:pageNumber                 — grade a single page
+ *   - GET/POST/DELETE /progress/pages/:pn/active-mistakes — per-ayah mistake marks
+ *                                                          (advisory-locked; see below)
+ *   - PUT    /progress/pages/:pageNumber/name            — per-user customName override
+ *   - POST/DELETE /progress/scope                        — bulk add/remove from revision scope
+ *   - POST   /progress/recite-batch                      — multi-page recitation submission
+ *   - GET    /progress/activity                          — recent recitation feed
+ *   - DELETE /progress/activity/:id                      — undo a recitation (locked txn)
+ *   - GET    /progress/daily-chart, /progress-chart      — sparkline data for the dashboard
+ *   - GET    /progress/mistakes                          — active (unresolved) mistakes feed
+ *                                                          shown on /mistakes
+ *
+ * Cross-cutting concerns (search the file for these comments to see the
+ * actual implementation):
+ *   - Page rows are lazily created by `ensurePageExists` — pages a user
+ *     has never touched are synthesized in-memory with status=out_of_scope.
+ *   - Undo and active-mistake mutations use Postgres advisory locks /
+ *     SELECT FOR UPDATE because cursors are recomputed by aggregating other
+ *     tables, which would otherwise race under rapid taps.
+ *   - Grading via homework also flows through here transitively (see
+ *     routes/homework.ts → /:id/items/:itemId).
+ *
+ * Logging: use `req.log` (pino-http child) — never `console.log`.
+ */
 import { Router, type IRouter } from "express";
 import { db, pageProgressTable, recitationLogTable, homeworkItemsTable, homeworkSessionsTable, ayahMistakesTable } from "@workspace/db";
 import { eq, and, inArray, desc, sql, gte } from "drizzle-orm";

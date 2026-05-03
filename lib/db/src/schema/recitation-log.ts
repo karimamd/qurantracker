@@ -1,3 +1,13 @@
+/**
+ * recitation_log — append-only history of every page recitation. The
+ * authoritative source for streaks, the daily/progress charts, the recent
+ * activity feed, and the undo-recitation flow.
+ *
+ * Each insert pairs with an UPDATE on page_progress (current state). On
+ * undo, page_progress is restored from the next-most-recent row here for
+ * the same page — see DELETE /progress/activity/:id in routes/progress.ts
+ * for the locking + recompute logic.
+ */
 import { pgTable, serial, integer, text, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";

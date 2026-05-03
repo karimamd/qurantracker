@@ -1,3 +1,20 @@
+/**
+ * App chrome shared by every authenticated page.
+ *
+ * Three responsive surfaces:
+ *   - md+ desktop: persistent left sidebar with the full nav list and the
+ *     auth footer (Clerk UserButton or guest CTA).
+ *   - <md mobile: top header (app name + UserButton/sign-up + burger) plus
+ *     a fixed bottom nav showing the five most-used screens. The burger
+ *     opens a drawer with the FULL nav list (kept in sync via navItems).
+ *   - Guest banner: amber strip on top of <main> when isGuestMode() is on
+ *     and Clerk says signed-out — converts guests via /sign-up.
+ *
+ * Sign-out path always invalidates the React Query cache (via the global
+ * ClerkQueryClientCacheInvalidator in App.tsx for sign-out, and
+ * `queryClient.clear()` here for guest exit) so the next user's data starts
+ * cold.
+ */
 import { Link, useLocation } from "wouter";
 import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info, AlertTriangle, Repeat } from "lucide-react";
 import { useState } from "react";

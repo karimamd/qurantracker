@@ -1,3 +1,23 @@
+/**
+ * Shared helpers for the memorization-progress domain.
+ *
+ * Exported helpers used across routes/progress.ts, routes/homework.ts and
+ * routes/settings.ts:
+ *   - getSettings(userId)        → lazy upsert of the user's settings row
+ *   - ensurePageExists(u, page)  → lazy upsert of a page_progress row
+ *   - calculateDueDate(...)      → applies the user's per-quality day buffer
+ *   - enrichPageProgress(row)    → augments a DB row with derived status,
+ *                                  effectiveQuality (overdue downgrade),
+ *                                  daysSinceRecited / daysUntilDue, etc.
+ *   - aggregateQuality(pages)    → average quality across a Rub'/Juz/Surah
+ *                                  using the canonical mistakes mapping
+ *   - getDefaultPageName(page)   → first-ayah snippet for a Mushaf page
+ *
+ * The "effective quality" downgrade ladder is the only place spaced
+ * repetition penalizes neglect: a "good" page that's 28+ days overdue is
+ * surfaced as "hard" (and so on through "relearn"), without ever mutating
+ * the stored quality. See computeEffectiveQuality below.
+ */
 import { db, settingsTable, pageProgressTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { getJuzForPage, getRob3ForPage, getSurahsForPage } from "./quran-data";

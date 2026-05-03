@@ -1,3 +1,20 @@
+/**
+ * Dashboard page (/dashboard) — the home screen for authenticated users.
+ *
+ * Composed of three roughly-independent sections, each fed by its own
+ * /api/progress endpoint so they can refresh / loading-skeleton in parallel:
+ *   1. Overview cards: total memorized, in-scope, overdue, streak
+ *      (useGetProgressOverview).
+ *   2. Daily and progress sparklines (useGetDailyChart, useGetProgressChart)
+ *      driven by recitation_log aggregates.
+ *   3. "Due today" + recent activity feed (useListPageProgress filtered to
+ *      due/overdue + useGetRecentActivity).
+ *
+ * Status backgrounds come from lib/quality.ts (getStatusBgClass /
+ * getStatusBarColor) so day/page tiles share their palette with the rest
+ * of the app; the per-quality button colors below are a small dashboard-
+ * local map intentionally kept inline rather than imported.
+ */
 import {
   useGetProgressOverview,
   useGetRecentActivity,

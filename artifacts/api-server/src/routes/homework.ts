@@ -1,3 +1,22 @@
+/**
+ * /api/homework/* — teacher-style assignment CRUD.
+ *
+ * A homework session bundles a set of pages a student must work on by a
+ * `dueDate`, each tagged "memorize" (new) or "revise" (existing). Grading
+ * an item is a real recitation: the PATCH item handler ALSO writes to
+ * page_progress and recitation_log, so the dashboard / streak / due-date
+ * machinery in routes/progress.ts stays consistent.
+ *
+ * Status derivation is denormalized at read time:
+ *   - completed → all items completed
+ *   - overdue   → dueDate's calendar day has fully passed (see
+ *                 isHomeworkOverdue — note the +1-day grace window)
+ *   - active    → otherwise
+ *
+ * Undo of a recitation in routes/progress.ts will re-derive `completed`
+ * for affected items in active sessions. See that file's
+ * DELETE /progress/activity/:id handler.
+ */
 import { Router, type IRouter } from "express";
 import { db, homeworkSessionsTable, homeworkItemsTable, pageProgressTable, recitationLogTable } from "@workspace/db";
 import { eq, and, sql, count, gte, inArray } from "drizzle-orm";

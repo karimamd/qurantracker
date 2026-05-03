@@ -1,3 +1,23 @@
+/**
+ * homework — teacher-style assignments grouping pages a student must
+ * either MEMORIZE (new material) or REVISE (existing memorization) by
+ * a chosen due date.
+ *
+ * Two tables:
+ *   - homework_sessions — the assignment header (title + dueDate)
+ *   - homework_items    — pages within an assignment, each with type
+ *                         "memorize" | "revise" and a denormalized
+ *                         completion flag/quality
+ *
+ * Cross-table coupling owned by api-server/src/routes/homework.ts:
+ *   - Grading a homework item ALSO writes to page_progress + recitation_log
+ *     so progress dashboards stay in sync (homework grading IS a recitation).
+ *   - Conversely, the undo path in routes/progress.ts re-derives the
+ *     `completed` flag for active sessions whenever a recitation is undone.
+ *
+ * "Overdue" is whole-day based: an assignment is only overdue once the
+ * entire dueDate calendar day has passed (see isHomeworkOverdue helper).
+ */
 import { pgTable, serial, text, timestamp, integer, boolean, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";

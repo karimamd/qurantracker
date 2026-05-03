@@ -1,3 +1,16 @@
+/**
+ * /api/settings — read/update the per-user preferences row.
+ *
+ * Wraps lib/progress-helpers.getSettings() so a settings row is created on
+ * first read. PATCH accepts a Zod-validated partial. The row is uniquely
+ * keyed by userId (see lib/db/src/schema/settings.ts), which is the safety
+ * net if two parallel first-reads race into the select-then-insert in
+ * getSettings — one of them will surface a unique-violation.
+ *
+ * Changes to {excellent,good,hard,relearn}Days take effect for FUTURE
+ * recitations only — past due dates are preserved as logged. Language
+ * changes are mirrored client-side by App.tsx → LanguageSync.
+ */
 import { Router, type IRouter } from "express";
 import { db, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";

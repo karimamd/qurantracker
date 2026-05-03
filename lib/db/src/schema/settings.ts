@@ -1,3 +1,18 @@
+/**
+ * settings — one row per user holding their personal preferences.
+ *
+ * Created lazily by getSettings() in lib/progress-helpers.ts the first time
+ * a user touches a settings-aware endpoint, so there is no separate signup
+ * hook. The defaults below are also the defaults a brand-new account sees.
+ *
+ * Fields:
+ *   - {excellent,good,hard,relearn}Days — spaced-repetition day buffers fed
+ *     into calculateDueDate(); editable via PATCH /api/settings.
+ *   - language — "en" | "ar"; mirrored into the i18n runtime by App.tsx
+ *     (LanguageSync) so it sticks across devices.
+ *   - telawaPagesPerDay — default daily Khatmah page goal; can be overridden
+ *     per active Khatmah via telawa_khatmah.pages_per_day (NULL = inherit).
+ */
 import { pgTable, serial, integer, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";

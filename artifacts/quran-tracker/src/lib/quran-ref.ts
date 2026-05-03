@@ -1,3 +1,18 @@
+/**
+ * Static Quran reference data (client-side mirror of
+ * artifacts/api-server/src/lib/quran-data.ts).
+ *
+ * Duplicated rather than shared via @workspace/lib because:
+ *   - Server uses these tables synchronously inside hot per-request loops
+ *     and importing the SPA bundle there would pull React/Vite deps in.
+ *   - The data is static; drift is caught by manual review (and the
+ *     identical structure makes diffing trivial).
+ *
+ * Provides: JUZ_RANGES, SURAHS, helpers (pagesForJuz, pagesForSurah,
+ * getSurahsInPageRange, todayLocalISO) and Rub'-quarter (240) lookups
+ * loaded from rob3-boundaries.json. See getRob3Range below for the
+ * boundary-page overlap rule shared with the server.
+ */
 export const JUZ_RANGES = [
   { juz: 1, startPage: 1, endPage: 21 },
   { juz: 2, startPage: 22, endPage: 41 },
