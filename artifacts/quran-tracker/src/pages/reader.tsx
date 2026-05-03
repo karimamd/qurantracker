@@ -25,6 +25,7 @@ import {
   useListActivePageMistakes,
   useAddActivePageMistake,
   useRemoveActivePageMistake,
+  useClearAllActivePageMistakes,
   useRecordTelawaRead,
   useStartKhatmah,
   useGetSettings,
@@ -55,7 +56,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat, Sparkles, Minus, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat, Sparkles, Minus, Plus, Eraser } from "lucide-react";
 import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
@@ -122,6 +123,7 @@ export default function Reader() {
   const { data: activeMistakes } = useListActivePageMistakes(pageNumber);
   const addActiveMistake = useAddActivePageMistake();
   const removeActiveMistake = useRemoveActivePageMistake();
+  const clearAllMistakes = useClearAllActivePageMistakes();
   const recordTelawaRead = useRecordTelawaRead();
   const startKhatmah = useStartKhatmah();
   const queryClient = useQueryClient();
@@ -565,6 +567,38 @@ export default function Reader() {
     if (hideMode && isLatest && revealedCount < totalAyahs) {
       setRevealedCount(c => c + 1);
     }
+  };
+
+  // Resolve every active mark (mistake / link / cleared) on the current
+  // page in one round-trip and reset the local sets immediately so the
+  // UI returns to a blank slate without waiting for the seed effect.
+  const handleClearAllMarks = () => {
+    const targetPage = pageNumber;
+    const prevMistakes = mistakeAyahs;
+    const prevLinks = linkAyahs;
+    const prevCleared = clearedAyahs;
+    if (prevMistakes.size === 0 && prevLinks.size === 0 && prevCleared.size === 0) return;
+    setMistakeAyahs(new Set());
+    setLinkAyahs(new Set());
+    setClearedAyahs(new Set());
+    queryClient.cancelQueries({ queryKey: getListActivePageMistakesQueryKey(targetPage) });
+    clearAllMistakes.mutate(
+      { pageNumber: targetPage },
+      {
+        onSuccess: (data) => {
+          queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
+          queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
+          toast({ title: t("reader.clearAllMarksDone", { page: targetPage }) });
+        },
+        onError: () => {
+          // Roll the optimistic clear back so the user can see what was lost.
+          setMistakeAyahs(prevMistakes);
+          setLinkAyahs(prevLinks);
+          setClearedAyahs(prevCleared);
+          toast({ title: t("reader.clearAllMarksFailed"), variant: "destructive" });
+        },
+      },
+    );
   };
 
   const closeSheetAndGo = (page: number) => {
@@ -1218,6 +1252,23 @@ export default function Reader() {
               <ChevronRight className="w-4 h-4 ms-1" />
             </Button>
           </div>
+
+          {(mistakeAyahs.size > 0 || linkAyahs.size > 0 || clearedAyahs.size > 0) && (
+            <div className="border-t pt-3 flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearAllMarks}
+                disabled={clearAllMistakes.isPending}
+                title={t("reader.clearAllMarksTitle")}
+                className="text-muted-foreground hover:text-destructive hover:border-destructive/50"
+                data-testid="btn-clear-all-marks"
+              >
+                <Eraser className="w-4 h-4 me-2" />
+                {t("reader.clearAllMarks")}
+              </Button>
+            </div>
+          )}
 
           <div className="border-t pt-3">
             <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">

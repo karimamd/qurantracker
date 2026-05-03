@@ -2305,6 +2305,93 @@ export const useRemoveActivePageMistake = <
 };
 
 /**
+ * @summary Resolve every active mark (mistake / link / cleared) on this page in one shot
+ */
+export const getClearAllActivePageMistakesUrl = (pageNumber: number) => {
+  return `/api/progress/pages/${pageNumber}/active-mistakes/all`;
+};
+
+export const clearAllActivePageMistakes = async (
+  pageNumber: number,
+  options?: RequestInit,
+): Promise<ActiveAyahMistake[]> => {
+  return customFetch<ActiveAyahMistake[]>(
+    getClearAllActivePageMistakesUrl(pageNumber),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getClearAllActivePageMistakesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearAllActivePageMistakes>>,
+    TError,
+    { pageNumber: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearAllActivePageMistakes>>,
+  TError,
+  { pageNumber: number },
+  TContext
+> => {
+  const mutationKey = ["clearAllActivePageMistakes"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearAllActivePageMistakes>>,
+    { pageNumber: number }
+  > = (props) => {
+    const { pageNumber } = props ?? {};
+
+    return clearAllActivePageMistakes(pageNumber, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearAllActivePageMistakesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearAllActivePageMistakes>>
+>;
+
+export type ClearAllActivePageMistakesMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Resolve every active mark (mistake / link / cleared) on this page in one shot
+ */
+export const useClearAllActivePageMistakes = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearAllActivePageMistakes>>,
+    TError,
+    { pageNumber: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearAllActivePageMistakes>>,
+  TError,
+  { pageNumber: number },
+  TContext
+> => {
+  return useMutation(getClearAllActivePageMistakesMutationOptions(options));
+};
+
+/**
  * @summary List per-ayah mistakes with summary analytics
  */
 export const getGetMistakesUrl = (params?: GetMistakesParams) => {

@@ -80,6 +80,8 @@ import {
   RemoveActivePageMistakeParams,
   RemoveActivePageMistakeBody,
   RemoveActivePageMistakeResponse,
+  ClearAllActivePageMistakesParams,
+  ClearAllActivePageMistakesResponse,
 } from "@workspace/api-zod";
 import {
   TOTAL_PAGES,
@@ -700,6 +702,39 @@ router.delete("/progress/pages/:pageNumber/active-mistakes", async (req, res): P
 
   const list = await listActiveMistakesForPage(userId, pageNumber);
   res.json(RemoveActivePageMistakeResponse.parse(list));
+});
+
+// Resolve every still-active mark (memorization, link AND cleared)
+// for a single page in one transaction. Powers the Reader's
+// "Clear all marks on this page" reset button so a user can wipe
+// the page back to a blank slate without tapping each ayah.
+router.delete("/progress/pages/:pageNumber/active-mistakes/all", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const params = ClearAllActivePageMistakesParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const pageNumber = params.data.pageNumber;
+
+  await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(${ACTIVE_MISTAKE_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
+    );
+    await tx
+      .update(ayahMistakesTable)
+      .set({ resolvedAt: new Date() })
+      .where(
+        and(
+          eq(ayahMistakesTable.userId, userId),
+          eq(ayahMistakesTable.pageNumber, pageNumber),
+          sql`${ayahMistakesTable.resolvedAt} is null`,
+        ),
+      );
+  });
+
+  const list = await listActiveMistakesForPage(userId, pageNumber);
+  res.json(ClearAllActivePageMistakesResponse.parse(list));
 });
 
 router.get("/progress/mistakes", async (req, res): Promise<void> => {

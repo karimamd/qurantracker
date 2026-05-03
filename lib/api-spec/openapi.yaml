@@ -545,6 +545,27 @@ paths:
                 items:
                   $ref: "#/components/schemas/ActiveAyahMistake"
 
+  /progress/pages/{pageNumber}/active-mistakes/all:
+    delete:
+      operationId: clearAllActivePageMistakes
+      tags: [progress]
+      summary: Resolve every active mark (mistake / link / cleared) on this page in one shot
+      parameters:
+        - name: pageNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated active marks for this page (always empty after a successful clear)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActiveAyahMistake"
+
   /progress/mistakes:
     get:
       operationId: getMistakes

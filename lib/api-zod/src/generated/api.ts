@@ -1011,6 +1011,23 @@ export const RemoveActivePageMistakeResponse = zod.array(
 );
 
 /**
+ * @summary Resolve every active mark (mistake / link / cleared) on this page in one shot
+ */
+export const ClearAllActivePageMistakesParams = zod.object({
+  pageNumber: zod.coerce.number(),
+});
+
+export const ClearAllActivePageMistakesResponseItem = zod.object({
+  surahNumber: zod.number(),
+  ayahNumberInSurah: zod.number(),
+  globalAyahNumber: zod.number(),
+  mistakeType: zod.enum(["memorization", "link", "cleared"]),
+});
+export const ClearAllActivePageMistakesResponse = zod.array(
+  ClearAllActivePageMistakesResponseItem,
+);
+
+/**
  * @summary List per-ayah mistakes with summary analytics
  */
 export const getMistakesQueryLimitDefault = 200;
