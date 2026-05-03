@@ -21,6 +21,17 @@ const router: IRouter = Router();
 
 router.use(requireAuth);
 
+/**
+ * Homework is "overdue" only once the entire due date has passed — not the
+ * instant the day begins. Due dates are stored as midnight UTC of the chosen
+ * `YYYY-MM-DD`, so we treat the whole 24h window of that day as still active
+ * and only flip to overdue from midnight UTC of the *next* day onwards.
+ */
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+function isHomeworkOverdue(dueDate: Date, now: Date): boolean {
+  return now.getTime() >= dueDate.getTime() + ONE_DAY_MS;
+}
+
 router.get("/homework", async (req, res): Promise<void> => {
   const userId = req.userId!;
   const sessions = await db.select().from(homeworkSessionsTable)
@@ -45,7 +56,7 @@ router.get("/homework", async (req, res): Promise<void> => {
     let status: string;
     if (counts.completed === counts.total && counts.total > 0) {
       status = "completed";
-    } else if (session.dueDate < now) {
+    } else if (isHomeworkOverdue(session.dueDate, now)) {
       status = "overdue";
     } else {
       status = "active";
@@ -238,7 +249,7 @@ router.patch("/homework/:id", async (req, res): Promise<void> => {
   let status: string;
   if (completedItems === items.length && items.length > 0) {
     status = "completed";
-  } else if (updated.dueDate < now) {
+  } else if (isHomeworkOverdue(updated.dueDate, now)) {
     status = "overdue";
   } else {
     status = "active";
