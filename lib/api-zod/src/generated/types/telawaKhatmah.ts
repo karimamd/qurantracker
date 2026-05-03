@@ -22,4 +22,12 @@ export interface TelawaKhatmah {
   startedAt: Date;
   /** Number of pages read so far in this Khatmah (0..604). */
   readsInKhatmah: number;
+  /**
+   * Per-Khatmah daily page goal. When `null`, the user-level
+`settings.telawaPagesPerDay` is used.
+
+   * @minimum 1
+   * @maximum 604
+   */
+  pagesPerDay: number | null;
 }

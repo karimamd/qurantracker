@@ -4,6 +4,8 @@ import {
   useUndoTelawaRead,
   useGetTelawaStats,
   useStartKhatmah,
+  useUpdateActiveKhatmah,
+  useGetSettings,
   getGetTelawaTodayQueryKey,
   getGetTelawaStatsQueryKey,
 } from "@workspace/api-client-react";
@@ -21,7 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { PageLabel } from "@/components/page-label";
-import { BookOpen, Check, Undo2, RotateCcw, CheckCircle, Repeat, ExternalLink, Sparkles } from "lucide-react";
+import { BookOpen, Check, Undo2, RotateCcw, CheckCircle, Repeat, ExternalLink, Sparkles, Target, Pencil } from "lucide-react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -44,11 +46,20 @@ export default function TelawaPage() {
   const { toast } = useToast();
   const { data: today, isLoading } = useGetTelawaToday();
   const { data: stats } = useGetTelawaStats();
+  const { data: settings } = useGetSettings();
   const recordRead = useRecordTelawaRead();
   const undoRead = useUndoTelawaRead();
   const startKhatmah = useStartKhatmah();
+  const updateActiveKhatmah = useUpdateActiveKhatmah();
   const [khatmahDialogOpen, setKhatmahDialogOpen] = useState(false);
   const [khatmahStartPage, setKhatmahStartPage] = useState<string>("1");
+  const [khatmahPagesPerDay, setKhatmahPagesPerDay] = useState<string>("");
+  const [goalDialogOpen, setGoalDialogOpen] = useState(false);
+  const [goalInput, setGoalInput] = useState<string>("");
+
+  // Default daily goal — used in fallback labels and as a placeholder when the
+  // active Khatmah doesn't have its own override.
+  const defaultPagesPerDay = settings?.telawaPagesPerDay ?? 5;
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetTelawaTodayQueryKey() });
@@ -61,8 +72,20 @@ export default function TelawaPage() {
       toast({ title: t("telawa.khatmah.invalidPage"), variant: "destructive" });
       return;
     }
+    // pagesPerDay is optional. Empty input → omit the field so the server
+    // leaves the column NULL (= inherit from settings).
+    const trimmedGoal = khatmahPagesPerDay.trim();
+    let pagesPerDay: number | undefined;
+    if (trimmedGoal !== "") {
+      const g = parseInt(trimmedGoal, 10);
+      if (!Number.isFinite(g) || g < 1 || g > 604) {
+        toast({ title: t("telawa.khatmah.invalidPagesPerDay"), variant: "destructive" });
+        return;
+      }
+      pagesPerDay = g;
+    }
     startKhatmah.mutate(
-      { data: { startPage: n } },
+      { data: { startPage: n, ...(pagesPerDay !== undefined ? { pagesPerDay } : {}) } },
       {
         onSuccess: () => {
           invalidate();
@@ -71,6 +94,38 @@ export default function TelawaPage() {
         },
         onError: () =>
           toast({ title: t("telawa.khatmah.startFailed"), variant: "destructive" }),
+      },
+    );
+  };
+
+  const handleSaveGoal = () => {
+    const trimmed = goalInput.trim();
+    // Empty input clears the per-Khatmah override (server-side: column → NULL).
+    let payload: { pagesPerDay: number | null };
+    if (trimmed === "") {
+      payload = { pagesPerDay: null };
+    } else {
+      const g = parseInt(trimmed, 10);
+      if (!Number.isFinite(g) || g < 1 || g > 604) {
+        toast({ title: t("telawa.khatmah.invalidPagesPerDay"), variant: "destructive" });
+        return;
+      }
+      payload = { pagesPerDay: g };
+    }
+    updateActiveKhatmah.mutate(
+      { data: payload },
+      {
+        onSuccess: () => {
+          invalidate();
+          setGoalDialogOpen(false);
+          toast({
+            title: payload.pagesPerDay === null
+              ? t("telawa.khatmah.goalCleared")
+              : t("telawa.khatmah.goalUpdated"),
+          });
+        },
+        onError: () =>
+          toast({ title: t("telawa.khatmah.goalUpdateFailed"), variant: "destructive" }),
       },
     );
   };
@@ -130,7 +185,16 @@ export default function TelawaPage() {
           open={khatmahDialogOpen}
           onOpenChange={(open) => {
             setKhatmahDialogOpen(open);
-            if (open) setKhatmahStartPage(String(today.khatmah.startPage));
+            if (open) {
+              setKhatmahStartPage(String(today.khatmah.startPage));
+              // Pre-fill with the current Khatmah's override (if any) so the
+              // user sees their previous choice; blank means "use default".
+              setKhatmahPagesPerDay(
+                today.khatmah.pagesPerDay != null
+                  ? String(today.khatmah.pagesPerDay)
+                  : "",
+              );
+            }
           }}
         >
           <DialogTrigger asChild>
@@ -164,6 +228,24 @@ export default function TelawaPage() {
               />
               <p className="text-xs text-muted-foreground">
                 {t("telawa.khatmah.startPageHint")}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="khatmah-pages-per-day">
+                {t("telawa.khatmah.pagesPerDayLabel")}
+              </label>
+              <Input
+                id="khatmah-pages-per-day"
+                type="number"
+                min={1}
+                max={604}
+                placeholder={String(defaultPagesPerDay)}
+                value={khatmahPagesPerDay}
+                onChange={(e) => setKhatmahPagesPerDay(e.target.value)}
+                data-testid="telawa-khatmah-ppd-input"
+              />
+              <p className="text-xs text-muted-foreground">
+                {t("telawa.khatmah.pagesPerDayHint", { fallback: defaultPagesPerDay })}
               </p>
             </div>
             <DialogFooter>
@@ -213,6 +295,88 @@ export default function TelawaPage() {
               {today.khatmah.readsInKhatmah} / 604
             </span>
           </div>
+          <Dialog
+            open={goalDialogOpen}
+            onOpenChange={(open) => {
+              setGoalDialogOpen(open);
+              if (open) {
+                setGoalInput(
+                  today.khatmah.pagesPerDay != null
+                    ? String(today.khatmah.pagesPerDay)
+                    : "",
+                );
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+                data-testid="telawa-khatmah-edit-goal"
+                title={t("telawa.khatmah.editGoal")}
+              >
+                <Target className="w-3.5 h-3.5" />
+                <span className="tabular-nums">
+                  {today.khatmah.pagesPerDay != null
+                    ? t("telawa.khatmah.pagesPerDayUsingOverride", {
+                        value: today.khatmah.pagesPerDay,
+                      })
+                    : t("telawa.khatmah.pagesPerDayUsingDefault", {
+                        value: defaultPagesPerDay,
+                      })}
+                </span>
+                <Pencil className="w-3 h-3 opacity-60" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t("telawa.khatmah.editGoalDialogTitle")}</DialogTitle>
+                <DialogDescription>
+                  {t("telawa.khatmah.editGoalDialogDescription", {
+                    fallback: defaultPagesPerDay,
+                  })}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="khatmah-goal-input">
+                  {t("telawa.khatmah.pagesPerDayLabel")}
+                </label>
+                <Input
+                  id="khatmah-goal-input"
+                  type="number"
+                  min={1}
+                  max={604}
+                  placeholder={String(defaultPagesPerDay)}
+                  value={goalInput}
+                  onChange={(e) => setGoalInput(e.target.value)}
+                  data-testid="telawa-khatmah-goal-input"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("telawa.khatmah.pagesPerDayHint", { fallback: defaultPagesPerDay })}
+                </p>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="ghost"
+                  onClick={() => setGoalDialogOpen(false)}
+                  data-testid="telawa-khatmah-goal-cancel"
+                >
+                  {t("telawa.khatmah.cancel")}
+                </Button>
+                <Button
+                  onClick={handleSaveGoal}
+                  disabled={updateActiveKhatmah.isPending}
+                  data-testid="telawa-khatmah-goal-save"
+                >
+                  <Check className="w-4 h-4 me-1.5" />
+                  {updateActiveKhatmah.isPending
+                    ? t("telawa.khatmah.saving")
+                    : t("telawa.khatmah.save")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
 

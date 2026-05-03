@@ -1086,6 +1086,8 @@ export const UndoRecitationResponse = zod.object({
  */
 export const getTelawaTodayResponseKhatmahStartPageMax = 604;
 
+export const getTelawaTodayResponseKhatmahPagesPerDayMax = 604;
+
 export const GetTelawaTodayResponse = zod.object({
   pagesPerDay: zod.number(),
   nextPage: zod
@@ -1117,6 +1119,14 @@ export const GetTelawaTodayResponse = zod.object({
       readsInKhatmah: zod
         .number()
         .describe("Number of pages read so far in this Khatmah (0..604)."),
+      pagesPerDay: zod
+        .number()
+        .min(1)
+        .max(getTelawaTodayResponseKhatmahPagesPerDayMax)
+        .nullable()
+        .describe(
+          "Per-Khatmah daily page goal. When `null`, the user-level\n`settings.telawaPagesPerDay` is used.\n",
+        ),
     })
     .describe("The user's currently active Khatmah (full 604-page rotation)."),
   upcomingPages: zod
@@ -1155,6 +1165,8 @@ export const RecordTelawaReadBody = zod.object({
 
 export const recordTelawaReadResponseKhatmahStartPageMax = 604;
 
+export const recordTelawaReadResponseKhatmahPagesPerDayMax = 604;
+
 export const RecordTelawaReadResponse = zod.object({
   pagesPerDay: zod.number(),
   nextPage: zod
@@ -1186,6 +1198,14 @@ export const RecordTelawaReadResponse = zod.object({
       readsInKhatmah: zod
         .number()
         .describe("Number of pages read so far in this Khatmah (0..604)."),
+      pagesPerDay: zod
+        .number()
+        .min(1)
+        .max(recordTelawaReadResponseKhatmahPagesPerDayMax)
+        .nullable()
+        .describe(
+          "Per-Khatmah daily page goal. When `null`, the user-level\n`settings.telawaPagesPerDay` is used.\n",
+        ),
     })
     .describe("The user's currently active Khatmah (full 604-page rotation)."),
   upcomingPages: zod
@@ -1209,6 +1229,8 @@ export const RecordTelawaReadResponse = zod.object({
  * @summary Undo the most recent Telawa read entry
  */
 export const undoTelawaReadResponseKhatmahStartPageMax = 604;
+
+export const undoTelawaReadResponseKhatmahPagesPerDayMax = 604;
 
 export const UndoTelawaReadResponse = zod.object({
   pagesPerDay: zod.number(),
@@ -1241,6 +1263,14 @@ export const UndoTelawaReadResponse = zod.object({
       readsInKhatmah: zod
         .number()
         .describe("Number of pages read so far in this Khatmah (0..604)."),
+      pagesPerDay: zod
+        .number()
+        .min(1)
+        .max(undoTelawaReadResponseKhatmahPagesPerDayMax)
+        .nullable()
+        .describe(
+          "Per-Khatmah daily page goal. When `null`, the user-level\n`settings.telawaPagesPerDay` is used.\n",
+        ),
     })
     .describe("The user's currently active Khatmah (full 604-page rotation)."),
   upcomingPages: zod
@@ -1271,15 +1301,27 @@ opened.
  */
 export const startKhatmahBodyStartPageMax = 604;
 
+export const startKhatmahBodyPagesPerDayMax = 604;
+
 export const StartKhatmahBody = zod.object({
   startPage: zod
     .number()
     .min(1)
     .max(startKhatmahBodyStartPageMax)
     .describe("Page number (1..604) to start the new Khatmah from."),
+  pagesPerDay: zod
+    .number()
+    .min(1)
+    .max(startKhatmahBodyPagesPerDayMax)
+    .optional()
+    .describe(
+      "Optional per-Khatmah daily page goal. When omitted, the\nuser-level `settings.telawaPagesPerDay` applies.\n",
+    ),
 });
 
 export const startKhatmahResponseKhatmahStartPageMax = 604;
+
+export const startKhatmahResponseKhatmahPagesPerDayMax = 604;
 
 export const StartKhatmahResponse = zod.object({
   pagesPerDay: zod.number(),
@@ -1312,6 +1354,98 @@ export const StartKhatmahResponse = zod.object({
       readsInKhatmah: zod
         .number()
         .describe("Number of pages read so far in this Khatmah (0..604)."),
+      pagesPerDay: zod
+        .number()
+        .min(1)
+        .max(startKhatmahResponseKhatmahPagesPerDayMax)
+        .nullable()
+        .describe(
+          "Per-Khatmah daily page goal. When `null`, the user-level\n`settings.telawaPagesPerDay` is used.\n",
+        ),
+    })
+    .describe("The user's currently active Khatmah (full 604-page rotation)."),
+  upcomingPages: zod
+    .array(zod.number())
+    .describe(
+      "Next pagesPerDay pages to read, starting from the cursor and wrapping at 604.",
+    ),
+  recentReads: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        pageNumber: zod.number(),
+        cycleNumber: zod.number(),
+        readAt: zod.coerce.date(),
+      }),
+    )
+    .describe("Pages read today (most recent first), for display only."),
+});
+
+/**
+ * Adjust per-Khatmah settings (currently the daily page goal) without
+starting a new Khatmah. Applies to the user's currently-active
+Khatmah row.
+
+ * @summary Update fields on the active Khatmah
+ */
+export const updateActiveKhatmahBodyPagesPerDayMax = 604;
+
+export const UpdateActiveKhatmahBody = zod
+  .object({
+    pagesPerDay: zod
+      .number()
+      .min(1)
+      .max(updateActiveKhatmahBodyPagesPerDayMax)
+      .nullish()
+      .describe(
+        "New daily page goal for the active Khatmah. Pass `null` to\nclear the per-Khatmah override and fall back to the user-level\n`settings.telawaPagesPerDay`.\n",
+      ),
+  })
+  .describe("Patch fields on the user's active Khatmah.");
+
+export const updateActiveKhatmahResponseKhatmahStartPageMax = 604;
+
+export const updateActiveKhatmahResponseKhatmahPagesPerDayMax = 604;
+
+export const UpdateActiveKhatmahResponse = zod.object({
+  pagesPerDay: zod.number(),
+  nextPage: zod
+    .number()
+    .describe("Next page number in the rotation cursor (1..604)"),
+  cycleNumber: zod
+    .number()
+    .describe("Current Khatmah's cycle number (1-based per user)."),
+  totalRead: zod
+    .number()
+    .describe("Total Telawa reads ever recorded for the user."),
+  readToday: zod
+    .number()
+    .describe(
+      "Number of Telawa reads recorded since the start of today (UTC).",
+    ),
+  khatmah: zod
+    .object({
+      id: zod.number(),
+      startPage: zod
+        .number()
+        .min(1)
+        .max(updateActiveKhatmahResponseKhatmahStartPageMax)
+        .describe("Page number this Khatmah started from."),
+      cycleNumber: zod
+        .number()
+        .describe("1-based ordinal across the user's Khatmahs."),
+      startedAt: zod.coerce.date(),
+      readsInKhatmah: zod
+        .number()
+        .describe("Number of pages read so far in this Khatmah (0..604)."),
+      pagesPerDay: zod
+        .number()
+        .min(1)
+        .max(updateActiveKhatmahResponseKhatmahPagesPerDayMax)
+        .nullable()
+        .describe(
+          "Per-Khatmah daily page goal. When `null`, the user-level\n`settings.telawaPagesPerDay` is used.\n",
+        ),
     })
     .describe("The user's currently active Khatmah (full 604-page rotation)."),
   upcomingPages: zod

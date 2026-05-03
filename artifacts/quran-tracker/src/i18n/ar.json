@@ -207,7 +207,20 @@
       "started": "بدأت ختمة جديدة من الصفحة {{page}}",
       "startFailed": "تعذّر بدء ختمة جديدة",
       "invalidPage": "اختر صفحة بين ١ و ٦٠٤",
-      "bannerTitle": "الختمة {{cycle}} · بدأت من الصفحة {{start}}"
+      "invalidPagesPerDay": "اختر هدفًا يوميًا بين ١ و ٦٠٤ صفحة",
+      "bannerTitle": "الختمة {{cycle}} · بدأت من الصفحة {{start}}",
+      "pagesPerDayLabel": "الهدف اليومي (صفحات)",
+      "pagesPerDayHint": "اختياري — اتركه فارغًا لاستخدام الإعداد الافتراضي ({{fallback}} صفحة/يوم).",
+      "pagesPerDayUsingDefault": "افتراضي ({{value}}/يوم)",
+      "pagesPerDayUsingOverride": "{{value}} صفحة/يوم",
+      "editGoal": "تعديل الهدف",
+      "editGoalDialogTitle": "الهدف اليومي لهذه الختمة",
+      "editGoalDialogDescription": "اختر عدد الصفحات التي تريد قراءتها يوميًا في هذه الختمة. اتركه فارغًا للعودة إلى الإعداد الافتراضي ({{fallback}}/يوم).",
+      "save": "حفظ",
+      "saving": "جارٍ الحفظ...",
+      "goalUpdated": "تم تحديث الهدف اليومي",
+      "goalUpdateFailed": "تعذّر تحديث الهدف اليومي",
+      "goalCleared": "تمت العودة إلى الهدف اليومي الافتراضي"
     },
     "todayPlan": {
       "title": "صفحات اليوم",

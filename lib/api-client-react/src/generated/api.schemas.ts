@@ -513,6 +513,14 @@ export interface TelawaKhatmah {
   startedAt: string;
   /** Number of pages read so far in this Khatmah (0..604). */
   readsInKhatmah: number;
+  /**
+   * Per-Khatmah daily page goal. When `null`, the user-level
+`settings.telawaPagesPerDay` is used.
+
+   * @minimum 1
+   * @maximum 604
+   */
+  pagesPerDay: number | null;
 }
 
 export interface TelawaReadEntry {
@@ -546,6 +554,29 @@ export interface StartKhatmahBody {
    * @maximum 604
    */
   startPage: number;
+  /**
+   * Optional per-Khatmah daily page goal. When omitted, the
+user-level `settings.telawaPagesPerDay` applies.
+
+   * @minimum 1
+   * @maximum 604
+   */
+  pagesPerDay?: number;
+}
+
+/**
+ * Patch fields on the user's active Khatmah.
+ */
+export interface UpdateActiveKhatmahBody {
+  /**
+   * New daily page goal for the active Khatmah. Pass `null` to
+clear the per-Khatmah override and fall back to the user-level
+`settings.telawaPagesPerDay`.
+
+   * @minimum 1
+   * @maximum 604
+   */
+  pagesPerDay?: number | null;
 }
 
 export interface RecordTelawaReadBody {

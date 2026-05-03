@@ -7,6 +7,8 @@ export const telawaKhatmahTable = pgTable("telawa_khatmah", {
   userId: text("user_id"),
   startPage: integer("start_page").notNull(),
   cycleNumber: integer("cycle_number").notNull().default(1),
+  // Per-Khatmah daily page goal. NULL = inherit from settings.telawaPagesPerDay.
+  pagesPerDay: integer("pages_per_day"),
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 }, (table) => ({

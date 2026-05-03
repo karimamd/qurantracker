@@ -61,6 +61,7 @@ export * from "./telawaKhatmah";
 export * from "./telawaReadEntry";
 export * from "./telawaStats";
 export * from "./telawaToday";
+export * from "./updateActiveKhatmahBody";
 export * from "./updateHomeworkBody";
 export * from "./updateHomeworkItemBody";
 export * from "./updateHomeworkItemBodyQuality";

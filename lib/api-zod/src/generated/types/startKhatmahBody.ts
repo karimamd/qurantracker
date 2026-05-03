@@ -13,4 +13,12 @@ export interface StartKhatmahBody {
    * @maximum 604
    */
   startPage: number;
+  /**
+   * Optional per-Khatmah daily page goal. When omitted, the
+user-level `settings.telawaPagesPerDay` applies.
+
+   * @minimum 1
+   * @maximum 604
+   */
+  pagesPerDay?: number;
 }

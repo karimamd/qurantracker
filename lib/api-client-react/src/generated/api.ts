@@ -50,6 +50,7 @@ import type {
   SurahProgress,
   TelawaStats,
   TelawaToday,
+  UpdateActiveKhatmahBody,
   UpdateHomeworkBody,
   UpdateHomeworkItemBody,
   UpdateSettingsBody,
@@ -2914,6 +2915,96 @@ export const useStartKhatmah = <
   TContext
 > => {
   return useMutation(getStartKhatmahMutationOptions(options));
+};
+
+/**
+ * Adjust per-Khatmah settings (currently the daily page goal) without
+starting a new Khatmah. Applies to the user's currently-active
+Khatmah row.
+
+ * @summary Update fields on the active Khatmah
+ */
+export const getUpdateActiveKhatmahUrl = () => {
+  return `/api/telawa/khatmah/active`;
+};
+
+export const updateActiveKhatmah = async (
+  updateActiveKhatmahBody: UpdateActiveKhatmahBody,
+  options?: RequestInit,
+): Promise<TelawaToday> => {
+  return customFetch<TelawaToday>(getUpdateActiveKhatmahUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateActiveKhatmahBody),
+  });
+};
+
+export const getUpdateActiveKhatmahMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateActiveKhatmah>>,
+    TError,
+    { data: BodyType<UpdateActiveKhatmahBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateActiveKhatmah>>,
+  TError,
+  { data: BodyType<UpdateActiveKhatmahBody> },
+  TContext
+> => {
+  const mutationKey = ["updateActiveKhatmah"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateActiveKhatmah>>,
+    { data: BodyType<UpdateActiveKhatmahBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateActiveKhatmah(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateActiveKhatmahMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateActiveKhatmah>>
+>;
+export type UpdateActiveKhatmahMutationBody = BodyType<UpdateActiveKhatmahBody>;
+export type UpdateActiveKhatmahMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update fields on the active Khatmah
+ */
+export const useUpdateActiveKhatmah = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateActiveKhatmah>>,
+    TError,
+    { data: BodyType<UpdateActiveKhatmahBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateActiveKhatmah>>,
+  TError,
+  { data: BodyType<UpdateActiveKhatmahBody> },
+  TContext
+> => {
+  return useMutation(getUpdateActiveKhatmahMutationOptions(options));
 };
 
 /**

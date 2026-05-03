@@ -9,6 +9,8 @@ import {
   GetTelawaStatsResponse,
   StartKhatmahBody,
   StartKhatmahResponse,
+  UpdateActiveKhatmahBody,
+  UpdateActiveKhatmahResponse,
 } from "@workspace/api-zod";
 import { getSettings } from "../lib/progress-helpers";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -130,13 +132,15 @@ async function ensureActiveKhatmah(tx: Tx, userId: string) {
 
 async function buildToday(userId: string) {
   const settings = await getSettings(userId);
-  const pagesPerDay = settings.telawaPagesPerDay ?? 5;
+  const defaultPagesPerDay = settings.telawaPagesPerDay ?? 5;
 
   const result = await db.transaction(async (tx) => {
     await tx.execute(
       sql`select pg_advisory_xact_lock(${TELAWA_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
     );
     const active = await ensureActiveKhatmah(tx, userId);
+    // Per-Khatmah goal overrides the user-level default; null = inherit.
+    const pagesPerDay = active.pagesPerDay ?? defaultPagesPerDay;
 
     const [{ total }] = await tx
       .select({ total: sql<number>`count(*)::int` })
@@ -178,6 +182,7 @@ async function buildToday(userId: string) {
         cycleNumber: active.cycleNumber,
         startedAt: active.startedAt.toISOString(),
         readsInKhatmah: khatmahReads,
+        pagesPerDay: active.pagesPerDay,
       },
       upcomingPages: computeUpcoming(nextPage, pagesPerDay),
       recentReads: recent.map((r) => ({
@@ -323,6 +328,12 @@ router.post("/telawa/khatmah", async (req, res): Promise<void> => {
     return;
   }
   const startPage = clampPage(parsed.data.startPage);
+  // `pagesPerDay` is optional on the body. Undefined = inherit from settings
+  // (column stays NULL); a number sets a per-Khatmah override.
+  const pagesPerDay =
+    parsed.data.pagesPerDay !== undefined
+      ? clampPage(parsed.data.pagesPerDay)
+      : null;
 
   await db.transaction(async (tx) => {
     await tx.execute(
@@ -337,10 +348,16 @@ router.post("/telawa/khatmah", async (req, res): Promise<void> => {
     const khatmahReads = Number(inKhatmah ?? 0);
 
     if (khatmahReads === 0) {
-      // No reads yet in the active Khatmah — just retarget its start page.
+      // No reads yet in the active Khatmah — just retarget its start page
+      // (and goal, when supplied; otherwise leave the existing value alone).
+      const patch: Partial<typeof telawaKhatmahTable.$inferInsert> = {
+        startPage,
+        startedAt: new Date(),
+      };
+      if (parsed.data.pagesPerDay !== undefined) patch.pagesPerDay = pagesPerDay;
       await tx
         .update(telawaKhatmahTable)
-        .set({ startPage, startedAt: new Date() })
+        .set(patch)
         .where(eq(telawaKhatmahTable.id, active.id));
       return;
     }
@@ -354,6 +371,7 @@ router.post("/telawa/khatmah", async (req, res): Promise<void> => {
       userId,
       startPage,
       cycleNumber: active.cycleNumber + 1,
+      pagesPerDay,
       startedAt: new Date(),
       completedAt: null,
     });
@@ -363,10 +381,44 @@ router.post("/telawa/khatmah", async (req, res): Promise<void> => {
   res.json(StartKhatmahResponse.parse(today));
 });
 
+router.patch("/telawa/khatmah/active", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const parsed = UpdateActiveKhatmahBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(${TELAWA_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
+    );
+    const active = await ensureActiveKhatmah(tx, userId);
+
+    const patch: Partial<typeof telawaKhatmahTable.$inferInsert> = {};
+    if (parsed.data.pagesPerDay !== undefined) {
+      patch.pagesPerDay =
+        parsed.data.pagesPerDay === null
+          ? null
+          : clampPage(parsed.data.pagesPerDay);
+    }
+
+    if (Object.keys(patch).length > 0) {
+      await tx
+        .update(telawaKhatmahTable)
+        .set(patch)
+        .where(eq(telawaKhatmahTable.id, active.id));
+    }
+  });
+
+  const today = await buildToday(userId);
+  res.json(UpdateActiveKhatmahResponse.parse(today));
+});
+
 router.get("/telawa/stats", async (req, res): Promise<void> => {
   const userId = req.userId!;
   const settings = await getSettings(userId);
-  const pagesPerDay = settings.telawaPagesPerDay ?? 5;
+  const defaultPagesPerDay = settings.telawaPagesPerDay ?? 5;
 
   // Make sure the user has an active Khatmah row so the cursor matches /today
   const active = await db.transaction(async (tx) => {
@@ -375,6 +427,8 @@ router.get("/telawa/stats", async (req, res): Promise<void> => {
     );
     return ensureActiveKhatmah(tx, userId);
   });
+  // Match buildToday's resolution: per-Khatmah override falls back to settings.
+  const pagesPerDay = active.pagesPerDay ?? defaultPagesPerDay;
 
   const [{ total }] = await db
     .select({ total: sql<number>`count(*)::int` })

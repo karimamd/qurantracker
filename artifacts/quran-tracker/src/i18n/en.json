@@ -203,7 +203,20 @@
       "started": "New Khatmah started from page {{page}}",
       "startFailed": "Could not start a new Khatmah",
       "invalidPage": "Pick a page between 1 and 604",
-      "bannerTitle": "Khatmah {{cycle}} · started from page {{start}}"
+      "invalidPagesPerDay": "Pick a daily goal between 1 and 604 pages",
+      "bannerTitle": "Khatmah {{cycle}} · started from page {{start}}",
+      "pagesPerDayLabel": "Daily goal (pages)",
+      "pagesPerDayHint": "Optional — leave blank to use your default of {{fallback}} pages/day.",
+      "pagesPerDayUsingDefault": "Using default ({{value}}/day)",
+      "pagesPerDayUsingOverride": "{{value}} pages/day",
+      "editGoal": "Edit goal",
+      "editGoalDialogTitle": "Daily goal for this Khatmah",
+      "editGoalDialogDescription": "Choose how many pages you want to read each day in this Khatmah. Pass an empty value to fall back to your default ({{fallback}}/day).",
+      "save": "Save",
+      "saving": "Saving...",
+      "goalUpdated": "Daily goal updated",
+      "goalUpdateFailed": "Could not update the daily goal",
+      "goalCleared": "Reverted to default daily goal"
     },
     "todayPlan": {
       "title": "Today's pages",
