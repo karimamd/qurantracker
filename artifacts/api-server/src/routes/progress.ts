@@ -646,7 +646,13 @@ router.get("/progress/mistakes", async (req, res): Promise<void> => {
   const limit = parsedQuery.data.limit ?? 200;
   const typeFilter = parsedQuery.data.type;
 
-  const whereClauses = [eq(ayahMistakesTable.userId, userId)];
+  // Only show mistakes that haven't been resolved (overwritten by a later
+  // tick / unlinked). Resolved rows are kept in the DB for analytics but
+  // shouldn't appear in the user-facing mistakes list or summary counts.
+  const whereClauses = [
+    eq(ayahMistakesTable.userId, userId),
+    sql`${ayahMistakesTable.resolvedAt} is null`,
+  ];
   if (typeFilter) whereClauses.push(eq(ayahMistakesTable.mistakeType, typeFilter));
 
   const rows = await db
@@ -656,7 +662,8 @@ router.get("/progress/mistakes", async (req, res): Promise<void> => {
     .orderBy(desc(ayahMistakesTable.recitedAt))
     .limit(limit);
 
-  // Summary aggregates across the user's full history (independent of limit/filter on list).
+  // Summary aggregates: also restricted to currently-active mistakes so the
+  // numbers match what the user actually sees in the list.
   const allRows = await db
     .select({
       mistakeType: ayahMistakesTable.mistakeType,
@@ -664,7 +671,12 @@ router.get("/progress/mistakes", async (req, res): Promise<void> => {
       globalAyahNumber: ayahMistakesTable.globalAyahNumber,
     })
     .from(ayahMistakesTable)
-    .where(eq(ayahMistakesTable.userId, userId));
+    .where(
+      and(
+        eq(ayahMistakesTable.userId, userId),
+        sql`${ayahMistakesTable.resolvedAt} is null`,
+      ),
+    );
 
   let memorizationCount = 0;
   let linkCount = 0;

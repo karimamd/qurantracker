@@ -462,7 +462,9 @@ export default function Reader() {
 
   const handleAyahMark = (ayahNumber: number, mark: "clear" | "mistake", isLatest: boolean) => {
     if (mark === "clear") {
-      // The tick acts as a reversal of the X mark for this ayah.
+      // The tick acts as a positive overwrite for this ayah: it clears any
+      // previous X (memorization) mark AND any previous link mark, so the
+      // ayah disappears from the Mistakes page in either case.
       setClearedAyahs(prev => {
         const next = new Set(prev);
         next.add(ayahNumber);
@@ -477,6 +479,21 @@ export default function Reader() {
         });
         persistRemove(ayahNumber, "memorization", () => {
           setMistakeAyahs(prev => {
+            const next = new Set(prev);
+            next.add(ayahNumber);
+            return next;
+          });
+        });
+      }
+      const wasLink = linkAyahs.has(ayahNumber);
+      if (wasLink) {
+        setLinkAyahs(prev => {
+          const next = new Set(prev);
+          next.delete(ayahNumber);
+          return next;
+        });
+        persistRemove(ayahNumber, "link", () => {
+          setLinkAyahs(prev => {
             const next = new Set(prev);
             next.add(ayahNumber);
             return next;
