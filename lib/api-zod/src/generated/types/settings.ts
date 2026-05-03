@@ -18,4 +18,6 @@ export interface Settings {
   telawaPagesPerDay: number;
   /** Font size in pixels used for the Quran page text in the Reader. Default 24. */
   readerFontSize: number;
+  /** Default font size in pixels used for the single-ayah detail page (/ayahs/:n). Default 40. */
+  ayahViewFontSize: number;
 }

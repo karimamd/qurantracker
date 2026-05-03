@@ -30,6 +30,11 @@ export const settingsTable = pgTable("settings", {
   // per user so adjustments stick across devices. Bounded client-side to
   // keep page text readable and avoid extreme layouts.
   readerFontSize: integer("reader_font_size").notNull().default(24),
+  // Default font size in pixels for the single-ayah detail page on the
+  // /ayahs route. Tracked separately from readerFontSize so the user can
+  // browse the full Mushaf page at one size and study a single ayah at a
+  // larger one without thrashing the other view's preference.
+  ayahViewFontSize: integer("ayah_view_font_size").notNull().default(40),
 }, (table) => ({
   userIdUnique: uniqueIndex("settings_user_id_unique").on(table.userId),
 }));

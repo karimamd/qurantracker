@@ -35,6 +35,11 @@ export const GetSettingsResponse = zod.object({
     .describe(
       "Font size in pixels used for the Quran page text in the Reader. Default 24.",
     ),
+  ayahViewFontSize: zod
+    .number()
+    .describe(
+      "Default font size in pixels used for the single-ayah detail page (\/ayahs\/:n). Default 40.",
+    ),
 });
 
 /**
@@ -44,6 +49,9 @@ export const updateSettingsBodyTelawaPagesPerDayMax = 604;
 
 export const updateSettingsBodyReaderFontSizeMin = 14;
 export const updateSettingsBodyReaderFontSizeMax = 64;
+
+export const updateSettingsBodyAyahViewFontSizeMin = 14;
+export const updateSettingsBodyAyahViewFontSizeMax = 96;
 
 export const UpdateSettingsBody = zod.object({
   excellentDays: zod.number().optional(),
@@ -60,6 +68,11 @@ export const UpdateSettingsBody = zod.object({
     .number()
     .min(updateSettingsBodyReaderFontSizeMin)
     .max(updateSettingsBodyReaderFontSizeMax)
+    .optional(),
+  ayahViewFontSize: zod
+    .number()
+    .min(updateSettingsBodyAyahViewFontSizeMin)
+    .max(updateSettingsBodyAyahViewFontSizeMax)
     .optional(),
 });
 
@@ -79,6 +92,11 @@ export const UpdateSettingsResponse = zod.object({
     .number()
     .describe(
       "Font size in pixels used for the Quran page text in the Reader. Default 24.",
+    ),
+  ayahViewFontSize: zod
+    .number()
+    .describe(
+      "Default font size in pixels used for the single-ayah detail page (\/ayahs\/:n). Default 40.",
     ),
 });
 

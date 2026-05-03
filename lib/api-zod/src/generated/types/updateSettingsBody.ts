@@ -23,4 +23,9 @@ export interface UpdateSettingsBody {
    * @maximum 64
    */
   readerFontSize?: number;
+  /**
+   * @minimum 14
+   * @maximum 96
+   */
+  ayahViewFontSize?: number;
 }

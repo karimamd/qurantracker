@@ -758,6 +758,9 @@ components:
         readerFontSize:
           type: integer
           description: Font size in pixels used for the Quran page text in the Reader. Default 24.
+        ayahViewFontSize:
+          type: integer
+          description: Default font size in pixels used for the single-ayah detail page (/ayahs/:n). Default 40.
       required:
         - id
         - excellentDays
@@ -767,6 +770,7 @@ components:
         - language
         - telawaPagesPerDay
         - readerFontSize
+        - ayahViewFontSize
 
     UpdateSettingsBody:
       type: object
@@ -790,6 +794,10 @@ components:
           type: integer
           minimum: 14
           maximum: 64
+        ayahViewFontSize:
+          type: integer
+          minimum: 14
+          maximum: 96
 
     ProgressOverview:
       type: object
