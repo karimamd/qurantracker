@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCachedPage, setCachedPage } from "@/lib/quran-page-cache";
+import { getPageFromDump } from "@/lib/quran-dump";
 
 export interface ApiAyah {
   number: number;
@@ -86,12 +87,31 @@ async function fetchPageAyahsFromNetwork(
   return stripBasmalaFromFirstAyah(json.data.ayahs);
 }
 
-// Read-through cache: serve from IndexedDB instantly when present, otherwise
-// hit the remote API and persist the result for next time. Quran text is
-// immutable so cached entries never need to be invalidated.
+// Read-through fetch with a layered fallback chain:
+//   1. IndexedDB (per-page cache, populated on previous successful reads)
+//   2. Bundled local dump shipped at /quran-dump.json (fully offline)
+//   3. Remote alquran.cloud API (last-resort backfill if the dump file
+//      is missing or doesn't contain that page yet)
+//
+// The bundled dump means a self-hosted clone of this open-source project
+// works without any external dependency; the API is genuinely just a
+// safety net. Quran text is immutable, so successful results from any
+// layer are persisted to IndexedDB for instant future loads.
 export async function fetchPageAyahs(pageNumber: number, signal?: AbortSignal): Promise<ApiAyah[]> {
   const cached = await getCachedPage(pageNumber);
   if (cached) return cached;
+
+  const fromDump = await getPageFromDump(pageNumber);
+  if (fromDump) {
+    // Local dump already had Basmala-stripping applied at generation
+    // time — but the generator currently mirrors the API, so we re-run
+    // the same normalisation to keep behaviour identical to the network
+    // path. Cheap and idempotent.
+    const normalised = stripBasmalaFromFirstAyah(fromDump);
+    void setCachedPage(pageNumber, normalised);
+    return normalised;
+  }
+
   const ayahs = await fetchPageAyahsFromNetwork(pageNumber, signal);
   void setCachedPage(pageNumber, ayahs);
   return ayahs;

@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "test-routes": "tsx ./src/test-routes.ts",
+    "build-quran-dump": "tsx ./src/build-quran-dump.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

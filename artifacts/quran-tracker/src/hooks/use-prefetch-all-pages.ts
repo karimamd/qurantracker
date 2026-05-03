@@ -1,14 +1,14 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  fetchPageAyahs,
   pageAyahsQueryKey,
   type ApiAyah,
 } from "@/hooks/use-page-ayahs";
-import { getCachedPage } from "@/lib/quran-page-cache";
+import { getCachedPage, setCachedPage } from "@/lib/quran-page-cache";
+import { getDump } from "@/lib/quran-dump";
 import { TOTAL_PAGES } from "@/lib/quran-ref";
 
-const SESSION_FLAG = "quran-prefetch-started-v1";
+const SESSION_FLAG = "quran-prefetch-started-v2";
 
 type IdleCb = (deadline: { timeRemaining: () => number; didTimeout: boolean }) => void;
 type RequestIdleCallback = (cb: IdleCb, opts?: { timeout: number }) => number;
@@ -23,10 +23,11 @@ function scheduleIdle(cb: () => void, fallbackMs = 1500): void {
   }
 }
 
-// On first mount per session, warm the IndexedDB cache with every Quran page
-// in the background so subsequent reader navigation is fully offline-instant.
-// Runs serially with idle-callback pacing to avoid hammering the remote API
-// and to stay out of the way of foreground work.
+// On first mount per session, warm the IndexedDB cache from the bundled
+// Quran dump (a single same-origin JSON request) so subsequent reader
+// navigation is fully offline-instant. If the dump fails to load we
+// silently bail — the per-page hook will fall back to the remote API
+// the next time a page is requested.
 export function usePrefetchAllPages(): void {
   const qc = useQueryClient();
 
@@ -40,36 +41,35 @@ export function usePrefetchAllPages(): void {
     }
 
     let cancelled = false;
-    const CONCURRENCY = 2;
-    const PAUSE_BETWEEN_MS = 25;
 
-    let cursor = 1;
-    const runOne = async (): Promise<void> => {
-      while (!cancelled && cursor <= TOTAL_PAGES) {
-        const page = cursor++;
-        try {
-          const cached = await getCachedPage(page);
-          if (cached) {
-            // Seed the in-memory cache too so React Query never refetches.
-            qc.setQueryData<ApiAyah[]>(pageAyahsQueryKey(page), cached);
-            continue;
-          }
-          const ayahs = await fetchPageAyahs(page);
-          qc.setQueryData<ApiAyah[]>(pageAyahsQueryKey(page), ayahs);
-        } catch {
-          // Network blip — skip this page; the next session will retry.
-        }
+    const run = async (): Promise<void> => {
+      const dump = await getDump();
+      if (cancelled || !dump) return;
+
+      // Seed each page into IndexedDB and React Query in idle chunks so we
+      // don't block the main thread on a 600+ entry write loop.
+      const CHUNK = 30;
+      for (let start = 1; start <= TOTAL_PAGES; start += CHUNK) {
         if (cancelled) return;
-        await new Promise<void>((resolve) => {
-          scheduleIdle(resolve, PAUSE_BETWEEN_MS);
+        const end = Math.min(start + CHUNK - 1, TOTAL_PAGES);
+        for (let page = start; page <= end; page++) {
+          const ayahs = dump.pages[String(page)];
+          if (!ayahs) continue;
+          // Avoid clobbering richer cached entries (e.g. ones already
+          // fetched & post-processed during this session).
+          const existing = await getCachedPage(page);
+          if (!existing) void setCachedPage(page, ayahs);
+          qc.setQueryData<ApiAyah[]>(pageAyahsQueryKey(page), prev => prev ?? ayahs);
+        }
+        await new Promise<void>(resolve => {
+          scheduleIdle(resolve, 50);
         });
       }
     };
 
     scheduleIdle(() => {
-      const workers = Array.from({ length: CONCURRENCY }, () => runOne());
-      void Promise.all(workers);
-    }, 2000);
+      void run();
+    }, 1500);
 
     return () => {
       cancelled = true;
