@@ -535,7 +535,7 @@ async function listActiveMistakesForPage(
   surahNumber: number;
   ayahNumberInSurah: number;
   globalAyahNumber: number;
-  mistakeType: "memorization" | "link";
+  mistakeType: "memorization" | "link" | "cleared";
 }[]> {
   const rows = await db
     .select({
@@ -554,15 +554,20 @@ async function listActiveMistakesForPage(
     );
 
   // Dedupe — multiple historical rows for the same (ayah,type) collapse to one mark.
+  // The list now also surfaces "cleared" rows (positive ticks the user placed
+  // on an ayah). Cleared and memorization/link are mutually exclusive per ayah:
+  // the POST handler below resolves the opposite side whenever a new mark of
+  // either kind is added, so the active set should only ever contain one row
+  // per (globalAyahNumber, mistakeType) and never contradictory marks.
   const seen = new Set<string>();
   const unique: {
     surahNumber: number;
     ayahNumberInSurah: number;
     globalAyahNumber: number;
-    mistakeType: "memorization" | "link";
+    mistakeType: "memorization" | "link" | "cleared";
   }[] = [];
   for (const r of rows) {
-    if (r.mistakeType !== "memorization" && r.mistakeType !== "link") continue;
+    if (r.mistakeType !== "memorization" && r.mistakeType !== "link" && r.mistakeType !== "cleared") continue;
     const k = `${r.globalAyahNumber}|${r.mistakeType}`;
     if (seen.has(k)) continue;
     seen.add(k);
@@ -605,11 +610,34 @@ router.post("/progress/pages/:pageNumber/active-mistakes", async (req, res): Pro
     return;
   }
 
+  // Marks that are mutually exclusive with the one being added — a "cleared"
+  // tick supersedes any active memorization/link mistake on the same ayah,
+  // and adding a memorization or link mistake supersedes a previous tick.
+  const opposites: ("memorization" | "link" | "cleared")[] =
+    body.data.mistakeType === "cleared" ? ["memorization", "link"] : ["cleared"];
+
   await db.transaction(async (tx) => {
     // Per-user advisory lock so concurrent toggles can't race and create duplicates.
     await tx.execute(
       sql`select pg_advisory_xact_lock(${ACTIVE_MISTAKE_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
     );
+
+    // Resolve any active marks on this ayah that contradict the new one. Doing
+    // this inside the same transaction (and under the advisory lock above)
+    // keeps the (ayah → at most one of {cleared} OR {memorization,link})
+    // invariant atomic from any reader's point of view.
+    await tx
+      .update(ayahMistakesTable)
+      .set({ resolvedAt: new Date() })
+      .where(
+        and(
+          eq(ayahMistakesTable.userId, userId),
+          eq(ayahMistakesTable.globalAyahNumber, body.data.globalAyahNumber),
+          inArray(ayahMistakesTable.mistakeType, opposites),
+          sql`${ayahMistakesTable.resolvedAt} is null`,
+        ),
+      );
+
     const existing = await tx
       .select({ id: ayahMistakesTable.id })
       .from(ayahMistakesTable)
@@ -687,9 +715,14 @@ router.get("/progress/mistakes", async (req, res): Promise<void> => {
   // Only show mistakes that haven't been resolved (overwritten by a later
   // tick / unlinked). Resolved rows are kept in the DB for analytics but
   // shouldn't appear in the user-facing mistakes list or summary counts.
+  // We also explicitly exclude "cleared" rows here — those represent positive
+  // ticks (ayah recited correctly), not mistakes, and live alongside real
+  // mistakes in the same table only because the active per-page endpoints
+  // need to surface both kinds of marks.
   const whereClauses = [
     eq(ayahMistakesTable.userId, userId),
     sql`${ayahMistakesTable.resolvedAt} is null`,
+    inArray(ayahMistakesTable.mistakeType, ["memorization", "link"]),
   ];
   if (typeFilter) whereClauses.push(eq(ayahMistakesTable.mistakeType, typeFilter));
 
@@ -713,6 +746,7 @@ router.get("/progress/mistakes", async (req, res): Promise<void> => {
       and(
         eq(ayahMistakesTable.userId, userId),
         sql`${ayahMistakesTable.resolvedAt} is null`,
+        inArray(ayahMistakesTable.mistakeType, ["memorization", "link"]),
       ),
     );
 

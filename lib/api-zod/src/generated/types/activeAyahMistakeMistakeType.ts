@@ -12,4 +12,5 @@ export type ActiveAyahMistakeMistakeType =
 export const ActiveAyahMistakeMistakeType = {
   memorization: "memorization",
   link: "link",
+  cleared: "cleared",
 } as const;

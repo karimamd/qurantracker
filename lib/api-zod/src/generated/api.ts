@@ -394,9 +394,9 @@ export const UpdatePageProgressBody = zod.object({
           .number()
           .describe("Quran-wide ayah ordinal (1..6236)"),
         mistakeType: zod
-          .enum(["memorization", "link"])
+          .enum(["memorization", "link", "cleared"])
           .describe(
-            "memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one",
+            "memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one; cleared = user explicitly marked the ayah as recited correctly (mutually exclusive with the two mistake types — adding either side resolves the other on the server)",
           ),
       }),
     )
@@ -908,7 +908,7 @@ export const ListActivePageMistakesResponseItem = zod.object({
   surahNumber: zod.number(),
   ayahNumberInSurah: zod.number(),
   globalAyahNumber: zod.number(),
-  mistakeType: zod.enum(["memorization", "link"]),
+  mistakeType: zod.enum(["memorization", "link", "cleared"]),
 });
 export const ListActivePageMistakesResponse = zod.array(
   ListActivePageMistakesResponseItem,
@@ -926,9 +926,9 @@ export const AddActivePageMistakeBody = zod.object({
   ayahNumberInSurah: zod.number(),
   globalAyahNumber: zod.number().describe("Quran-wide ayah ordinal (1..6236)"),
   mistakeType: zod
-    .enum(["memorization", "link"])
+    .enum(["memorization", "link", "cleared"])
     .describe(
-      "memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one",
+      "memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one; cleared = user explicitly marked the ayah as recited correctly (mutually exclusive with the two mistake types — adding either side resolves the other on the server)",
     ),
 });
 
@@ -936,7 +936,7 @@ export const AddActivePageMistakeResponseItem = zod.object({
   surahNumber: zod.number(),
   ayahNumberInSurah: zod.number(),
   globalAyahNumber: zod.number(),
-  mistakeType: zod.enum(["memorization", "link"]),
+  mistakeType: zod.enum(["memorization", "link", "cleared"]),
 });
 export const AddActivePageMistakeResponse = zod.array(
   AddActivePageMistakeResponseItem,
@@ -951,14 +951,14 @@ export const RemoveActivePageMistakeParams = zod.object({
 
 export const RemoveActivePageMistakeBody = zod.object({
   globalAyahNumber: zod.number(),
-  mistakeType: zod.enum(["memorization", "link"]),
+  mistakeType: zod.enum(["memorization", "link", "cleared"]),
 });
 
 export const RemoveActivePageMistakeResponseItem = zod.object({
   surahNumber: zod.number(),
   ayahNumberInSurah: zod.number(),
   globalAyahNumber: zod.number(),
-  mistakeType: zod.enum(["memorization", "link"]),
+  mistakeType: zod.enum(["memorization", "link", "cleared"]),
 });
 export const RemoveActivePageMistakeResponse = zod.array(
   RemoveActivePageMistakeResponseItem,

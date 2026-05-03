@@ -279,7 +279,9 @@
     "noItems": "No items in this homework session.",
     "updateFailed": "Failed to update page",
     "clearFailed": "Failed to clear page",
-    "clearQuality": "Clear quality"
+    "clearQuality": "Clear quality",
+    "ayahCoverage": "{{done}} / {{total}} ayahs clear",
+    "ayahCoverageTitle": "Ayahs marked clear (no mistakes). Unmarked ayahs do not count."
   },
   "juzList": {
     "title": "Juz Overview",

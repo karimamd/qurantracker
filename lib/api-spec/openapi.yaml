@@ -1135,8 +1135,8 @@ components:
           description: Quran-wide ayah ordinal (1..6236)
         mistakeType:
           type: string
-          enum: [memorization, link]
-          description: "memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one"
+          enum: [memorization, link, cleared]
+          description: "memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one; cleared = user explicitly marked the ayah as recited correctly (mutually exclusive with the two mistake types — adding either side resolves the other on the server)"
       required:
         - surahNumber
         - ayahNumberInSurah
@@ -1185,7 +1185,7 @@ components:
           type: integer
         mistakeType:
           type: string
-          enum: [memorization, link]
+          enum: [memorization, link, cleared]
       required:
         - surahNumber
         - ayahNumberInSurah
@@ -1199,7 +1199,7 @@ components:
           type: integer
         mistakeType:
           type: string
-          enum: [memorization, link]
+          enum: [memorization, link, cleared]
       required:
         - globalAyahNumber
         - mistakeType

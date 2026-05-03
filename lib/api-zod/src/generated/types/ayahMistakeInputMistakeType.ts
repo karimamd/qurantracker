@@ -7,7 +7,7 @@
  */
 
 /**
- * memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one
+ * memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one; cleared = user explicitly marked the ayah as recited correctly (mutually exclusive with the two mistake types — adding either side resolves the other on the server)
  */
 export type AyahMistakeInputMistakeType =
   (typeof AyahMistakeInputMistakeType)[keyof typeof AyahMistakeInputMistakeType];
@@ -15,4 +15,5 @@ export type AyahMistakeInputMistakeType =
 export const AyahMistakeInputMistakeType = {
   memorization: "memorization",
   link: "link",
+  cleared: "cleared",
 } as const;

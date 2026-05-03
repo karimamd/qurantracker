@@ -12,6 +12,6 @@ export interface AyahMistakeInput {
   ayahNumberInSurah: number;
   /** Quran-wide ayah ordinal (1..6236) */
   globalAyahNumber: number;
-  /** memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one */
+  /** memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one; cleared = user explicitly marked the ayah as recited correctly (mutually exclusive with the two mistake types — adding either side resolves the other on the server) */
   mistakeType: AyahMistakeInputMistakeType;
 }

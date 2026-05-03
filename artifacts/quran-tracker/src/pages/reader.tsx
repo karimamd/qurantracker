@@ -171,13 +171,13 @@ export default function Reader() {
     setPageNumber(prev => (prev === n ? prev : n));
   }, [params.page]);
 
-  // Reset reveal progress and transient "cleared" markers on page change.
-  // mistakeAyahs and linkAyahs are NOT reset here — they reflect the
-  // server-persisted active marks and are seeded by the effect below
-  // whenever the active-mistakes query result changes.
+  // Reset only transient UI on page change — reveal progress and the
+  // currently-selected ayah. mistakeAyahs / linkAyahs / clearedAyahs are
+  // ALL server-persisted now and re-seeded by the effect below whenever
+  // the active-mistakes query result changes; resetting them here would
+  // briefly clear the marks before the seed effect re-applies them.
   useEffect(() => {
     setRevealedCount(0);
-    setClearedAyahs(new Set());
     setSelectedAyahShowAll(null);
   }, [pageNumber]);
 
@@ -187,19 +187,24 @@ export default function Reader() {
     if (hideMode) setSelectedAyahShowAll(null);
   }, [hideMode]);
 
-  // Seed mistake/link marks from the server's persisted "active" set so they
-  // remain visible across navigation, refresh, and even fresh sessions until
-  // the user explicitly reverses them in the reader.
+  // Seed mistake / link / cleared marks from the server's persisted "active"
+  // set so they remain visible across navigation, refresh, and even fresh
+  // sessions until the user explicitly reverses them in the reader. The
+  // server enforces that cleared is mutually exclusive with memorization /
+  // link on the same ayah, so the three sets here will never overlap.
   useEffect(() => {
     if (!activeMistakes) return;
     const m = new Set<number>();
     const l = new Set<number>();
+    const c = new Set<number>();
     for (const am of activeMistakes as ActiveAyahMistake[]) {
       if (am.mistakeType === "memorization") m.add(am.globalAyahNumber);
       else if (am.mistakeType === "link") l.add(am.globalAyahNumber);
+      else if (am.mistakeType === "cleared") c.add(am.globalAyahNumber);
     }
     setMistakeAyahs(m);
     setLinkAyahs(l);
+    setClearedAyahs(c);
   }, [activeMistakes]);
 
   // Apply ?practice=<globalAyahNumber> — auto-enter hide-mode at the target ayah and scroll to it.
@@ -212,8 +217,7 @@ export default function Reader() {
     practiceAppliedRef.current = key;
     setHideMode(true);
     setRevealedCount(idx); // hide the target so the user can practice predicting it
-    // Don't reset mistakeAyahs/linkAyahs — they reflect persisted active marks.
-    setClearedAyahs(new Set());
+    // Don't reset mistake / link / cleared sets — all three are persisted.
     // Scroll the target placeholder/highlight into view shortly after render
     setTimeout(() => {
       const el = document.querySelector(
@@ -347,14 +351,8 @@ export default function Reader() {
           });
           invalidateProgressData();
           queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
-          // Clear only transient cleared markers; mistake/link marks remain
+          // mistake / link / cleared marks are all persistent now and stay
           // visible until the user explicitly reverses them in the reader.
-          setPageNumber(currentPage => {
-            if (currentPage === targetPage) {
-              setClearedAyahs(new Set());
-            }
-            return currentPage;
-          });
         },
         onError: () => toast({ title: t("reader.recordFailed"), variant: "destructive" }),
       }
@@ -364,7 +362,6 @@ export default function Reader() {
   const startHideMode = () => {
     setHideMode(true);
     setRevealedCount(0);
-    setClearedAyahs(new Set());
   };
 
   const showAllAyahs = () => {
@@ -377,7 +374,6 @@ export default function Reader() {
 
   const resetPractice = () => {
     setRevealedCount(0);
-    setClearedAyahs(new Set());
   };
 
   // Find the ayah's surah/numberInSurah from the loaded page so the server
@@ -390,11 +386,17 @@ export default function Reader() {
 
   const persistAdd = (
     globalAyahNumber: number,
-    mistakeType: "memorization" | "link",
+    mistakeType: "memorization" | "link" | "cleared",
   ) => {
     const meta = ayahMeta(globalAyahNumber);
     if (!meta) return;
     const targetPage = pageNumber;
+    // Cancel any in-flight active-mistakes GET for this page so a slow
+    // pre-mutation fetch can't resolve later and overwrite our optimistic
+    // (and soon-to-be-authoritative) cache write with stale data. The
+    // setQueryData in onSuccess will then be the next thing the seed
+    // effect sees.
+    queryClient.cancelQueries({ queryKey: getListActivePageMistakesQueryKey(targetPage) });
     addActiveMistake.mutate(
       {
         pageNumber: targetPage,
@@ -419,8 +421,15 @@ export default function Reader() {
               n.delete(globalAyahNumber);
               return n;
             });
-          } else {
+          } else if (mistakeType === "link") {
             setLinkAyahs(prev => {
+              const n = new Set(prev);
+              n.delete(globalAyahNumber);
+              return n;
+            });
+          } else {
+            // mistakeType === "cleared"
+            setClearedAyahs(prev => {
               const n = new Set(prev);
               n.delete(globalAyahNumber);
               return n;
@@ -434,10 +443,13 @@ export default function Reader() {
 
   const persistRemove = (
     globalAyahNumber: number,
-    mistakeType: "memorization" | "link",
+    mistakeType: "memorization" | "link" | "cleared",
     rollback: () => void,
   ) => {
     const targetPage = pageNumber;
+    // Same rationale as persistAdd: cancel pre-mutation in-flight GETs so
+    // they can't overwrite the authoritative onSuccess cache write.
+    queryClient.cancelQueries({ queryKey: getListActivePageMistakesQueryKey(targetPage) });
     removeActiveMistake.mutate(
       {
         pageNumber: targetPage,
@@ -477,50 +489,51 @@ export default function Reader() {
         n.add(ayahNumber);
         return n;
       });
+      // Adding a link mistake supersedes any prior "cleared" tick on this
+      // ayah; mirror the server's auto-resolve in local state so the UI
+      // updates instantly without waiting for the next refetch.
+      setClearedAyahs(prev => {
+        if (!prev.has(ayahNumber)) return prev;
+        const n = new Set(prev);
+        n.delete(ayahNumber);
+        return n;
+      });
       persistAdd(ayahNumber, "link");
     }
   };
 
   const handleAyahMark = (ayahNumber: number, mark: "clear" | "mistake", isLatest: boolean) => {
     if (mark === "clear") {
-      // The tick acts as a positive overwrite for this ayah: it clears any
-      // previous X (memorization) mark AND any previous link mark, so the
-      // ayah disappears from the Mistakes page in either case.
+      // The tick is a positive overwrite for this ayah: it persists a
+      // "cleared" mark and the server atomically resolves any active
+      // memorization / link mistakes for the same ayah inside the same
+      // transaction. We only need to call persistAdd("cleared") — the
+      // single response refreshes the active-mistakes cache, which the
+      // seed effect above turns into the final source of truth for the
+      // mistake / link / cleared sets.
+      const wasCleared = clearedAyahs.has(ayahNumber);
+      // Optimistically reflect the new state immediately for snappy UI;
+      // the seed effect will reconcile to the server's authoritative set.
       setClearedAyahs(prev => {
         const next = new Set(prev);
         next.add(ayahNumber);
         return next;
       });
-      const wasMistake = mistakeAyahs.has(ayahNumber);
-      if (wasMistake) {
-        setMistakeAyahs(prev => {
-          const next = new Set(prev);
-          next.delete(ayahNumber);
-          return next;
-        });
-        persistRemove(ayahNumber, "memorization", () => {
-          setMistakeAyahs(prev => {
-            const next = new Set(prev);
-            next.add(ayahNumber);
-            return next;
-          });
-        });
-      }
-      const wasLink = linkAyahs.has(ayahNumber);
-      if (wasLink) {
-        setLinkAyahs(prev => {
-          const next = new Set(prev);
-          next.delete(ayahNumber);
-          return next;
-        });
-        persistRemove(ayahNumber, "link", () => {
-          setLinkAyahs(prev => {
-            const next = new Set(prev);
-            next.add(ayahNumber);
-            return next;
-          });
-        });
-      }
+      setMistakeAyahs(prev => {
+        if (!prev.has(ayahNumber)) return prev;
+        const next = new Set(prev);
+        next.delete(ayahNumber);
+        return next;
+      });
+      setLinkAyahs(prev => {
+        if (!prev.has(ayahNumber)) return prev;
+        const next = new Set(prev);
+        next.delete(ayahNumber);
+        return next;
+      });
+      // Skip the network round-trip when the ayah was already cleared on
+      // the server — re-posting would be a no-op anyway.
+      if (!wasCleared) persistAdd(ayahNumber, "cleared");
     } else {
       const wasMistake = mistakeAyahs.has(ayahNumber);
       if (!wasMistake) {
@@ -531,6 +544,8 @@ export default function Reader() {
         });
         persistAdd(ayahNumber, "memorization");
       }
+      // Adding a memorization mistake supersedes any prior "cleared" tick
+      // on this ayah — mirror the server's auto-resolve locally.
       setClearedAyahs(prev => {
         if (!prev.has(ayahNumber)) return prev;
         const next = new Set(prev);

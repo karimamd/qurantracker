@@ -12,4 +12,5 @@ export type RemoveActiveMistakeBodyMistakeType =
 export const RemoveActiveMistakeBodyMistakeType = {
   memorization: "memorization",
   link: "link",
+  cleared: "cleared",
 } as const;

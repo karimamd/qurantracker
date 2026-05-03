@@ -299,7 +299,9 @@
     "noItems": "لا توجد عناصر في جلسة الواجب هذه.",
     "updateFailed": "فشل تحديث الصفحة",
     "clearFailed": "فشل مسح الصفحة",
-    "clearQuality": "مسح التقييم"
+    "clearQuality": "مسح التقييم",
+    "ayahCoverage": "{{done}} / {{total}} آية صحيحة",
+    "ayahCoverageTitle": "الآيات الموسومة كصحيحة (بدون أخطاء). الآيات غير الموسومة لا تُحتسب."
   },
   "juzList": {
     "title": "نظرة عامّة على الأجزاء",
