@@ -540,13 +540,39 @@ export default function Reader() {
           <h2 className="text-2xl font-semibold">{t("reader.title")}</h2>
           <p className="text-sm text-muted-foreground mt-1">{t("reader.subtitle")}</p>
         </div>
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm" data-testid="btn-open-jump">
-              <BookMarked className="w-4 h-4 me-1.5" />
-              {t("reader.jumpToSurah")}
-            </Button>
-          </SheetTrigger>
+        <div className="flex items-center gap-2 flex-wrap justify-end ms-auto">
+          {ayahs && !ayahsError ? (
+            !hideMode ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={startHideMode}
+                data-testid="btn-hide-all"
+              >
+                <EyeOff className="w-4 h-4 me-1.5" />
+                {t("reader.hideAll")}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={showAllAyahs}
+                data-testid="btn-show-all"
+              >
+                <Eye className="w-4 h-4 me-1.5" />
+                {t("reader.showAll")}
+              </Button>
+            )
+          ) : null}
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="btn-open-jump">
+                <BookMarked className="w-4 h-4 me-1.5" />
+                {t("reader.jumpToSurah")}
+              </Button>
+            </SheetTrigger>
           <SheetContent side="right" className="w-full sm:max-w-md flex flex-col gap-0 p-0">
             <SheetHeader className="p-4 border-b shrink-0">
               <SheetTitle>{t("reader.jumpToSurah")}</SheetTitle>
@@ -623,12 +649,45 @@ export default function Reader() {
               )}
             </div>
           </SheetContent>
-        </Sheet>
+          </Sheet>
+        </div>
       </div>
 
       <Card className="border shadow-sm">
         <CardContent className="px-3 py-2 flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
+            {/* Compact prev/next pair so the user can change pages from the
+                top of the reader without scrolling down to the bottom nav.
+                Mirrors the bottom buttons: in RTL Quran flow, Next sits on
+                the left (lower-numbered chevron) and Previous on the right. */}
+            <div className="flex items-center gap-0.5 shrink-0" data-testid="reader-top-nav">
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => goToPage(pageNumber + 1)}
+                disabled={pageNumber >= TOTAL_PAGES}
+                className="h-7 w-7"
+                aria-label={t("reader.next")}
+                title={t("reader.next")}
+                data-testid="btn-top-next-page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => goToPage(pageNumber - 1)}
+                disabled={pageNumber <= 1}
+                className="h-7 w-7"
+                aria-label={t("reader.previous")}
+                title={t("reader.previous")}
+                data-testid="btn-top-prev-page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
             <div className="text-base font-semibold tabular-nums shrink-0" data-testid="reader-current-page">
               {pageNumber}
               <span className="text-xs font-normal text-muted-foreground"> / {TOTAL_PAGES}</span>
@@ -689,32 +748,11 @@ export default function Reader() {
       </Card>
 
       <Card className="border shadow-sm overflow-hidden">
-        {ayahs && !ayahsError && (
+        {ayahs && !ayahsError && (hideMode || mistakeAyahs.size > 0 || linkAyahs.size > 0) && (
           <div className="border-b bg-background px-3 py-2 flex items-center justify-between gap-2 flex-wrap" data-testid="reader-practice-toolbar">
             <div className="flex items-center gap-2 flex-wrap">
-              {!hideMode ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={startHideMode}
-                  data-testid="btn-hide-all"
-                >
-                  <EyeOff className="w-4 h-4 me-1.5" />
-                  {t("reader.hideAll")}
-                </Button>
-              ) : (
+              {hideMode && (
                 <>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={showAllAyahs}
-                    data-testid="btn-show-all"
-                  >
-                    <Eye className="w-4 h-4 me-1.5" />
-                    {t("reader.showAll")}
-                  </Button>
                   <Button
                     type="button"
                     size="sm"
