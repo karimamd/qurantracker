@@ -497,6 +497,24 @@ export interface ActivityEntry {
   recitedAt: string;
 }
 
+/**
+ * The user's currently active Khatmah (full 604-page rotation).
+ */
+export interface TelawaKhatmah {
+  id: number;
+  /**
+   * Page number this Khatmah started from.
+   * @minimum 1
+   * @maximum 604
+   */
+  startPage: number;
+  /** 1-based ordinal across the user's Khatmahs. */
+  cycleNumber: number;
+  startedAt: string;
+  /** Number of pages read so far in this Khatmah (0..604). */
+  readsInKhatmah: number;
+}
+
 export interface TelawaReadEntry {
   id: number;
   pageNumber: number;
@@ -508,21 +526,31 @@ export interface TelawaToday {
   pagesPerDay: number;
   /** Next page number in the rotation cursor (1..604) */
   nextPage: number;
-  /** Current cycle number (1-based). Increments after page 604 is read. */
+  /** Current Khatmah's cycle number (1-based per user). */
   cycleNumber: number;
   /** Total Telawa reads ever recorded for the user. */
   totalRead: number;
   /** Number of Telawa reads recorded since the start of today (UTC). */
   readToday: number;
+  khatmah: TelawaKhatmah;
   /** Next pagesPerDay pages to read, starting from the cursor and wrapping at 604. */
   upcomingPages: number[];
   /** Pages read today (most recent first), for display only. */
   recentReads: TelawaReadEntry[];
 }
 
+export interface StartKhatmahBody {
+  /**
+   * Page number (1..604) to start the new Khatmah from.
+   * @minimum 1
+   * @maximum 604
+   */
+  startPage: number;
+}
+
 export interface RecordTelawaReadBody {
   /**
-   * Must equal the current cursor (TelawaToday.nextPage).
+   * Page number (1..604). Reads can be recorded out of order.
    * @minimum 1
    * @maximum 604
    */

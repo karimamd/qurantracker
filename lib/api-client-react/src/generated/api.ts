@@ -45,6 +45,7 @@ import type {
   Rob3ProgressItem,
   ScopeBody,
   Settings,
+  StartKhatmahBody,
   SurahDetail,
   SurahProgress,
   TelawaStats,
@@ -2821,6 +2822,98 @@ export const useUndoTelawaRead = <
   TContext
 > => {
   return useMutation(getUndoTelawaReadMutationOptions(options));
+};
+
+/**
+ * Begins a new Khatmah (a full 604-page rotation) starting from the
+chosen page. The recurring Telawa rotation continues from this page
+and wraps at 604 → 1. If the active Khatmah has zero reads, its start
+page is updated in place; otherwise it is closed and a new Khatmah is
+opened.
+
+ * @summary Start a new Khatmah from any page
+ */
+export const getStartKhatmahUrl = () => {
+  return `/api/telawa/khatmah`;
+};
+
+export const startKhatmah = async (
+  startKhatmahBody: StartKhatmahBody,
+  options?: RequestInit,
+): Promise<TelawaToday> => {
+  return customFetch<TelawaToday>(getStartKhatmahUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(startKhatmahBody),
+  });
+};
+
+export const getStartKhatmahMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startKhatmah>>,
+    TError,
+    { data: BodyType<StartKhatmahBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startKhatmah>>,
+  TError,
+  { data: BodyType<StartKhatmahBody> },
+  TContext
+> => {
+  const mutationKey = ["startKhatmah"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startKhatmah>>,
+    { data: BodyType<StartKhatmahBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return startKhatmah(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartKhatmahMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startKhatmah>>
+>;
+export type StartKhatmahMutationBody = BodyType<StartKhatmahBody>;
+export type StartKhatmahMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Start a new Khatmah from any page
+ */
+export const useStartKhatmah = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startKhatmah>>,
+    TError,
+    { data: BodyType<StartKhatmahBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof startKhatmah>>,
+  TError,
+  { data: BodyType<StartKhatmahBody> },
+  TContext
+> => {
+  return useMutation(getStartKhatmahMutationOptions(options));
 };
 
 /**

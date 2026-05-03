@@ -7,11 +7,15 @@ export const telawaLogTable = pgTable("telawa_log", {
   userId: text("user_id"),
   pageNumber: integer("page_number").notNull(),
   cycleNumber: integer("cycle_number").notNull().default(1),
+  // Nullable for backwards compatibility with rows recorded before
+  // the Khatmah model existed; backfilled lazily on first read.
+  khatmahId: integer("khatmah_id"),
   readAt: timestamp("read_at", { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   userIdx: index("telawa_log_user_idx").on(table.userId),
   userReadIdx: index("telawa_log_user_read_idx").on(table.userId, table.readAt),
+  khatmahIdx: index("telawa_log_khatmah_idx").on(table.khatmahId),
 }));
 
 export const insertTelawaLogSchema = createInsertSchema(telawaLogTable).omit({ id: true, createdAt: true });

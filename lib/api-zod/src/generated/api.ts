@@ -1084,6 +1084,8 @@ export const UndoRecitationResponse = zod.object({
 /**
  * @summary Get today's Telawa batch and rotation cursor
  */
+export const getTelawaTodayResponseKhatmahStartPageMax = 604;
+
 export const GetTelawaTodayResponse = zod.object({
   pagesPerDay: zod.number(),
   nextPage: zod
@@ -1091,9 +1093,7 @@ export const GetTelawaTodayResponse = zod.object({
     .describe("Next page number in the rotation cursor (1..604)"),
   cycleNumber: zod
     .number()
-    .describe(
-      "Current cycle number (1-based). Increments after page 604 is read.",
-    ),
+    .describe("Current Khatmah's cycle number (1-based per user)."),
   totalRead: zod
     .number()
     .describe("Total Telawa reads ever recorded for the user."),
@@ -1102,6 +1102,23 @@ export const GetTelawaTodayResponse = zod.object({
     .describe(
       "Number of Telawa reads recorded since the start of today (UTC).",
     ),
+  khatmah: zod
+    .object({
+      id: zod.number(),
+      startPage: zod
+        .number()
+        .min(1)
+        .max(getTelawaTodayResponseKhatmahStartPageMax)
+        .describe("Page number this Khatmah started from."),
+      cycleNumber: zod
+        .number()
+        .describe("1-based ordinal across the user's Khatmahs."),
+      startedAt: zod.coerce.date(),
+      readsInKhatmah: zod
+        .number()
+        .describe("Number of pages read so far in this Khatmah (0..604)."),
+    })
+    .describe("The user's currently active Khatmah (full 604-page rotation)."),
   upcomingPages: zod
     .array(zod.number())
     .describe(
@@ -1133,8 +1150,10 @@ export const RecordTelawaReadBody = zod.object({
     .number()
     .min(1)
     .max(recordTelawaReadBodyPageNumberMax)
-    .describe("Must equal the current cursor (TelawaToday.nextPage)."),
+    .describe("Page number (1..604). Reads can be recorded out of order."),
 });
+
+export const recordTelawaReadResponseKhatmahStartPageMax = 604;
 
 export const RecordTelawaReadResponse = zod.object({
   pagesPerDay: zod.number(),
@@ -1143,9 +1162,7 @@ export const RecordTelawaReadResponse = zod.object({
     .describe("Next page number in the rotation cursor (1..604)"),
   cycleNumber: zod
     .number()
-    .describe(
-      "Current cycle number (1-based). Increments after page 604 is read.",
-    ),
+    .describe("Current Khatmah's cycle number (1-based per user)."),
   totalRead: zod
     .number()
     .describe("Total Telawa reads ever recorded for the user."),
@@ -1154,6 +1171,23 @@ export const RecordTelawaReadResponse = zod.object({
     .describe(
       "Number of Telawa reads recorded since the start of today (UTC).",
     ),
+  khatmah: zod
+    .object({
+      id: zod.number(),
+      startPage: zod
+        .number()
+        .min(1)
+        .max(recordTelawaReadResponseKhatmahStartPageMax)
+        .describe("Page number this Khatmah started from."),
+      cycleNumber: zod
+        .number()
+        .describe("1-based ordinal across the user's Khatmahs."),
+      startedAt: zod.coerce.date(),
+      readsInKhatmah: zod
+        .number()
+        .describe("Number of pages read so far in this Khatmah (0..604)."),
+    })
+    .describe("The user's currently active Khatmah (full 604-page rotation)."),
   upcomingPages: zod
     .array(zod.number())
     .describe(
@@ -1174,6 +1208,8 @@ export const RecordTelawaReadResponse = zod.object({
 /**
  * @summary Undo the most recent Telawa read entry
  */
+export const undoTelawaReadResponseKhatmahStartPageMax = 604;
+
 export const UndoTelawaReadResponse = zod.object({
   pagesPerDay: zod.number(),
   nextPage: zod
@@ -1181,9 +1217,7 @@ export const UndoTelawaReadResponse = zod.object({
     .describe("Next page number in the rotation cursor (1..604)"),
   cycleNumber: zod
     .number()
-    .describe(
-      "Current cycle number (1-based). Increments after page 604 is read.",
-    ),
+    .describe("Current Khatmah's cycle number (1-based per user)."),
   totalRead: zod
     .number()
     .describe("Total Telawa reads ever recorded for the user."),
@@ -1192,6 +1226,94 @@ export const UndoTelawaReadResponse = zod.object({
     .describe(
       "Number of Telawa reads recorded since the start of today (UTC).",
     ),
+  khatmah: zod
+    .object({
+      id: zod.number(),
+      startPage: zod
+        .number()
+        .min(1)
+        .max(undoTelawaReadResponseKhatmahStartPageMax)
+        .describe("Page number this Khatmah started from."),
+      cycleNumber: zod
+        .number()
+        .describe("1-based ordinal across the user's Khatmahs."),
+      startedAt: zod.coerce.date(),
+      readsInKhatmah: zod
+        .number()
+        .describe("Number of pages read so far in this Khatmah (0..604)."),
+    })
+    .describe("The user's currently active Khatmah (full 604-page rotation)."),
+  upcomingPages: zod
+    .array(zod.number())
+    .describe(
+      "Next pagesPerDay pages to read, starting from the cursor and wrapping at 604.",
+    ),
+  recentReads: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        pageNumber: zod.number(),
+        cycleNumber: zod.number(),
+        readAt: zod.coerce.date(),
+      }),
+    )
+    .describe("Pages read today (most recent first), for display only."),
+});
+
+/**
+ * Begins a new Khatmah (a full 604-page rotation) starting from the
+chosen page. The recurring Telawa rotation continues from this page
+and wraps at 604 → 1. If the active Khatmah has zero reads, its start
+page is updated in place; otherwise it is closed and a new Khatmah is
+opened.
+
+ * @summary Start a new Khatmah from any page
+ */
+export const startKhatmahBodyStartPageMax = 604;
+
+export const StartKhatmahBody = zod.object({
+  startPage: zod
+    .number()
+    .min(1)
+    .max(startKhatmahBodyStartPageMax)
+    .describe("Page number (1..604) to start the new Khatmah from."),
+});
+
+export const startKhatmahResponseKhatmahStartPageMax = 604;
+
+export const StartKhatmahResponse = zod.object({
+  pagesPerDay: zod.number(),
+  nextPage: zod
+    .number()
+    .describe("Next page number in the rotation cursor (1..604)"),
+  cycleNumber: zod
+    .number()
+    .describe("Current Khatmah's cycle number (1-based per user)."),
+  totalRead: zod
+    .number()
+    .describe("Total Telawa reads ever recorded for the user."),
+  readToday: zod
+    .number()
+    .describe(
+      "Number of Telawa reads recorded since the start of today (UTC).",
+    ),
+  khatmah: zod
+    .object({
+      id: zod.number(),
+      startPage: zod
+        .number()
+        .min(1)
+        .max(startKhatmahResponseKhatmahStartPageMax)
+        .describe("Page number this Khatmah started from."),
+      cycleNumber: zod
+        .number()
+        .describe("1-based ordinal across the user's Khatmahs."),
+      startedAt: zod.coerce.date(),
+      readsInKhatmah: zod
+        .number()
+        .describe("Number of pages read so far in this Khatmah (0..604)."),
+    })
+    .describe("The user's currently active Khatmah (full 604-page rotation)."),
   upcomingPages: zod
     .array(zod.number())
     .describe(

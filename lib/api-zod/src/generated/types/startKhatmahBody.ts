@@ -6,11 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface RecordTelawaReadBody {
+export interface StartKhatmahBody {
   /**
-   * Page number (1..604). Reads can be recorded out of order.
+   * Page number (1..604) to start the new Khatmah from.
    * @minimum 1
    * @maximum 604
    */
-  pageNumber: number;
+  startPage: number;
 }

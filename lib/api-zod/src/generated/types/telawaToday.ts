@@ -5,18 +5,20 @@
  * Quran Memorization Tracker API
  * OpenAPI spec version: 0.1.0
  */
+import type { TelawaKhatmah } from "./telawaKhatmah";
 import type { TelawaReadEntry } from "./telawaReadEntry";
 
 export interface TelawaToday {
   pagesPerDay: number;
   /** Next page number in the rotation cursor (1..604) */
   nextPage: number;
-  /** Current cycle number (1-based). Increments after page 604 is read. */
+  /** Current Khatmah's cycle number (1-based per user). */
   cycleNumber: number;
   /** Total Telawa reads ever recorded for the user. */
   totalRead: number;
   /** Number of Telawa reads recorded since the start of today (UTC). */
   readToday: number;
+  khatmah: TelawaKhatmah;
   /** Next pagesPerDay pages to read, starting from the cursor and wrapping at 604. */
   upcomingPages: number[];
   /** Pages read today (most recent first), for display only. */

@@ -5,6 +5,7 @@ import {
   useAddActivePageMistake,
   useRemoveActivePageMistake,
   useRecordTelawaRead,
+  useStartKhatmah,
   getGetTelawaTodayQueryKey,
   getGetTelawaStatsQueryKey,
   getListPageProgressQueryKey,
@@ -30,7 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
@@ -95,19 +96,38 @@ export default function Reader() {
   const addActiveMistake = useAddActivePageMistake();
   const removeActiveMistake = useRemoveActivePageMistake();
   const recordTelawaRead = useRecordTelawaRead();
+  const startKhatmah = useStartKhatmah();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const invalidateTelawa = () => {
+    queryClient.invalidateQueries({ queryKey: getGetTelawaTodayQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetTelawaStatsQueryKey() });
+  };
 
   const handleMarkTelawa = () => {
     recordTelawaRead.mutate(
       { data: { pageNumber } },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getGetTelawaTodayQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getGetTelawaStatsQueryKey() });
+          invalidateTelawa();
           toast({ title: t("reader.telawaMarked", { page: pageNumber }) });
         },
         onError: () => toast({ title: t("telawa.recordFailed"), variant: "destructive" }),
+      },
+    );
+  };
+
+  const handleStartKhatmahHere = () => {
+    startKhatmah.mutate(
+      { data: { startPage: pageNumber } },
+      {
+        onSuccess: () => {
+          invalidateTelawa();
+          toast({ title: t("reader.khatmahStarted", { page: pageNumber }) });
+        },
+        onError: () =>
+          toast({ title: t("telawa.khatmah.startFailed"), variant: "destructive" }),
       },
     );
   };
@@ -623,6 +643,19 @@ export default function Reader() {
             >
               <Repeat className="w-3.5 h-3.5 me-1" />
               {t("reader.markTelawa")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={handleStartKhatmahHere}
+              disabled={startKhatmah.isPending}
+              data-testid="reader-start-khatmah"
+              title={t("reader.startKhatmahTitle")}
+              className="h-7 px-2 text-xs text-primary hover:bg-primary/10"
+            >
+              <Sparkles className="w-3.5 h-3.5 me-1" />
+              {t("reader.startKhatmah")}
             </Button>
           </div>
         </CardContent>

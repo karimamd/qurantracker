@@ -191,6 +191,20 @@
       "totalDesc": "Pages read across all cycles"
     },
     "openInReader": "Open in reader",
+    "khatmah": {
+      "startNew": "Start new Khatmah",
+      "starting": "Starting...",
+      "confirm": "Start Khatmah",
+      "cancel": "Cancel",
+      "dialogTitle": "Start a new Khatmah",
+      "dialogDescription": "A Khatmah is a full reading of all 604 pages. Pick where to start — the Telawa rotation will continue from there and wrap back to page 1 after 604.",
+      "startPageLabel": "Start from page",
+      "startPageHint": "Any page from 1 to 604.",
+      "started": "New Khatmah started from page {{page}}",
+      "startFailed": "Could not start a new Khatmah",
+      "invalidPage": "Pick a page between 1 and 604",
+      "bannerTitle": "Khatmah {{cycle}} · started from page {{start}}"
+    },
     "todayPlan": {
       "title": "Today's pages",
       "description": "Tap any page to open it in the reader, or tap Read to log it. Order is flexible.",
@@ -389,6 +403,9 @@
     "markTelawa": "Mark Telawa",
     "markTelawaTitle": "Record this page as read in the Telawa rotation",
     "telawaMarked": "Page {{page}} recorded as Telawa read",
+    "startKhatmah": "Start Khatmah here",
+    "startKhatmahTitle": "Begin a new Khatmah (full 604-page rotation) starting from this page",
+    "khatmahStarted": "New Khatmah started from page {{page}}",
     "revealed_one": "{{count}} / {{total}} ayah revealed",
     "revealed_other": "{{count}} / {{total}} ayahs revealed",
     "mistakes_one": "{{count}} mistake",

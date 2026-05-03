@@ -3,19 +3,31 @@ import {
   useRecordTelawaRead,
   useUndoTelawaRead,
   useGetTelawaStats,
+  useStartKhatmah,
   getGetTelawaTodayQueryKey,
   getGetTelawaStatsQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { PageLabel } from "@/components/page-label";
-import { BookOpen, Check, Undo2, RotateCcw, CheckCircle, Repeat, ExternalLink } from "lucide-react";
+import { BookOpen, Check, Undo2, RotateCcw, CheckCircle, Repeat, ExternalLink, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
+import { useState } from "react";
 import {
   BarChart,
   Bar,
@@ -34,10 +46,33 @@ export default function TelawaPage() {
   const { data: stats } = useGetTelawaStats();
   const recordRead = useRecordTelawaRead();
   const undoRead = useUndoTelawaRead();
+  const startKhatmah = useStartKhatmah();
+  const [khatmahDialogOpen, setKhatmahDialogOpen] = useState(false);
+  const [khatmahStartPage, setKhatmahStartPage] = useState<string>("1");
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetTelawaTodayQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetTelawaStatsQueryKey() });
+  };
+
+  const handleStartKhatmah = () => {
+    const n = parseInt(khatmahStartPage, 10);
+    if (!Number.isFinite(n) || n < 1 || n > 604) {
+      toast({ title: t("telawa.khatmah.invalidPage"), variant: "destructive" });
+      return;
+    }
+    startKhatmah.mutate(
+      { data: { startPage: n } },
+      {
+        onSuccess: () => {
+          invalidate();
+          setKhatmahDialogOpen(false);
+          toast({ title: t("telawa.khatmah.started", { page: n }) });
+        },
+        onError: () =>
+          toast({ title: t("telawa.khatmah.startFailed"), variant: "destructive" }),
+      },
+    );
   };
 
   const handleRead = (pageNumber: number) => {
@@ -83,7 +118,7 @@ export default function TelawaPage() {
 
   return (
     <div className="space-y-5 max-w-3xl" data-testid="telawa-page">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-2xl font-semibold flex items-center gap-2">
             <Repeat className="w-6 h-6 text-primary" />
@@ -91,7 +126,95 @@ export default function TelawaPage() {
           </h2>
           <p className="text-sm text-muted-foreground mt-1">{t("telawa.subtitle")}</p>
         </div>
+        <Dialog
+          open={khatmahDialogOpen}
+          onOpenChange={(open) => {
+            setKhatmahDialogOpen(open);
+            if (open) setKhatmahStartPage(String(today.khatmah.startPage));
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-primary/40 text-primary hover:bg-primary/10"
+              data-testid="telawa-start-khatmah"
+            >
+              <Sparkles className="w-4 h-4 me-1.5" />
+              {t("telawa.khatmah.startNew")}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("telawa.khatmah.dialogTitle")}</DialogTitle>
+              <DialogDescription>{t("telawa.khatmah.dialogDescription")}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="khatmah-start-page">
+                {t("telawa.khatmah.startPageLabel")}
+              </label>
+              <Input
+                id="khatmah-start-page"
+                type="number"
+                min={1}
+                max={604}
+                value={khatmahStartPage}
+                onChange={(e) => setKhatmahStartPage(e.target.value)}
+                data-testid="telawa-khatmah-page-input"
+              />
+              <p className="text-xs text-muted-foreground">
+                {t("telawa.khatmah.startPageHint")}
+              </p>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => setKhatmahDialogOpen(false)}
+                data-testid="telawa-khatmah-cancel"
+              >
+                {t("telawa.khatmah.cancel")}
+              </Button>
+              <Button
+                onClick={handleStartKhatmah}
+                disabled={startKhatmah.isPending}
+                data-testid="telawa-khatmah-confirm"
+              >
+                <Sparkles className="w-4 h-4 me-1.5" />
+                {startKhatmah.isPending
+                  ? t("telawa.khatmah.starting")
+                  : t("telawa.khatmah.confirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
+
+      <Card className="border shadow-sm" data-testid="telawa-khatmah-banner">
+        <CardContent className="py-3 px-4 flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-sm">
+            <Sparkles className="w-4 h-4 text-primary shrink-0" />
+            <span className="font-medium">
+              {t("telawa.khatmah.bannerTitle", {
+                cycle: today.khatmah.cycleNumber,
+                start: today.khatmah.startPage,
+              })}
+            </span>
+          </div>
+          <div className="flex-1 min-w-[140px] flex items-center gap-2">
+            <div className="h-1.5 bg-muted rounded-full flex-1 overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{
+                  width: `${Math.min(100, Math.round((today.khatmah.readsInKhatmah / 604) * 100))}%`,
+                }}
+              />
+            </div>
+            <span className="text-xs tabular-nums text-muted-foreground" data-testid="telawa-khatmah-progress">
+              {today.khatmah.readsInKhatmah} / 604
+            </span>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="border shadow-sm" data-testid="telawa-stat-today">
