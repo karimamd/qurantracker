@@ -1061,13 +1061,16 @@ export default function Reader() {
                       return (
                         <span
                           key={a.number}
-                          className={
-                            isMistake
-                              ? "text-rose-600 dark:text-rose-400"
-                              : isLatest || isSelectedShowAll
+                          className={[
+                            // Mistake colours the text red…
+                            isMistake ? "text-rose-600 dark:text-rose-400" : "",
+                            // …but the selected/latest highlight is a
+                            // background+ring effect, so it must compose
+                            // with the red text instead of replacing it.
+                            isLatest || isSelectedShowAll
                               ? "bg-amber-200/80 dark:bg-amber-400/30 ring-1 ring-amber-400/70 dark:ring-amber-300/50 rounded px-1 py-0.5"
-                              : ""
-                          }
+                              : "",
+                          ].filter(Boolean).join(" ")}
                           data-testid={`reader-ayah-${a.number}`}
                           data-selected={isSelectedShowAll ? "true" : undefined}
                           style={isLink ? { textDecoration: "underline wavy", textDecorationColor: "#d97706", textDecorationThickness: "2px" } : undefined}
