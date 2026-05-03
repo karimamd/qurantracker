@@ -539,7 +539,9 @@
     "clearFailed": "Failed to clear page",
     "clearQuality": "Clear quality",
     "ayahCoverage": "{{done}} / {{total}} ayahs clear",
-    "ayahCoverageTitle": "Ayahs marked clear (no mistakes). Unmarked ayahs do not count."
+    "ayahCoverageTitle": "Ayahs marked clear (no mistakes). Unmarked ayahs do not count.",
+    "pagesProgress": "{{done}} / {{total}} pages done",
+    "pagesProgressTitle": "Pages with a recorded recitation quality in this homework, out of the total pages in it."
   },
   "juzList": {
     "title": "Juz Overview",

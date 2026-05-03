@@ -261,8 +261,11 @@ export default function HomeworkDetail() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 flex-wrap">
             {label}
-            <span className="font-normal text-sm text-muted-foreground">
-              {doneCount}/{items.length}
+            <span
+              className="font-normal text-sm text-muted-foreground"
+              title={t("homework.pagesProgressTitle")}
+            >
+              {t("homework.pagesProgress", { done: doneCount, total: items.length })}
               {needsWorkCount > 0 && (
                 <span className="ms-1 text-amber-600">· {t("homework.needsWork", { count: needsWorkCount })}</span>
               )}

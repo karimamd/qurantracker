@@ -169,8 +169,12 @@ export default function HomeworkList() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Progress value={pct} className="flex-1 h-2" />
-                    <span className="text-xs text-muted-foreground w-16 text-right">
-                      {session.completedItems}/{session.totalItems}
+                    <span
+                      className="text-xs text-muted-foreground whitespace-nowrap"
+                      title={t("homework.pagesProgressTitle")}
+                      data-testid={`hw-session-pages-progress-${session.id}`}
+                    >
+                      {t("homework.pagesProgress", { done: session.completedItems, total: session.totalItems })}
                     </span>
                   </div>
                 </CardContent>
