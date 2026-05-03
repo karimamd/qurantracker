@@ -112,6 +112,28 @@ export default function PageList() {
     );
   };
 
+  // Per-row scope toggle so users can add/remove a single page from scope
+  // without going through the multi-select + bulk action bar flow. The same
+  // mutations (`useAddToScope` / `useRemoveFromScope`) back both paths so
+  // the optimistic state and cache invalidation remain consistent.
+  const handleSinglePageScope = (pageNumber: number, currentlyInScope: boolean) => {
+    const mutation = currentlyInScope ? removeFromScope : addToScope;
+    mutation.mutate(
+      { data: { pageNumbers: [pageNumber] } },
+      {
+        onSuccess: () => {
+          toast({
+            title: currentlyInScope
+              ? t("pageList.removedFromScope", { count: 1 })
+              : t("pageList.addedToScope", { count: 1 }),
+          });
+          queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey(params) });
+          queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
+        },
+      },
+    );
+  };
+
   const selectRange = (start: number, end: number) => {
     setSelectedPages(prev => {
       const next = new Set(prev);
@@ -457,20 +479,48 @@ export default function PageList() {
                       <span className="text-[10px] text-muted-foreground">{formatDate(page.lastRecited)}</span>
                     </div>
                   </div>
-                  {page.inScope && (
-                    <div className="mt-2 sm:ps-[60px]" onClick={(e) => e.stopPropagation()}>
-                      <PageQualityButtons
-                        pageNumber={page.pageNumber}
-                        currentQuality={page.quality}
-                        size="xs"
-                        invalidateKeys={[
-                          getListPageProgressQueryKey(params),
-                          getListPageProgressQueryKey(),
-                          getGetProgressOverviewQueryKey(),
-                        ]}
-                      />
-                    </div>
-                  )}
+                  <div
+                    className="mt-2 sm:ps-[60px] flex items-center gap-2 flex-wrap"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {page.inScope ? (
+                      <>
+                        <PageQualityButtons
+                          pageNumber={page.pageNumber}
+                          currentQuality={page.quality}
+                          size="xs"
+                          invalidateKeys={[
+                            getListPageProgressQueryKey(params),
+                            getListPageProgressQueryKey(),
+                            getGetProgressOverviewQueryKey(),
+                          ]}
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-rose-700"
+                          onClick={() => handleSinglePageScope(page.pageNumber, true)}
+                          disabled={removeFromScope.isPending}
+                          data-testid={`btn-row-remove-scope-${page.pageNumber}`}
+                          title={t("pageList.remove")}
+                        >
+                          <Minus className="w-3 h-3 me-1" /> {t("pageList.remove")}
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handleSinglePageScope(page.pageNumber, false)}
+                        disabled={addToScope.isPending}
+                        data-testid={`btn-row-add-scope-${page.pageNumber}`}
+                        title={t("pageList.addToScope")}
+                      >
+                        <Plus className="w-3 h-3 me-1" /> {t("pageList.addToScope")}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               );
             })}
