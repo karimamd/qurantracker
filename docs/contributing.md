@@ -16,9 +16,10 @@ You don't need to read everything before opening a PR — just the area you're t
 ### Good first contributions
 
 - **Fix something in the docs** that confused you. Even a single sentence rewrite is welcome.
-- **Add a missing translation key** — search for an English string in `artifacts/quran-tracker/src/i18n/en.json` that has no Arabic counterpart in `ar.json`, or vice-versa.
-- **Improve a `data-testid`** on an interactive element so the testing harness can target it more reliably.
+- **Add a missing translation key** — search for an English string in `artifacts/quran-tracker/src/i18n/en.json` that has no Arabic counterpart in `ar.json`, or vice-versa. Arabic uses the full pluralization set (`_zero`/`_one`/`_two`/`_few`/`_many`/`_other`); English just needs `_one`/`_other`.
+- **Improve a `data-testid`** on an interactive element so the testing harness can target it more reliably. Use stable English values so they don't depend on the active language.
 - **Tighten a type** — replace any lingering `any` or implicit `unknown` with a proper type.
+- **Mirror logical-property utilities** — find a `pl-*`/`pr-*`/`text-left`/`text-right` and replace it with `ps-*`/`pe-*`/`text-start`/`text-end` so the layout flips cleanly in Arabic RTL.
 
 For larger changes (new endpoints, schema changes, new pages), please open an issue first so we can sanity-check the design together. A 5-line clarification beats a rejected 500-line PR.
 

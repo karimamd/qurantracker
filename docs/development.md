@@ -120,7 +120,12 @@ pnpm --filter db push
 
 # Restart a workflow after a server-side change
 #  (on Replit: use the agent or the workflows panel)
+
+# Regenerate the bundled Quran text dump (rarely needed; the file is committed)
+pnpm --filter @workspace/scripts run build-quran-dump
 ```
+
+The Quran-text dump (`artifacts/quran-tracker/public/quran-dump.json`, ~2 MB, all 604 pages) is checked into the repo. The Reader uses it as a layered fallback (IndexedDB → bundled dump → `api.alquran.cloud`), so a self-hosted fork has zero external API dependency at runtime. Only regenerate the dump if you change the ayah post-processing rules — and remember to bump `CACHE_VERSION` in `artifacts/quran-tracker/src/lib/quran-page-cache.ts` so old IndexedDB entries are purged.
 
 ### Health checks
 

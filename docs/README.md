@@ -1,6 +1,6 @@
 # Quran Memorization Tracker — Documentation
 
-A personal Quran memorization progress tracker built as a pnpm monorepo. Tracks revision across multiple grains (Juz, Rob3, Surah, Page) using quality-based spaced repetition, with homework sessions, activity history, and progress charts.
+A personal Quran memorization progress tracker built as a pnpm monorepo. Tracks revision across multiple grains (Juz, Rub', Surah, Page) using quality-based spaced repetition, with homework sessions, per-ayah mistake tracking, an interactive Quran Reader, and a parallel **Telawa (read-through)** rotation. Bilingual (English + Arabic / RTL).
 
 **Live app:** https://qurantracker.replit.app
 

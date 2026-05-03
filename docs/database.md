@@ -24,7 +24,7 @@ Every domain table has a nullable `user_id text` column. Every query in the API 
 
 ### `settings`
 
-User-configurable spaced-repetition intervals.
+Per-user configuration: spaced-repetition intervals, UI language, default Telawa daily goal.
 
 | Column | Type | Default | Notes |
 | --- | --- | --- | --- |
@@ -34,6 +34,8 @@ User-configurable spaced-repetition intervals.
 | `good_days` | integer | `14` | Days when rated Good. |
 | `hard_days` | integer | `7` | Days when rated Hard. |
 | `relearn_days` | integer | `3` | Days when rated Relearn. |
+| `language` | text | `"en"` | UI language: `"en"` or `"ar"`. The frontend mirrors this to `localStorage` under `qurantracker.language` so the choice survives sign-out. |
+| `telawa_pages_per_day` | integer | `5` | **Default** Telawa daily page goal. A `telawa_khatmah` row may override it via its own `pages_per_day` column. |
 
 ### `page_progress`
 
@@ -104,7 +106,7 @@ Individual pages assigned within a homework session.
 
 ### `ayah_mistakes`
 
-Append-only per-ayah mistake records. Captured during Reader hide-mode practice and submitted alongside the page's quality rating in `PATCH /api/progress/pages/:n` (atomic with the recitation log entry). Powers the `/mistakes` analytics page.
+Per-ayah mistake records — used as **both** an append-only history (for the `/mistakes` analytics page) **and** a per-page active queue (for the in-Reader badges that persist until cleared). The dual role is encoded in `resolved_at`: a row with `resolved_at IS NULL` is *active* (still showing on the page); a non-null `resolved_at` means the user dismissed/cleared it but the row stays for analytics.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -116,14 +118,54 @@ Append-only per-ayah mistake records. Captured during Reader hide-mode practice 
 | `global_ayah_number` | integer | 1–6,236 — used to deep-link `/reader/<page>?practice=<n>`. |
 | `mistake_type` | text | Currently `"memorization"` (failed to remember the ayah) or `"link"` (failed to predict it from the previous one). The two are independent dimensions and can coexist on the same ayah. |
 | `recited_at` | timestamptz default `now()` | Time the parent recitation was recorded. |
+| `resolved_at` | timestamptz NULL | When the active mark was cleared via `DELETE /api/progress/pages/:n/active-mistakes`. NULL = still active. |
 | `created_at` | timestamptz default `now()` | |
 
-**Indexes:** `(user_id)`, `(user_id, recited_at)`, `(user_id, page_number)`.
+**Write paths:**
+- `PATCH /progress/pages/:n` — captures hide-mode mistakes alongside the quality rating (atomic with the `recitation_log` insert). Inserted with `resolved_at = NULL`.
+- `POST /progress/pages/:n/active-mistakes` — idempotent add of a single (surah, ayah, type). If the same active row already exists, no-op.
+- `DELETE /progress/pages/:n/active-mistakes` — sets `resolved_at = now()` rather than deleting, preserving the analytics history.
+
+**Indexes:** `(user_id)`, `(user_id, recited_at)`, `(user_id, page_number)`, `(user_id, page_number, resolved_at)` — the last one supports the active-only filter.
+
+### `telawa_khatmah`
+
+A full 604-page read-through cycle. Multiple Khatmahs per user (closed ones stay in the table for history); at most one is **active** (`completed_at IS NULL`).
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | serial PK | |
+| `user_id` | text | |
+| `start_page` | integer | 1–604. The page this Khatmah began from. The cursor wraps modulo 604, so a Khatmah starting at page 100 reads 100, 101, …, 604, 1, 2, …, 99 in that order. |
+| `cycle_number` | integer default `1` | 1-based ordinal across the user's Khatmahs. |
+| `pages_per_day` | integer NULL | **Per-Khatmah override** of the daily goal. NULL = inherit from `settings.telawa_pages_per_day`. Set via `POST /telawa/khatmah` (start) or `PATCH /telawa/khatmah/active` (update); pass `null` in the PATCH body to clear. |
+| `started_at` | timestamptz default `now()` | |
+| `completed_at` | timestamptz NULL | NULL = still active. Set automatically when `readsInKhatmah` hits 604 (a successor Khatmah is opened with the same `start_page`); restored to NULL if the user undoes the 604th read (the empty rollover Khatmah is deleted). |
+
+**Indexes:** `(user_id)`, `(user_id, completed_at)` — supports "find active" lookups.
+
+### `telawa_log`
+
+Append-only history of every "Read" tap. Fully separate from `recitation_log` — Telawa never affects memorization status, due dates, scope, streak, or charts.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | serial PK | |
+| `user_id` | text | |
+| `page_number` | integer | 1–604. Reads can be recorded out of order (the cursor only advances when the user taps the canonical "next page" button, but the API accepts any page). |
+| `cycle_number` | integer default `1` | Mirrors the parent Khatmah's `cycle_number` for fast aggregation. |
+| `khatmah_id` | integer NULL | FK (logical) to `telawa_khatmah.id`. Nullable for backwards-compat with rows recorded before the Khatmah model existed; backfilled lazily on first `GET /telawa/today`. |
+| `read_at` | timestamptz default `now()` | |
+| `created_at` | timestamptz default `now()` | |
+
+**Indexes:** `(user_id)`, `(user_id, read_at)`, `(khatmah_id)`.
+
+**Concurrency.** All Telawa write paths run inside a per-user `pg_advisory_xact_lock` (namespace `0x746c7761`) to serialize concurrent reads/undos against the same Khatmah cursor. See [Business Logic — Telawa](./business-logic.md#7-telawa--khatmah-recurring-read-through).
 
 ## Relationships (logical)
 
 ```text
-settings  1───1  user (Clerk)
+settings  1───1  user (Clerk or guest)
 
 page_progress  N───1  user
         │
@@ -138,6 +180,13 @@ homework_sessions  1───N  homework_items  (by homework_id)
 ayah_mistakes  N───1  user
         │
         └─── (page_number) — ayah belongs to one of 604 pages
+              ├─ resolved_at IS NULL  → active mark on the Reader
+              └─ resolved_at NOT NULL → archived (analytics-only)
+
+telawa_khatmah  1───N  telawa_log   (by khatmah_id)
+        │                  │
+        └─── user ──────────┘
+        At most one row per user with completed_at IS NULL = "active".
 ```
 
 Foreign keys are not declared at the SQL level; integrity is enforced in application code. This was an early decision to keep migrations cheap during rapid iteration.

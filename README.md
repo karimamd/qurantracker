@@ -1,6 +1,6 @@
 # Quran Memorization Tracker
 
-A personal Quran memorization companion — track revision across Juz, Rub', Surah, and Page; record per-ayah mistakes; assign homework; review on a quality-based spaced-repetition schedule; practice in an interactive Reader.
+A personal Quran memorization companion — track revision across Juz, Rub', Surah, and Page; record per-ayah mistakes; assign homework; review on a quality-based spaced-repetition schedule; practice in an interactive Reader; run a parallel **Telawa (read-through)** rotation across the whole Mushaf with per-Khatmah daily goals.
 
 **Live app:** https://qurantracker.replit.app
 
@@ -12,6 +12,7 @@ A personal Quran memorization companion — track revision across Juz, Rub', Sur
 - **i18n:** English + Arabic (RTL), via `react-i18next`.
 - **Three artifacts:** `artifacts/quran-tracker` (SPA), `artifacts/api-server` (REST API), `artifacts/mockup-sandbox` (component prototyping, dev-only).
 - **Four shared libs:** `lib/api-spec` (OpenAPI source of truth), `lib/api-zod` (generated Zod schemas), `lib/api-client-react` (generated React Query hooks), `lib/db` (Drizzle schema + client).
+- **Offline-first Quran text:** all 604 pages of Uthmani text ship as a bundled JSON dump; the Reader serves from IndexedDB → bundled dump → `api.alquran.cloud` (last-resort backfill). A self-hosted fork works with **zero external API dependency**.
 
 ## Documentation
 

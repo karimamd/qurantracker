@@ -351,7 +351,88 @@ Daily-chart and progress-chart endpoints reconstruct historical state by replayi
 - Removing a page from scope does not erase it from the history charts.
 - Activity-feed and chart numbers can outlive the rows in `page_progress`.
 
-## 7. Adding ayah-level support (future)
+## 7. Telawa & Khatmah (recurring read-through)
+
+Telawa is a **second, parallel track** to memorization. Some users want to *read* the Quran on a rotation — not to memorize it, just to keep it on their lips — and don't want their reading mixed into their memorization stats. The Telawa subsystem gives them their own surface (`/telawa`), their own table (`telawa_log`), and their own cycle abstraction (`telawa_khatmah`), with zero crosstalk into the memorization side: it never updates `page_progress`, never affects scope, never feeds the streak, and never appears on the dashboard charts.
+
+### The cursor
+
+The Telawa "next page" cursor is a function of the active Khatmah:
+
+```ts
+nextPage = ((khatmah.startPage - 1 + readsInKhatmah) % 604) + 1;
+```
+
+So a Khatmah that starts at page 100 reads 100, 101, …, 604, 1, 2, …, 99 — wrapping once. `readsInKhatmah` counts the number of `telawa_log` rows belonging to this `khatmah_id`.
+
+### Khatmah lifecycle
+
+- **Active.** `completed_at IS NULL`. At most one per user.
+- **Auto-close.** When `readsInKhatmah` hits 604, the handler sets `completed_at = now()` and inserts a successor Khatmah with the same `start_page` and `cycle_number + 1`. The user is now on the next rotation transparently.
+- **Auto-reopen on undo.** Undoing the 604th read deletes the empty successor and clears the active Khatmah's `completed_at`, so the user is back where they were.
+- **Start a new one.** `POST /telawa/khatmah { startPage, pagesPerDay? }` is the user's "let me start a fresh rotation from here" button. If the active Khatmah has 0 reads it's *retargeted* in place (no new row); otherwise it's closed and a successor is opened.
+
+### Per-Khatmah daily goal
+
+Two layers, with override semantics:
+
+1. `settings.telawa_pages_per_day` — the user's default (default `5`).
+2. `telawa_khatmah.pages_per_day` — optional per-rotation override.
+
+Resolution:
+
+```ts
+pagesPerDay = activeKhatmah.pagesPerDay ?? settings.telawaPagesPerDay ?? 5;
+```
+
+The `PATCH /telawa/khatmah/active` endpoint distinguishes three cases on the body:
+
+| Body | Meaning |
+| --- | --- |
+| `{ pagesPerDay: 7 }` | Set override to 7. |
+| `{ pagesPerDay: null }` | **Clear** the override; fall back to settings. |
+| `{ }` (no field) | No-op (does not clear). |
+
+This lets the UI either set, clear, or leave-alone with one endpoint. The `upcomingPages` list (`GET /telawa/today`) recomputes immediately from the new value.
+
+### Visual progress on the banner
+
+The active-Khatmah banner uses a four-segment bar that makes the cursor position explicit:
+
+```text
+[ wrapped reads (primary) ][ skipped pages still pending (amber) ][ linear reads from startPage (primary) ][ remaining (empty) ]
+```
+
+The numeric counter shows `(skipped + reads) / 604`, not `0 / 604`, so a Khatmah started from page 100 immediately shows `99 / 604` with 99 amber pages waiting to be read after the wrap. The math is wrap-safe: as the user reads past 604 → 1, reads transition from the third segment into the first and the amber segment shrinks accordingly.
+
+### Concurrency
+
+Every Telawa write path (`POST /telawa/read`, `DELETE /telawa/read/last`, `POST /telawa/khatmah`, `PATCH /telawa/khatmah/active`) wraps its work in a per-user `pg_advisory_xact_lock(0x746c7761, hashtext(userId))`. This serializes all writes for a single user — important because the cursor is computed by counting `telawa_log` rows and racing reads + auto-close logic would otherwise produce duplicates.
+
+### Backfill for pre-Khatmah users
+
+`telawa_log` predates `telawa_khatmah`; existing rows have `khatmah_id = NULL`. On first call to `GET /telawa/today` for such a user, the handler groups those legacy rows by `cycle_number`, inserts one `telawa_khatmah` row per group with `start_page = 1`, attaches every log row to its Khatmah, and leaves only the latest non-full cycle as active. From that point on the user is on the modern model.
+
+## 8. Per-page Active Mistakes (queue vs history)
+
+The `ayah_mistakes` table plays two roles at once:
+
+| Role | Filter | Surface |
+| --- | --- | --- |
+| **Active queue** (per page) | `resolved_at IS NULL` | Reader page badges — dots on individual ayat that the user has flagged but not yet cleared. Survives sign-out and works across devices once signed in. |
+| **History** (analytics) | all rows | `/mistakes` page summary cards + date-grouped list. |
+
+Three endpoints maintain the queue:
+
+- `GET /progress/pages/:n/active-mistakes` — list active marks for the page (used by Reader on mount).
+- `POST /progress/pages/:n/active-mistakes` — **idempotent**. The handler checks for an existing active row with the same `(surah, ayah, type)` before inserting; if one exists it returns the current list unchanged. This means the Reader can fire-and-forget even if the user double-taps.
+- `DELETE /progress/pages/:n/active-mistakes` — sets `resolved_at = now()` rather than deleting. The row stays for analytics; it just stops appearing in the active list.
+
+`PATCH /progress/pages/:n` (recording a quality rating) **also** writes ayah-mistake rows from the optional `ayahMistakes[]` field, atomically with the `recitation_log` insert. Those rows start with `resolved_at = NULL` and become "active marks" for the page.
+
+The dual-purpose design keeps the analytics history complete (a cleared mistake still happened) while letting the user manage their per-page todo list independently.
+
+## 9. Adding ayah-level support (future)
 
 A high-level sketch in case you want to take this on. The minimum invasive path:
 
@@ -399,3 +480,6 @@ The current architecture (derived status, lazy row creation, append-only log, de
 | Undo restore (transactional) | `artifacts/api-server/src/routes/progress.ts` (`DELETE /progress/activity/:id`) |
 | `due_date` snapshot on each recitation | `artifacts/api-server/src/routes/progress.ts` (single + batch) and `artifacts/api-server/src/routes/homework.ts` |
 | Multi-tenant `requireAuth` | `artifacts/api-server/src/middlewares/requireAuth.ts` |
+| Telawa cursor + Khatmah lifecycle | `artifacts/api-server/src/routes/telawa.ts` |
+| Per-Khatmah daily-goal resolution (`buildToday`) | same file |
+| Active vs resolved mistake split | `artifacts/api-server/src/routes/progress.ts` (`/progress/pages/:n/active-mistakes` handlers) |

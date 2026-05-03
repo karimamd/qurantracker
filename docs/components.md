@@ -50,12 +50,13 @@ All pages are registered inside `App.tsx`. The catch-all uses `path="*"` (wouter
 | `/juz/:id` | `juz-detail.tsx` | One Juz: 8 Rob3 sections + per-page tiles with quick-rate buttons. |
 | `/surah` | `surah-list.tsx` | All 114 Surah cards. |
 | `/surah/:id` | `surah-detail.tsx` | One Surah: per-page tiles with quick-rate buttons. |
-| `/rob3` | `rob3-list.tsx` | All 240 Rub' al-Hizb with search, progress stats, and inline quality pickers (rates all pages in the rub via `/progress/recite-batch`). |
-| `/reader`, `/reader/:page` | `reader.tsx` | Interactive Quran reader: Uthmani text from `api.alquran.cloud`, hide-mode practice, per-ayah mistake controls (✓ / ✗ memorization / 🔗 link), inline quality marking. Supports `?practice=<globalAyahNumber>` to jump straight to a target ayah. |
+| `/rub` | `rob3-list.tsx` | All 240 Rub' al-Hizb with search, progress stats, and inline quality pickers (rates all pages in the rub via `/progress/recite-batch`). The corresponding API path is `/api/progress/rob3` (legacy spelling). |
+| `/reader`, `/reader/:page` | `reader.tsx` | Interactive Quran reader: Uthmani text served from a layered cache (per-page IndexedDB → bundled `public/quran-dump.json` → `api.alquran.cloud`), hide-mode practice, per-ayah mistake controls (✓ / ✗ memorization / 🔗 link), inline quality marking. The first mount per session prefetches the bundled dump into IndexedDB in idle chunks so navigation is instant and works offline. Supports `?practice=<globalAyahNumber>` to jump straight to a target ayah in hide-mode. |
 | `/mistakes` | `mistakes.tsx` | Analytics view of per-ayah mistakes: summary cards, type filter, date-grouped list. Each row has a "Practice" button that deep-links to the reader in hide-mode. |
+| `/telawa` | `telawa.tsx` | Telawa (recurring read-through) page: today's upcoming pages, one-tap "Read" / "Undo last", active-Khatmah banner with the visual progress bar (read-from-startPage in primary, skipped-pre-startPage in amber, remaining empty), pencil icon to edit the per-Khatmah daily goal, and a "Start new Khatmah" dialog that accepts an optional `pagesPerDay` override. The 30-day bar chart shows daily read counts. |
 | `/homework` | `homework-list.tsx` | List of homework sessions. |
 | `/homework/:id` | `homework-detail.tsx` | Items inside a session, check-off UI. Renders the unified `<PageRow />`. |
-| `/settings` | `settings-page.tsx` | Configure SR intervals (excellent/good/hard/relearn days) and language (English / العربية). |
+| `/settings` | `settings-page.tsx` | Configure SR intervals (excellent/good/hard/relearn days), default Telawa daily goal, and language (English / العربية). |
 | `/sign-in/*`, `/sign-up/*` | `App.tsx` inline | Clerk hosted-component sign-in / sign-up pages. |
 | `*` (catch-all) | `not-found.tsx` | 404. |
 
@@ -65,12 +66,13 @@ All pages are registered inside `App.tsx`. The catch-all uses `path="*"` (wouter
 
 The app shell. Renders:
 
-- A logo + nav sidebar on desktop, with the order **Dashboard → Homework → Pages → Juz → Surah → Recite → Settings**.
-- A bottom nav bar on mobile with the same primary destinations.
-- The Clerk `<UserButton />` for profile / sign-out.
+- A logo + nav sidebar on desktop with the full destination list, in this order: **Homework → Dashboard → Telawa → Reader → Mistakes → Juz → Rub' → Surah → Pages → Recite → Settings**.
+- A bottom nav bar on mobile with **only the five most-used screens**: Homework, Dashboard, Telawa, Reader, Mistakes. The full list lives behind a hamburger drawer (same `navItems` array, just rendered into a side sheet).
+- The Clerk `<UserButton />` for profile / sign-out (or, in guest mode, a "Sign up to save" CTA + an "Exit guest" button that clears the local session).
+- A guest-mode banner at the top of `<main>` reminding the user their data will migrate on sign-up.
 - A `<main>` slot for the page content.
 
-The nav order was deliberately chosen to make Homework prominent (the most-used feature day-to-day after Dashboard).
+The first three desktop entries (Homework, Dashboard, Telawa) are the daily-driver surfaces — assigning, reviewing, and reading respectively — which is why they lead the list and dominate the mobile bottom nav.
 
 ### `ErrorBoundary`
 

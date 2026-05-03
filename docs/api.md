@@ -32,7 +32,7 @@ The HTTP contract is defined in `lib/api-spec/openapi.yaml`. **That file is the 
 | `GET` | `/progress/juz/{juzNumber}` | Yes | Detail for a single Juz: includes 8 Rob3s and the contained pages. |
 | `GET` | `/progress/surah` | Yes | All 114 Surahs with aggregated counts. |
 | `GET` | `/progress/surah/{surahNumber}` | Yes | Detail for a single Surah: name, page range, and pages. |
-| `GET` | `/progress/rob3` | Yes | All 240 Rub' al-Hizb with aggregated stats. |
+| `GET` | `/progress/rob3` | Yes | All 240 Rub' al-Hizb with aggregated stats. (The frontend route is `/rub`; the API path kept the legacy `rob3` spelling for backwards compatibility.) |
 
 #### `PageProgress` shape (returned by every endpoint above)
 
@@ -57,11 +57,23 @@ Every page object is enriched server-side via `enrichPageProgress`. The notable 
 
 `ayahMistakes[]` items are `{ surahNumber, ayahNumberInSurah, globalAyahNumber, mistakeType }`. `mistakeType` is currently `"memorization"` or `"link"` — both can coexist on the same ayah.
 
-### Mistakes
+> **Legacy path.** Sending `ayahMistakes[]` in `PATCH /progress/pages/:n` still inserts active rows (with `resolved_at = NULL`) for backwards compatibility, but the current Reader writes mistakes through the dedicated `/progress/pages/:n/active-mistakes` endpoints below for instant per-tap persistence. New code should prefer those.
+
+### Mistakes (history feed)
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
-| `GET` | `/mistakes` | Yes | Date-grouped feed of per-ayah mistakes for the Mistakes page. Filterable by mistake type. Each entry includes the surah, ayah, page, type, and timestamp — used to deep-link to `/reader/<page>?practice=<globalAyahNumber>`. |
+| `GET` | `/progress/mistakes` | Yes | Date-grouped feed of per-ayah mistakes for the `/mistakes` analytics page. Filterable by mistake type. Each entry includes the surah, ayah, page, type, and timestamp — used to deep-link to `/reader/<page>?practice=<globalAyahNumber>`. |
+
+### Mistakes (per-page active queue)
+
+The "active mistakes" list is the set of mistakes the Reader currently shows as un-cleared dots on the page. Same `ayah_mistakes` table as the history feed, filtered by `resolved_at IS NULL`.
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `GET` | `/progress/pages/{pageNumber}/active-mistakes` | Yes | List the currently-active (`resolved_at IS NULL`) ayah mistake marks on the page. |
+| `POST` | `/progress/pages/{pageNumber}/active-mistakes` | Yes | Idempotent — re-applying the same `(surahNumber, ayahNumberInSurah, mistakeType)` is a no-op. Body: `{ surahNumber, ayahNumberInSurah, globalAyahNumber, mistakeType }`. |
+| `DELETE` | `/progress/pages/{pageNumber}/active-mistakes` | Yes | Resolves (sets `resolved_at = now()`) the matching active mark. The row remains in the table for analytics. Body identifies the (surah, ayah, type). |
 
 ### Progress — scope
 
@@ -88,6 +100,19 @@ Every page object is enriched server-side via `enrichPageProgress`. The notable 
 | `PATCH` | `/homework/{id}` | Yes | Update title and/or due date. |
 | `DELETE` | `/homework/{id}` | Yes | Delete a session (and its items). |
 | `PATCH` | `/homework/{homeworkId}/items/{itemId}` | Yes | Mark an individual item completed (or change its quality). |
+
+### Telawa (read-through rotation)
+
+A separate, parallel track to memorization — see [Business Logic — Telawa & Khatmah](./business-logic.md#7-telawa--khatmah-recurring-read-through). Telawa endpoints **never** touch memorization state.
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `GET` | `/telawa/today` | Yes | Today's plan: `{ pagesPerDay, nextPage, cycleNumber, totalRead, readToday, khatmah, upcomingPages[], recentReads[] }`. `pagesPerDay` resolves to the active Khatmah's override or `settings.telawaPagesPerDay`. `upcomingPages` is the next `pagesPerDay` pages from the cursor, wrapped at 604. |
+| `POST` | `/telawa/read` | Yes | Record one page as read. Body: `{ pageNumber }`. Auto-closes the active Khatmah and opens a successor when `readsInKhatmah` hits 604. |
+| `DELETE` | `/telawa/read/last` | Yes | Undo the user's most recent Telawa read. If undoing the 604th read, the empty rollover Khatmah is deleted and the previous Khatmah is reopened. |
+| `POST` | `/telawa/khatmah` | Yes | Start a new Khatmah at `{ startPage, pagesPerDay? }`. If the active Khatmah has 0 reads, it's retargeted in place; otherwise it's closed and a successor is opened. `pagesPerDay` is optional (NULL → inherit from settings). |
+| `PATCH` | `/telawa/khatmah/active` | Yes | Update only the **active** Khatmah's daily goal. Body: `{ pagesPerDay: number \| null }` — pass `null` to clear the override and fall back to settings. Omitting the field is a no-op. |
+| `GET` | `/telawa/stats` | Yes | Card data: `{ totalRead, currentCycle, nextPage, pagesPerDay, readToday, last30Days[] }`. `last30Days` is per-day read counts for the bar chart. |
 
 ## Calling the API from React
 

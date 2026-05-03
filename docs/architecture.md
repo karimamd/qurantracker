@@ -12,10 +12,12 @@ artifacts/                              Deployable applications
 │   │   ├── app.ts                      Express app factory — wires routes
 │   │   ├── routes/                     Per-domain route modules
 │   │   │   ├── health.ts               GET /healthz
-│   │   │   ├── settings.ts             /settings — SR interval config
-│   │   │   ├── progress.ts             /progress/* — pages, juz, surah, rob3, charts, activity, undo
-│   │   │   ├── mistakes.ts             /mistakes — per-ayah mistake feed for the Mistakes page
+│   │   │   ├── settings.ts             /settings — SR interval + language + telawa goal config
+│   │   │   ├── progress.ts             /progress/* — pages, juz, surah, rub', charts, activity,
+│   │   │   │                            mistakes (history + per-page active queue), undo
 │   │   │   ├── homework.ts             /homework/* — sessions and items
+│   │   │   ├── telawa.ts               /telawa/* — today's plan, record/undo read,
+│   │   │   │                            start Khatmah, update active Khatmah, stats
 │   │   │   └── index.ts                Aggregates routers
 │   │   ├── middlewares/
 │   │   │   ├── requireAuth.ts          Resolves Clerk userId OR mints/migrates a guest_id cookie
@@ -52,8 +54,9 @@ lib/                                    Shared libraries
 │   ├── generated/                      GENERATED — React Query hooks
 │   └── custom-fetch.ts                 The fetch mutator used by all hooks (handles base URL, auth)
 └── db/
-    ├── src/schema/                     Drizzle tables: settings, page-progress, recitation-log,
-    │                                    homework, ayah-mistakes (one file per domain)
+    ├── src/schema/                     Drizzle tables — one file per domain:
+    │                                    settings, page-progress, recitation-log, homework,
+    │                                    ayah-mistakes, telawa, telawa-khatmah
     ├── src/index.ts                    db client export + table re-exports
     └── drizzle.config.ts               drizzle-kit config (uses DATABASE_URL)
 
