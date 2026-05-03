@@ -782,6 +782,13 @@ components:
         ayahViewFontSize:
           type: integer
           description: Default font size in pixels used for the single-ayah detail page (/ayahs/:n). Default 40.
+        bottomNavKeys:
+          type: array
+          description: Ordered list of nav-item keys shown in the mobile bottom-tab bar. Empty/unknown entries are ignored client-side and the historical default applies.
+          maxItems: 5
+          items:
+            type: string
+            enum: [homework, dashboard, telawa, reader, mistakes, juz, rub, surah, pages, ayahs, recite, welcome, settings]
       required:
         - id
         - excellentDays
@@ -792,6 +799,7 @@ components:
         - telawaPagesPerDay
         - readerFontSize
         - ayahViewFontSize
+        - bottomNavKeys
 
     UpdateSettingsBody:
       type: object
@@ -819,6 +827,12 @@ components:
           type: integer
           minimum: 14
           maximum: 96
+        bottomNavKeys:
+          type: array
+          maxItems: 5
+          items:
+            type: string
+            enum: [homework, dashboard, telawa, reader, mistakes, juz, rub, surah, pages, ayahs, recite, welcome, settings]
 
     ProgressOverview:
       type: object

@@ -18,6 +18,8 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary Get user settings
  */
+export const getSettingsResponseBottomNavKeysMax = 5;
+
 export const GetSettingsResponse = zod.object({
   id: zod.number(),
   excellentDays: zod.number(),
@@ -40,6 +42,28 @@ export const GetSettingsResponse = zod.object({
     .describe(
       "Default font size in pixels used for the single-ayah detail page (\/ayahs\/:n). Default 40.",
     ),
+  bottomNavKeys: zod
+    .array(
+      zod.enum([
+        "homework",
+        "dashboard",
+        "telawa",
+        "reader",
+        "mistakes",
+        "juz",
+        "rub",
+        "surah",
+        "pages",
+        "ayahs",
+        "recite",
+        "welcome",
+        "settings",
+      ]),
+    )
+    .max(getSettingsResponseBottomNavKeysMax)
+    .describe(
+      "Ordered list of nav-item keys shown in the mobile bottom-tab bar. Empty\/unknown entries are ignored client-side and the historical default applies.",
+    ),
 });
 
 /**
@@ -52,6 +76,8 @@ export const updateSettingsBodyReaderFontSizeMax = 64;
 
 export const updateSettingsBodyAyahViewFontSizeMin = 14;
 export const updateSettingsBodyAyahViewFontSizeMax = 96;
+
+export const updateSettingsBodyBottomNavKeysMax = 5;
 
 export const UpdateSettingsBody = zod.object({
   excellentDays: zod.number().optional(),
@@ -74,7 +100,29 @@ export const UpdateSettingsBody = zod.object({
     .min(updateSettingsBodyAyahViewFontSizeMin)
     .max(updateSettingsBodyAyahViewFontSizeMax)
     .optional(),
+  bottomNavKeys: zod
+    .array(
+      zod.enum([
+        "homework",
+        "dashboard",
+        "telawa",
+        "reader",
+        "mistakes",
+        "juz",
+        "rub",
+        "surah",
+        "pages",
+        "ayahs",
+        "recite",
+        "welcome",
+        "settings",
+      ]),
+    )
+    .max(updateSettingsBodyBottomNavKeysMax)
+    .optional(),
 });
+
+export const updateSettingsResponseBottomNavKeysMax = 5;
 
 export const UpdateSettingsResponse = zod.object({
   id: zod.number(),
@@ -97,6 +145,28 @@ export const UpdateSettingsResponse = zod.object({
     .number()
     .describe(
       "Default font size in pixels used for the single-ayah detail page (\/ayahs\/:n). Default 40.",
+    ),
+  bottomNavKeys: zod
+    .array(
+      zod.enum([
+        "homework",
+        "dashboard",
+        "telawa",
+        "reader",
+        "mistakes",
+        "juz",
+        "rub",
+        "surah",
+        "pages",
+        "ayahs",
+        "recite",
+        "welcome",
+        "settings",
+      ]),
+    )
+    .max(updateSettingsResponseBottomNavKeysMax)
+    .describe(
+      "Ordered list of nav-item keys shown in the mobile bottom-tab bar. Empty\/unknown entries are ignored client-side and the historical default applies.",
     ),
 });
 

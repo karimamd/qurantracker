@@ -5,6 +5,7 @@
  * Quran Memorization Tracker API
  * OpenAPI spec version: 0.1.0
  */
+import type { SettingsBottomNavKeysItem } from "./settingsBottomNavKeysItem";
 import type { SettingsLanguage } from "./settingsLanguage";
 
 export interface Settings {
@@ -20,4 +21,9 @@ export interface Settings {
   readerFontSize: number;
   /** Default font size in pixels used for the single-ayah detail page (/ayahs/:n). Default 40. */
   ayahViewFontSize: number;
+  /**
+   * Ordered list of nav-item keys shown in the mobile bottom-tab bar. Empty/unknown entries are ignored client-side and the historical default applies.
+   * @maxItems 5
+   */
+  bottomNavKeys: SettingsBottomNavKeysItem[];
 }

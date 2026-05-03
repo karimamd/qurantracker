@@ -17,6 +17,25 @@ export const SettingsLanguage = {
   ar: "ar",
 } as const;
 
+export type SettingsBottomNavKeysItem =
+  (typeof SettingsBottomNavKeysItem)[keyof typeof SettingsBottomNavKeysItem];
+
+export const SettingsBottomNavKeysItem = {
+  homework: "homework",
+  dashboard: "dashboard",
+  telawa: "telawa",
+  reader: "reader",
+  mistakes: "mistakes",
+  juz: "juz",
+  rub: "rub",
+  surah: "surah",
+  pages: "pages",
+  ayahs: "ayahs",
+  recite: "recite",
+  welcome: "welcome",
+  settings: "settings",
+} as const;
+
 export interface Settings {
   id: number;
   excellentDays: number;
@@ -30,6 +49,11 @@ export interface Settings {
   readerFontSize: number;
   /** Default font size in pixels used for the single-ayah detail page (/ayahs/:n). Default 40. */
   ayahViewFontSize: number;
+  /**
+   * Ordered list of nav-item keys shown in the mobile bottom-tab bar. Empty/unknown entries are ignored client-side and the historical default applies.
+   * @maxItems 5
+   */
+  bottomNavKeys: SettingsBottomNavKeysItem[];
 }
 
 export type UpdateSettingsBodyLanguage =
@@ -38,6 +62,25 @@ export type UpdateSettingsBodyLanguage =
 export const UpdateSettingsBodyLanguage = {
   en: "en",
   ar: "ar",
+} as const;
+
+export type UpdateSettingsBodyBottomNavKeysItem =
+  (typeof UpdateSettingsBodyBottomNavKeysItem)[keyof typeof UpdateSettingsBodyBottomNavKeysItem];
+
+export const UpdateSettingsBodyBottomNavKeysItem = {
+  homework: "homework",
+  dashboard: "dashboard",
+  telawa: "telawa",
+  reader: "reader",
+  mistakes: "mistakes",
+  juz: "juz",
+  rub: "rub",
+  surah: "surah",
+  pages: "pages",
+  ayahs: "ayahs",
+  recite: "recite",
+  welcome: "welcome",
+  settings: "settings",
 } as const;
 
 export interface UpdateSettingsBody {
@@ -61,6 +104,8 @@ export interface UpdateSettingsBody {
    * @maximum 96
    */
   ayahViewFontSize?: number;
+  /** @maxItems 5 */
+  bottomNavKeys?: UpdateSettingsBodyBottomNavKeysItem[];
 }
 
 export interface ProgressOverview {

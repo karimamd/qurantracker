@@ -14,12 +14,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
-import { Save, Download, Upload } from "lucide-react";
+import { Save, Download, Upload, ArrowUp, ArrowDown, X, Plus, RotateCcw } from "lucide-react";
 import { setLanguage, type SupportedLanguage } from "@/i18n";
+import {
+  ALLOWED_BOTTOM_NAV_KEYS,
+  DEFAULT_BOTTOM_NAV_KEYS,
+  MAX_BOTTOM_NAV_ITEMS,
+  resolveBottomNavKeys,
+  type BottomNavKey,
+} from "@/lib/bottom-nav";
 
 export default function SettingsPage() {
   const { data: settings, isLoading } = useGetSettings();
@@ -36,6 +43,10 @@ export default function SettingsPage() {
   const [readerFontSize, setReaderFontSize] = useState("");
   const [ayahViewFontSize, setAyahViewFontSize] = useState("");
   const [language, setLanguageState] = useState<SupportedLanguage>("en");
+  // Mobile bottom-tab order. Hydrated from settings via the same shared
+  // normaliser the Layout uses so the picker and the live bar always agree
+  // on what's "selected" even when the server returns unknown/legacy keys.
+  const [bottomNavKeys, setBottomNavKeys] = useState<BottomNavKey[]>([]);
 
   useEffect(() => {
     if (settings) {
@@ -46,6 +57,7 @@ export default function SettingsPage() {
       setTelawaPagesPerDay(String(settings.telawaPagesPerDay));
       setReaderFontSize(String(settings.readerFontSize));
       setAyahViewFontSize(String(settings.ayahViewFontSize));
+      setBottomNavKeys([...resolveBottomNavKeys(settings.bottomNavKeys)]);
       const lang = settings.language === "ar" ? "ar" : "en";
       setLanguageState(lang);
     }
@@ -85,6 +97,7 @@ export default function SettingsPage() {
           // Same out-of-range fallback strategy as readerFontSize. Bounds
           // mirror the OpenAPI schema for ayahViewFontSize (14-96).
           ayahViewFontSize: Number.isFinite(avfs) && avfs >= 14 && avfs <= 96 ? avfs : undefined,
+          bottomNavKeys: bottomNavKeys.slice(0, MAX_BOTTOM_NAV_ITEMS),
         },
       },
       {
@@ -237,8 +250,172 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      <BottomNavCard
+        selected={bottomNavKeys}
+        onChange={setBottomNavKeys}
+      />
+
       <BackupCard />
     </div>
+  );
+}
+
+/**
+ * Lets the user pick which screens appear in the mobile bottom-tab bar
+ * and in what order. Selection is capped at MAX_BOTTOM_NAV_ITEMS to keep
+ * the bar tappable. Changes are staged into the parent's bottomNavKeys
+ * state and persisted alongside the other settings via the page-level
+ * Save button — there is no separate save here so users see one
+ * confirmation toast for the whole settings card.
+ */
+function BottomNavCard({
+  selected,
+  onChange,
+}: {
+  selected: BottomNavKey[];
+  onChange: (next: BottomNavKey[]) => void;
+}) {
+  const { t } = useTranslation();
+
+  const available = useMemo<BottomNavKey[]>(() => {
+    const picked = new Set(selected);
+    return ALLOWED_BOTTOM_NAV_KEYS.filter((k) => !picked.has(k));
+  }, [selected]);
+
+  const atLimit = selected.length >= MAX_BOTTOM_NAV_ITEMS;
+
+  const move = (idx: number, delta: number) => {
+    const target = idx + delta;
+    if (target < 0 || target >= selected.length) return;
+    const next = selected.slice();
+    [next[idx], next[target]] = [next[target], next[idx]];
+    onChange(next);
+  };
+  const remove = (key: BottomNavKey) =>
+    onChange(selected.filter((k) => k !== key));
+  const add = (key: BottomNavKey) => {
+    if (selected.includes(key) || atLimit) return;
+    onChange([...selected, key]);
+  };
+  const reset = () => onChange([...DEFAULT_BOTTOM_NAV_KEYS]);
+
+  return (
+    <Card className="border shadow-sm" data-testid="settings-bottom-nav-card">
+      <CardHeader>
+        <CardTitle className="text-base">{t("settings.bottomNav.title")}</CardTitle>
+        <CardDescription>{t("settings.bottomNav.description")}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("settings.bottomNav.shown")}{" "}
+              <span className="text-muted-foreground/70 normal-case font-medium">
+                ({selected.length}/{MAX_BOTTOM_NAV_ITEMS})
+              </span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={reset}
+              data-testid="btn-bottom-nav-reset"
+            >
+              <RotateCcw className="w-3.5 h-3.5 me-1.5" />
+              {t("settings.bottomNav.resetDefault")}
+            </Button>
+          </div>
+          {selected.length === 0 ? (
+            <div className="text-xs text-muted-foreground p-3 rounded-lg border border-dashed">
+              {t("settings.bottomNav.empty")}
+            </div>
+          ) : (
+            <ul className="space-y-1.5" data-testid="bottom-nav-selected-list">
+              {selected.map((key, idx) => (
+                <li
+                  key={key}
+                  className="flex items-center gap-2 p-2 rounded-lg border bg-muted/30"
+                  data-testid={`bottom-nav-selected-${key}`}
+                >
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-primary/10 text-primary text-xs font-semibold">
+                    {idx + 1}
+                  </span>
+                  <span className="text-sm font-medium flex-1 min-w-0 truncate">
+                    {t(`nav.${key}`)}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => move(idx, -1)}
+                    disabled={idx === 0}
+                    aria-label={t("settings.bottomNav.moveUp")}
+                    data-testid={`btn-bottom-nav-up-${key}`}
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => move(idx, 1)}
+                    disabled={idx === selected.length - 1}
+                    aria-label={t("settings.bottomNav.moveDown")}
+                    data-testid={`btn-bottom-nav-down-${key}`}
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => remove(key)}
+                    aria-label={t("settings.bottomNav.remove")}
+                    data-testid={`btn-bottom-nav-remove-${key}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+            {t("settings.bottomNav.available")}
+          </div>
+          {atLimit && (
+            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 mb-2">
+              {t("settings.bottomNav.limitReached")}
+            </div>
+          )}
+          {available.length === 0 ? null : (
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5" data-testid="bottom-nav-available-list">
+              {available.map((key) => (
+                <li key={key}>
+                  <button
+                    type="button"
+                    onClick={() => add(key)}
+                    disabled={atLimit}
+                    className="w-full flex items-center gap-2 p-2 rounded-lg border bg-background hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-start"
+                    data-testid={`btn-bottom-nav-add-${key}`}
+                  >
+                    <Plus className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium flex-1 min-w-0 truncate">
+                      {t(`nav.${key}`)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

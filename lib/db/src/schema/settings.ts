@@ -13,6 +13,7 @@
  *   - telawaPagesPerDay — default daily Khatmah page goal; can be overridden
  *     per active Khatmah via telawa_khatmah.pages_per_day (NULL = inherit).
  */
+import { sql } from "drizzle-orm";
 import { pgTable, serial, integer, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -35,6 +36,16 @@ export const settingsTable = pgTable("settings", {
   // browse the full Mushaf page at one size and study a single ayah at a
   // larger one without thrashing the other view's preference.
   ayahViewFontSize: integer("ayah_view_font_size").notNull().default(40),
+  // Ordered list of nav-item keys to show in the mobile bottom-tab bar.
+  // The Layout component reads this and falls back to the historical
+  // five (homework, dashboard, telawa, reader, mistakes) when the array
+  // is empty or contains only unknown keys. Server-side validation
+  // (see api-spec) restricts entries to the allowed enum and caps
+  // length at 5 so the bar stays tappable on small phones.
+  bottomNavKeys: text("bottom_nav_keys")
+    .array()
+    .notNull()
+    .default(sql`ARRAY['homework','dashboard','telawa','reader','mistakes']::text[]`),
 }, (table) => ({
   userIdUnique: uniqueIndex("settings_user_id_unique").on(table.userId),
 }));

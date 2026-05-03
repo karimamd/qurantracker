@@ -331,6 +331,20 @@
       "description": "Default font size used when opening a single ayah on the Ayahs page. Adjustments inside the ayah view itself are session-only.",
       "unit": "px"
     },
+    "bottomNav": {
+      "title": "Bottom tab bar",
+      "description": "Pick which pages appear in the bottom tab bar on mobile and the order they show in. Up to 5.",
+      "shown": "Shown in the bar",
+      "available": "More pages",
+      "empty": "No tabs selected — the default five will be used.",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove from bar",
+      "add": "Add to bar",
+      "limitReached": "Up to 5 tabs at a time. Remove one to add another.",
+      "resetDefault": "Reset to default",
+      "saved": "Bottom tab bar updated"
+    },
     "backup": {
       "title": "Backup & restore",
       "description": "Download every page, recitation, mistake, homework session and Telawa entry as a single JSON file — then restore it on another device or after signing in.",

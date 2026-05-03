@@ -22,7 +22,9 @@ import { Menu, X } from "lucide-react";
 import { UserButton, useUser, useClerk, useAuth } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useGetSettings } from "@workspace/api-client-react";
 import { isGuestMode, exitGuestMode } from "@/lib/guest-mode";
+import { resolveBottomNavKeys } from "@/lib/bottom-nav";
 
 const navItems = [
   { href: "/homework", key: "homework", testId: "homework", icon: ClipboardList },
@@ -40,13 +42,9 @@ const navItems = [
   { href: "/settings", key: "settings", testId: "settings", icon: Settings },
 ] as const;
 
-// Mobile bottom-nav surfaces the five most-used screens; everything else
-// lives in the burger drawer (which still renders the full `navItems`).
-const BOTTOM_NAV_KEYS = ["homework", "dashboard", "telawa", "reader", "mistakes"] as const;
-const bottomNavItems = BOTTOM_NAV_KEYS.map(
-  k => navItems.find(n => n.key === k)!,
-);
-
+// Mobile bottom-nav: the user picks which screens (and order) appear here
+// from Settings. The rest of `navItems` is always available via the burger
+// drawer regardless of this preference.
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -55,6 +53,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { signOut } = useClerk();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  // Settings drives the bottom-nav. Until it loads we render the historical
+  // five (resolveBottomNavKeys handles the empty/undefined fallback) so the
+  // bar never flickers blank on first paint.
+  const { data: settings } = useGetSettings();
+  const bottomNavItems = resolveBottomNavKeys(settings?.bottomNavKeys)
+    .map(k => navItems.find(n => n.key === k))
+    .filter((n): n is (typeof navItems)[number] => n !== undefined);
 
   const guestMode = !isSignedIn && isGuestMode();
 

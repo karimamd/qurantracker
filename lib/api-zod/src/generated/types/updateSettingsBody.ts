@@ -5,6 +5,7 @@
  * Quran Memorization Tracker API
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateSettingsBodyBottomNavKeysItem } from "./updateSettingsBodyBottomNavKeysItem";
 import type { UpdateSettingsBodyLanguage } from "./updateSettingsBodyLanguage";
 
 export interface UpdateSettingsBody {
@@ -28,4 +29,6 @@ export interface UpdateSettingsBody {
    * @maximum 96
    */
   ayahViewFontSize?: number;
+  /** @maxItems 5 */
+  bottomNavKeys?: UpdateSettingsBodyBottomNavKeysItem[];
 }

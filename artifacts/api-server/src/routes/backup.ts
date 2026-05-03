@@ -79,6 +79,18 @@ const SettingsImport = z.object({
   telawaPagesPerDay: z.number().int().min(1).max(604),
   readerFontSize: z.number().int().min(14).max(64),
   ayahViewFontSize: z.number().int().min(14).max(96),
+  // Optional for backward-compat: backups taken before the bottom-nav
+  // customization feature shipped won't carry this field.
+  bottomNavKeys: z
+    .array(
+      z.enum([
+        "homework", "dashboard", "telawa", "reader", "mistakes",
+        "juz", "rub", "surah", "pages", "ayahs",
+        "recite", "welcome", "settings",
+      ]),
+    )
+    .max(5)
+    .optional(),
 });
 
 const PageProgressImport = z.object({
@@ -184,6 +196,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       telawaPagesPerDay: settings.telawaPagesPerDay,
       readerFontSize: settings.readerFontSize,
       ayahViewFontSize: settings.ayahViewFontSize,
+      bottomNavKeys: settings.bottomNavKeys,
     },
     pageProgress: pageProgress.map((r) => ({
       pageNumber: r.pageNumber,
