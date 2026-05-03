@@ -10,6 +10,7 @@ export const settingsTable = pgTable("settings", {
   hardDays: integer("hard_days").notNull().default(7),
   relearnDays: integer("relearn_days").notNull().default(3),
   language: text("language").notNull().default("en"),
+  telawaPagesPerDay: integer("telawa_pages_per_day").notNull().default(5),
 }, (table) => ({
   userIdUnique: uniqueIndex("settings_user_id_unique").on(table.userId),
 }));
