@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getCachedPage, setCachedPage } from "@/lib/quran-page-cache";
 
 export interface ApiAyah {
   number: number;
@@ -71,7 +72,10 @@ function stripBasmalaFromFirstAyah(ayahs: ApiAyah[]): ApiAyah[] {
   });
 }
 
-export async function fetchPageAyahs(pageNumber: number, signal?: AbortSignal): Promise<ApiAyah[]> {
+async function fetchPageAyahsFromNetwork(
+  pageNumber: number,
+  signal?: AbortSignal,
+): Promise<ApiAyah[]> {
   const res = await fetch(
     `https://api.alquran.cloud/v1/page/${pageNumber}/quran-uthmani`,
     { signal },
@@ -82,13 +86,27 @@ export async function fetchPageAyahs(pageNumber: number, signal?: AbortSignal): 
   return stripBasmalaFromFirstAyah(json.data.ayahs);
 }
 
+// Read-through cache: serve from IndexedDB instantly when present, otherwise
+// hit the remote API and persist the result for next time. Quran text is
+// immutable so cached entries never need to be invalidated.
+export async function fetchPageAyahs(pageNumber: number, signal?: AbortSignal): Promise<ApiAyah[]> {
+  const cached = await getCachedPage(pageNumber);
+  if (cached) return cached;
+  const ayahs = await fetchPageAyahsFromNetwork(pageNumber, signal);
+  void setCachedPage(pageNumber, ayahs);
+  return ayahs;
+}
+
 export function pageAyahsQueryKey(pageNumber: number) {
   return ["alquran-cloud-page", pageNumber] as const;
 }
 
+// Quran text never changes — keep the in-memory react-query cache forever
+// so navigating between pages within a session is instant, and rely on the
+// IndexedDB layer for cross-session persistence.
 const PAGE_AYAH_OPTIONS = {
-  staleTime: 1000 * 60 * 60,
-  gcTime: 1000 * 60 * 60,
+  staleTime: Infinity,
+  gcTime: Infinity,
   retry: 1,
 } as const;
 

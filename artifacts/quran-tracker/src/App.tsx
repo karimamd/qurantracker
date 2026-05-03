@@ -17,6 +17,7 @@ import JuzList from "@/pages/juz-list";
 import JuzDetail from "@/pages/juz-detail";
 import Rob3List from "@/pages/rob3-list";
 import Reader from "@/pages/reader";
+import { usePrefetchAllPages } from "@/hooks/use-prefetch-all-pages";
 import SurahList from "@/pages/surah-list";
 import SurahDetail from "@/pages/surah-detail";
 import PageList from "@/pages/page-list";
@@ -243,6 +244,7 @@ function HomeRedirect() {
 
 function ProtectedApp() {
   const { isLoaded, isSignedIn } = useAuth();
+  usePrefetchAllPages();
   if (!isLoaded) return <AuthLoadingScreen />;
   if (!isSignedIn && !isGuestMode()) return <Redirect to="/" />;
   return (
