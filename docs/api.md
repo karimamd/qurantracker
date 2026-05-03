@@ -52,7 +52,7 @@ Every page object is enriched server-side via `enrichPageProgress`. The notable 
 | --- | --- | --- | --- |
 | `PATCH` | `/progress/pages/{pageNumber}` | Yes | Record a single-page recitation. Body: `{ quality, mistakes?, ayahMistakes? }`. Updates `page_progress`, appends a `recitation_log` row, and persists per-ayah mistakes into `ayah_mistakes` (atomic). |
 | `POST` | `/progress/recite-batch` | Yes | Record the same quality across a list of pages. Body: `{ pageNumbers: number[], quality, mistakes? }`. Also adds the pages to scope and marks matching `homework_items` completed for active sessions. |
-| `DELETE` | `/progress/activity/{id}` | Yes | **Undo recitation.** Deletes one `recitation_log` row, recomputes `page_progress` and `homework_items.completed` from the remaining history. Transactional with row lock. |
+| `DELETE` | `/progress/activity/{id}` | Yes | **Undo recitation.** Deletes one `recitation_log` row, then restores `page_progress` from the most recent remaining log (using that log's stored `due_date` verbatim, so the page's previous due date is preserved exactly even if interval settings have changed since). Also re-derives `homework_items.completed` for any active sessions covering this page. Transactional with row lock. |
 | `PUT` | `/progress/pages/{pageNumber}/name` | Yes | Set or clear the custom name for a page. |
 
 `ayahMistakes[]` items are `{ surahNumber, ayahNumberInSurah, globalAyahNumber, mistakeType }`. `mistakeType` is currently `"memorization"` or `"link"` — both can coexist on the same ayah.

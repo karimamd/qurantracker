@@ -216,7 +216,7 @@ in scope, daysUntilDue <= 3 (and not overdue)           → "due_soon"
 otherwise                                               → "on_track"
 ```
 
-Status is **always derived, never stored.** This matters: if the user changes their interval settings, every page's status updates immediately on the next read — no migration, no recompute job. It also means the `dueDate` column is a snapshot taken at recitation time using whatever settings were active *then*. (See "Edge case: settings changes" below.)
+Status is **always derived, never stored.** This matters: if the user changes their interval settings, every page's status updates immediately on the next read — no migration, no recompute job. The `page_progress.dueDate` column is a snapshot taken at recitation time using whatever settings were active *then*; the same snapshot is also persisted onto the `recitation_log` row so that an undo can restore the page's previous due date verbatim (see [§5 Undo](#undo-transactional-restore)).
 
 ## 3. Scope
 
@@ -292,7 +292,7 @@ The user *can* still toggle items manually in the homework detail page via `PATC
 
 The product question "did I complete my homework?" is logically the same as "did I recite each assigned page well?". Deriving it from `recitation_log` means the user only has to touch one surface: their normal recitation flow updates everything else. It also means the **undo** path stays consistent — see below.
 
-### Undo (transactional recompute)
+### Undo (transactional restore)
 
 `DELETE /progress/activity/:id` is the most subtle write in the system:
 
@@ -300,12 +300,18 @@ The product question "did I complete my homework?" is logically the same as "did
 2. `SELECT ... FOR UPDATE` on the affected `page_progress` row to serialize concurrent writes.
 3. Delete the `recitation_log` row.
 4. Find the most recent **remaining** log for that page.
-5. If one exists: recompute `page_progress` (`quality`, `mistakes`, `lastRecited`, `dueDate`) from it using the **user's current settings**.
+5. If one exists: restore `page_progress` (`quality`, `mistakes`, `lastRecited`, `dueDate`) from it. The `dueDate` is read **verbatim** from the prior log row's stored `due_date` column — see "Why we store `due_date` on every log row" below.
 6. If none exists: clear the page (`quality = null`, etc.) — the page goes back to "not_started" status.
 7. Re-derive `homework_items.completed` for active sessions covering this page using the same positive-rating rule.
 8. Commit.
 
-> **Subtle point.** Step 5 uses the user's **current** settings, not the settings that were active when the recitation happened. So if you lowered your "excellent" interval from 30→14 days, undoing a recitation will restore the page with the new 14-day rule, not the old 30-day one. This is intentional: settings are global, the system never persists a "snapshot of settings at recitation time". This means undo is **not** a perfect time-machine reversal — it's "remove this entry and recompute as if it had never happened, under today's rules".
+#### Why we store `due_date` on every log row
+
+Each `recitation_log` row carries the `due_date` that was assigned to the page at the moment the recitation was recorded (`last_recited + settings[quality]Days`, evaluated against whatever settings were active *then*). All three insert sites populate it: `PATCH /progress/pages/:n`, `POST /progress/recite-batch`, and the homework `PATCH` route.
+
+This gives the undo operation a true time-machine restore: if you recited page 99 as Excellent under a 30-day interval, lowered your Excellent interval to 7 days, recited it again as Good, and then undid the Good — the page returns to its **original** Excellent due date (today + 30), not a recomputed value (today + 7) under your current settings.
+
+**Backward compatibility.** The column is nullable. Any `recitation_log` row written before this column existed has `due_date = NULL`, and undo falls back to `calculateDueDate(mostRecent.recitedAt, mostRecent.quality, currentSettings)` for those rows only. New rows always have it set. Over time the legacy NULL rows naturally age out as users undo or re-recite their pages.
 
 ## 6. Cross-cutting domain rules
 
@@ -390,5 +396,6 @@ The current architecture (derived status, lazy row creation, append-only log, de
 | Settings defaults | `lib/db/src/schema/settings.ts` |
 | Streak computation | `artifacts/api-server/src/routes/progress.ts`, in the `/progress/overview` handler |
 | Homework completion derivation (single + batch) | `artifacts/api-server/src/routes/progress.ts` (`PATCH /progress/pages/:n`, `POST /progress/recite-batch`) |
-| Undo recompute (transactional) | `artifacts/api-server/src/routes/progress.ts` (`DELETE /progress/activity/:id`) |
+| Undo restore (transactional) | `artifacts/api-server/src/routes/progress.ts` (`DELETE /progress/activity/:id`) |
+| `due_date` snapshot on each recitation | `artifacts/api-server/src/routes/progress.ts` (single + batch) and `artifacts/api-server/src/routes/homework.ts` |
 | Multi-tenant `requireAuth` | `artifacts/api-server/src/middlewares/requireAuth.ts` |

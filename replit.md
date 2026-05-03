@@ -66,7 +66,7 @@ The frontend is built with `React`, `Vite`, `Tailwind CSS`, and `shadcn/ui`, ens
 - **Due Pages Dashboard**: Highlights pages requiring attention, sorted by due date.
 - **Daily Recitation Chart**: Visualizes distinct pages recited per day over the last 30 days.
 - **Progress over Time Chart**: A dual y-axis line chart showing overdue count and distinct pages recited daily to track momentum.
-- **Undo Recitation**: Allows users to undo a recorded recitation, which triggers a recomputation of page progress based on the remaining recitation log entries. This process is protected by database locks to prevent race conditions.
+- **Undo Recitation**: Allows users to undo a recorded recitation, which restores page progress from the most recent remaining log entry. The page's `due_date` is restored **verbatim** from a snapshot stored on each `recitation_log` row at write time — so changing the interval settings between recitations does not perturb the restored due date on undo. All three log insert sites (single PATCH, recite-batch, and homework completion) populate `recitation_log.due_date`. Legacy log rows written before this column existed have `due_date = NULL` and fall back to recomputing from current settings. Protected by `SELECT ... FOR UPDATE` on the page row to serialize concurrent writes.
 - **Guest Mode**: The application is fully functional without user sign-up. Guest data is migrated to a Clerk user profile upon sign-up.
 
 ### System Design Choices

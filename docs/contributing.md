@@ -1,6 +1,26 @@
 # Contributing
 
-Thanks for considering a contribution. This is a personal project but external contributions are welcome — bug reports, focused PRs, and documentation improvements especially.
+Welcome! This is a personal project, but external contributions are genuinely appreciated — bug reports, small focused PRs, and documentation improvements especially. The bar to your first contribution should be low: if something in the docs is unclear, that itself is a bug worth fixing.
+
+## New here? Start with these
+
+If this is your first time looking at the repo, you'll get oriented fastest by reading in this order:
+
+1. The repo [README](../README.md) — one-page overview of the stack, the artifacts, and the conventions you'll bump into.
+2. [Architecture](./architecture.md) — what each folder is and how the pieces talk to each other.
+3. [Data Flow](./data-flow.md) — a single request walked end-to-end (UI → hook → Express → Drizzle → Postgres → back).
+4. [Business Logic](./business-logic.md) — the *why* behind the spaced-repetition rules, scope, streak, homework, and undo behavior.
+
+You don't need to read everything before opening a PR — just the area you're touching. The docs are organized as a "jump in where you need it" reference, not a tutorial you have to finish.
+
+### Good first contributions
+
+- **Fix something in the docs** that confused you. Even a single sentence rewrite is welcome.
+- **Add a missing translation key** — search for an English string in `artifacts/quran-tracker/src/i18n/en.json` that has no Arabic counterpart in `ar.json`, or vice-versa.
+- **Improve a `data-testid`** on an interactive element so the testing harness can target it more reliably.
+- **Tighten a type** — replace any lingering `any` or implicit `unknown` with a proper type.
+
+For larger changes (new endpoints, schema changes, new pages), please open an issue first so we can sanity-check the design together. A 5-line clarification beats a rejected 500-line PR.
 
 ## Before you start
 
@@ -84,7 +104,7 @@ These are real footguns we've hit:
 
 ## Asking for help
 
-Open a GitHub issue for anything: a question, an idea, a bug. There's no template requirement — just write what you'd want to read.
+Open a GitHub issue for anything: a question, an idea, a bug, or "I read the docs and this part still isn't clicking." There's no template requirement — just write what you'd want to read. Questions are not a tax on the maintainer; unclear documentation is, and your question helps us notice it.
 
 ## Reporting bugs
 

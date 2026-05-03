@@ -112,10 +112,14 @@ router.delete("/progress/activity/:id", async (req, res) => {
       .where(and(eq(...userId), eq(...pageNumber)))
       .orderBy(desc(recitationLogTable.recitedAt)).limit(1);
 
-    // Recompute page_progress from history (or clear if none)
+    // Restore page_progress from history (or clear if none).
+    // dueDate is read verbatim from the prior log row's stored snapshot;
+    // we only recompute as a fallback for legacy rows written before
+    // recitation_log.due_date existed.
     let nextPage;
     if (mostRecent) {
-      const dueDate = calculateDueDate(mostRecent.recitedAt, mostRecent.quality, settings);
+      const dueDate = mostRecent.dueDate
+        ?? calculateDueDate(mostRecent.recitedAt, mostRecent.quality, settings);
       [nextPage] = await tx.update(pageProgressTable).set({
         quality: mostRecent.quality,
         mistakes: mostRecent.mistakes ?? null,
@@ -150,10 +154,11 @@ router.delete("/progress/activity/:id", async (req, res) => {
 });
 ```
 
-Two important properties:
+Three important properties:
 
-- **Atomicity**: the delete + recompute is a single transaction, with `SELECT ... FOR UPDATE` on the page row to serialize concurrent writes for the same page.
+- **Atomicity**: the delete + restore is a single transaction, with `SELECT ... FOR UPDATE` on the page row to serialize concurrent writes for the same page.
 - **Auth scoping**: every `where` clause includes `eq(..., userId)`, so a user can never modify another user's data even by guessing IDs.
+- **Verbatim due-date restore**: each `recitation_log` row stores the `due_date` it assigned at write time. Undo prefers that snapshot, so changing your interval settings between recitations doesn't perturb the restored due date. See [Business Logic — Undo](./business-logic.md#undo-transactional-restore).
 
 ### 6. Response → React Query → UI
 

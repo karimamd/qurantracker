@@ -65,10 +65,11 @@ Append-only history of every recitation. Used by the activity feed, charts, and 
 | `quality` | text | One of `"excellent" \| "good" \| "hard" \| "relearn"`. |
 | `mistakes` | integer NULL | |
 | `recited_at` | timestamptz default `now()` | |
+| `due_date` | timestamptz NULL | Snapshot of the `page_progress.due_date` assigned by **this** recitation, computed from the user's settings at the time the row was written. Read verbatim by the undo handler to restore the page's previous due date even if the user has since changed their interval settings. **Nullable for backward compat** — rows written before this column existed are NULL, and the undo handler falls back to recomputing `dueDate` from current settings for those legacy rows. |
 
 **Indexes:** `(user_id)`, `(user_id, page_number, recited_at desc)`.
 
-When a row is deleted via `DELETE /api/progress/activity/:id`, the handler recomputes `page_progress` from the most-recent remaining log for that page (or clears it if none remain). See [`data-flow.md`](./data-flow.md).
+When a row is deleted via `DELETE /api/progress/activity/:id`, the handler restores `page_progress` from the most-recent remaining log for that page (preferring its stored `due_date`), or clears the page if no logs remain. See [`data-flow.md`](./data-flow.md) for the full sequence.
 
 ### `homework_sessions`
 
