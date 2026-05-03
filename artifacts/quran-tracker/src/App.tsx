@@ -11,7 +11,7 @@ import Layout from "@/components/layout";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { useTranslation } from "react-i18next";
 import { useGetSettings, getGetSettingsQueryKey } from "@workspace/api-client-react";
-import { setLanguage, type SupportedLanguage } from "@/i18n";
+import { setLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/i18n";
 import Dashboard from "@/pages/dashboard";
 import JuzList from "@/pages/juz-list";
 import JuzDetail from "@/pages/juz-detail";
@@ -116,6 +116,40 @@ function SignUpPage() {
   );
 }
 
+function LandingLanguageToggle() {
+  const { t, i18n } = useTranslation();
+  const current = (i18n.language?.startsWith("ar") ? "ar" : "en") as SupportedLanguage;
+  return (
+    <div
+      role="group"
+      aria-label={t("settings.language.label")}
+      className="inline-flex items-center rounded-full border border-border bg-background/70 p-0.5 text-xs"
+      data-testid="landing-language-toggle"
+    >
+      {SUPPORTED_LANGUAGES.map((lang) => {
+        const active = current === lang;
+        const label = lang === "ar" ? t("settings.language.arabic") : t("settings.language.english");
+        return (
+          <button
+            key={lang}
+            type="button"
+            onClick={() => setLanguage(lang)}
+            aria-pressed={active}
+            data-testid={`landing-lang-${lang}`}
+            className={`px-2.5 py-1 rounded-full font-medium transition-colors ${
+              active
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function Landing() {
   const [, setLocation] = useLocation();
   const { t } = useTranslation();
@@ -131,6 +165,7 @@ function Landing() {
           <span className="font-semibold text-foreground text-lg">{t("app.name")}</span>
         </div>
         <div className="flex items-center gap-2">
+          <LandingLanguageToggle />
           <Link href="/sign-in">
             <Button variant="ghost" size="sm" data-testid="link-sign-in">{t("auth.signIn")}</Button>
           </Link>
