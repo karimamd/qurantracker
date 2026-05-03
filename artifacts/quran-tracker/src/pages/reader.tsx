@@ -649,7 +649,7 @@ export default function Reader() {
                       }
 
                       const cleanedText = a.text.replace(
-                        /^\ufeff?بِسْمِ\s+اللَّهِ\s+الرَّحْمَ?ٰ?نِ\s+الرَّحِيمِ\s*/u,
+                        /^\ufeff?بِسْمِ\s+[اٱ]للَّهِ\s+[اٱ]لرَّحْمَ?ٰ?نِ\s+[اٱ]لرَّحِيمِ\s*/u,
                         group.isFirstAyah && i === 0 && group.surahNumber !== 1 ? "" : "$&",
                       );
 

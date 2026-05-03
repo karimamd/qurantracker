@@ -8,7 +8,7 @@ interface FirstAyahPreviewProps {
   wordCount?: number;
 }
 
-const BISMILLAH_RE = /^\ufeff?بِسْمِ\s+اللَّهِ\s+الرَّحْمَ?ٰ?نِ\s+الرَّحِيمِ\s*/u;
+const BISMILLAH_RE = /^\ufeff?بِسْمِ\s+[اٱ]للَّهِ\s+[اٱ]لرَّحْمَ?ٰ?نِ\s+[اٱ]لرَّحِيمِ\s*/u;
 
 export function FirstAyahPreview({
   pageNumber,
