@@ -423,6 +423,11 @@ export default function Reader() {
           // Authoritative server response — write directly to cache so the
           // seeding effect never clobbers optimistic state with stale data.
           queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
+          // Also refresh the global mistakes feed so /mistakes and the
+          // badges on /ayahs reflect this mark without a hard refresh.
+          // ("cleared" rows are excluded server-side from that feed, but
+          // invalidating is still cheap and keeps the path uniform.)
+          queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
         },
         onError: () => {
           // Roll back optimistic state on failure
@@ -469,6 +474,9 @@ export default function Reader() {
       {
         onSuccess: (data) => {
           queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
+          // Mirror persistAdd: keep /mistakes and the /ayahs badges in
+          // sync after a per-ayah toggle.
+          queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
         },
         onError: () => {
           rollback();

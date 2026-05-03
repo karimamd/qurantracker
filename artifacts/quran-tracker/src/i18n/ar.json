@@ -377,7 +377,13 @@
     "loadMore": "تحميل المزيد (يتبقّى {{remaining}})",
     "empty": "لا توجد آيات مطابقة لهذه التصفية",
     "emptyHint": "جرّب مسح البحث أو توسيع نطاق الصفحات.",
-    "loadError": "تعذّر تحميل نص القرآن. حدّث الصفحة من فضلك."
+    "loadError": "تعذّر تحميل نص القرآن. حدّث الصفحة من فضلك.",
+    "markFilterAll": "كل العلامات",
+    "markFilterMarked": "المُعلَّمة فقط",
+    "markFilterMemorization": "الأخطاء فقط",
+    "markFilterLink": "أخطاء الربط فقط",
+    "markBadgeMemorization": "خطأ",
+    "markBadgeLink": "ربط"
   },
   "ayahDetail": {
     "title": "الآية {{n}}",
@@ -744,7 +750,8 @@
     "openReader": "فتح المصحف",
     "ayahLine": "آية {{n}}",
     "pageTime": "صفحة {{page}} · {{time}}",
-    "practice": "تدريب"
+    "practice": "تدريب",
+    "focus": "تركيز"
   },
   "guestPrompt": {
     "savedTitle": "احفظ تقدّمك في حسابك",

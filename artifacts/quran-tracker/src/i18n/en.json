@@ -369,7 +369,13 @@
     "loadMore": "Load more ({{remaining}} left)",
     "empty": "No ayahs match these filters",
     "emptyHint": "Try clearing the search or widening the page range.",
-    "loadError": "Could not load the Quran text. Please refresh the page."
+    "loadError": "Could not load the Quran text. Please refresh the page.",
+    "markFilterAll": "All marks",
+    "markFilterMarked": "Marked only",
+    "markFilterMemorization": "Mistakes only",
+    "markFilterLink": "Link mistakes only",
+    "markBadgeMemorization": "Mistake",
+    "markBadgeLink": "Link"
   },
   "ayahDetail": {
     "title": "Ayah {{n}}",
@@ -720,7 +726,8 @@
     "openReader": "Open Reader",
     "ayahLine": "Ayah {{n}}",
     "pageTime": "Page {{page}} · {{time}}",
-    "practice": "Practice"
+    "practice": "Practice",
+    "focus": "Focus"
   },
   "guestPrompt": {
     "savedTitle": "Save your progress to your account",

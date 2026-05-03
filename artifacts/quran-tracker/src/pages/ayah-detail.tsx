@@ -34,7 +34,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
-  ArrowRight,
   BookMarked,
   Check,
   ChevronLeft,
@@ -376,6 +375,3 @@ export default function AyahDetail() {
   );
 }
 
-// Silence unused-import warnings for the directional arrow icons in case
-// future refactors swap them out.
-void ArrowRight;

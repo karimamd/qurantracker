@@ -18,7 +18,7 @@ import type { Mistake } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { AlertTriangle, Link2, X, Eye, FileText, BookMarked, ChevronDown } from "lucide-react";
+import { AlertTriangle, Link2, X, Eye, FileText, BookMarked, ChevronDown, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { JUZ_RANGES } from "@/lib/quran-ref";
@@ -273,14 +273,24 @@ export default function MistakesPage() {
                                   </div>
                                 </div>
                               </div>
-                              <Link
-                                href={`/reader/${m.pageNumber}?practice=${m.globalAyahNumber}`}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border bg-background text-xs font-medium hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors shrink-0"
-                                data-testid={`mistake-practice-${m.id}`}
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                                {t("mistakes.practice")}
-                              </Link>
+                              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                                <Link
+                                  href={`/ayahs/${m.globalAyahNumber}`}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border bg-background text-xs font-medium hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                                  data-testid={`mistake-focus-${m.id}`}
+                                >
+                                  <Sparkles className="w-3.5 h-3.5" />
+                                  {t("mistakes.focus")}
+                                </Link>
+                                <Link
+                                  href={`/reader/${m.pageNumber}?practice=${m.globalAyahNumber}`}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border bg-background text-xs font-medium hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                                  data-testid={`mistake-practice-${m.id}`}
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  {t("mistakes.practice")}
+                                </Link>
+                              </div>
                             </div>
                           );
                         })}
