@@ -161,8 +161,11 @@ export function PageRow({
             </div>
 
             {showFirstAyah && (
-              <div className="mt-1.5 max-w-full overflow-hidden text-sm sm:text-base">
-                <FirstAyahPreview pageNumber={pageNumber} className="block max-w-full" />
+              <div className="mt-1.5 w-full min-w-0 overflow-hidden text-sm sm:text-base">
+                <FirstAyahPreview
+                  pageNumber={pageNumber}
+                  className="block w-full max-w-full whitespace-nowrap overflow-hidden text-ellipsis"
+                />
               </div>
             )}
 
