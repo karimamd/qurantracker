@@ -45,7 +45,7 @@ The frontend is built with `React`, `Vite`, `Tailwind CSS`, and `shadcn/ui`, ens
 - **Telawa (recurring read-through)**: A separate track for reading the Quran, independent of memorization progress.
 - **Khatmah (Telawa cycles)**: Manages read-through cycles with customizable daily page goals and progress tracking.
 - **Per-page Active Mistakes**: A queue of unresolved ayah mistakes persisting across sessions until explicitly cleared.
-- **Homework Tracking**: Bi-weekly sessions for memorization and revision.
+- **Homework Tracking**: Bi-weekly sessions for memorization and revision. Page-completion counters render with explicit `"X / Y pages done"` labels (i18n keys `homework.pagesProgress` / `pagesProgressTitle`) on both the homework list cards and the per-section header in the detail view, so the bare numbers are never ambiguous.
 - **Activity Feed**: Recent recitation history on the dashboard with undo functionality.
 - **Streak Counter**: Tracks consecutive days of revision.
 - **Due Pages Dashboard**: Highlights pages requiring attention.
@@ -60,6 +60,12 @@ The frontend is built with `React`, `Vite`, `Tailwind CSS`, and `shadcn/ui`, ens
 - **Configurable mobile bottom-tab bar**: `settings.bottomNavKeys` (Postgres `text[]`, OpenAPI enum array, max 5) drives which screens appear in the fixed bottom nav on mobile and in what order. The Settings page exposes a picker (add/remove + up/down reorder + reset). `Layout` consumes the field via `useGetSettings()` and a shared `resolveBottomNavKeys()` helper (`src/lib/bottom-nav.ts`) that drops unknown keys, dedupes, caps at 5, and falls back to the historical default five (homework, dashboard, telawa, reader, mistakes) so the bar never renders blank. Backups include the field; older backups without it inherit the DB default.
 - **Per-ayah Tafsir & Word-by-Word**: Detail screen for ayahs including Tafsir Muyassar and Word-by-Word explanations, with offline-first caching.
 - **Backup & Restore**: Self-serve JSON import/export of all user data.
+- **Cross-screen cache invalidation**: Mutations that can transitively change page progress invalidate every derived view, so any screen the user navigates back to is fresh:
+  - `/reader` per-ayah mistake POST/DELETE — in addition to refreshing `mistakes` and the per-page active-mistakes cache, also invalidates `pageProgress`, `progressOverview`, `juz`/`surah`/`rob3` lists, `recentActivity`, the open `juzDetail`/`surahDetail`, and all `homework` queries, because the server may auto-assign a recitation as a side effect.
+  - `/dashboard` quick-rate on a due page — invalidates the same broad set (page progress, overview, juz/surah, recent activity, daily/progress charts, homework list and details) instead of only the two queries it directly mutates.
+  - `/recite` batch recitation — additionally invalidates the global `mistakes` feed, since a recited page resolves any active per-ayah mistakes server-side.
+  - `homework-detail` reads per-page active mistakes through the generated `getListActivePageMistakesQueryKey` so its cache entry is shared with the reader's optimistic writes.
+  - `Settings → language` — if the persist mutation fails, the i18next-applied language flips back to the previous value so the UI never disagrees with the server.
 
 ### System Design Choices
 

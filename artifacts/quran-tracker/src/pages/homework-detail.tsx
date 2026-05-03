@@ -7,6 +7,7 @@ import {
   getListHomeworkQueryKey,
   getGetProgressOverviewQueryKey,
   getListPageProgressQueryKey,
+  getListActivePageMistakesQueryKey,
   type ActiveAyahMistake,
 } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
@@ -61,7 +62,11 @@ function usePagesCoverage(pageNumbers: number[]): Map<number, PageCoverage> {
 
   const mistakesResults = useQueries({
     queries: uniquePages.map(pageNumber => ({
-      queryKey: [`/api/progress/pages/${pageNumber}/active-mistakes`] as const,
+      // Use the generated query key so this cache entry is shared with the
+      // reader's per-ayah mistake mutations — when the user marks an ayah
+      // on /reader, the optimistic setQueryData and invalidations there
+      // automatically flow into this view's coverage badges.
+      queryKey: getListActivePageMistakesQueryKey(pageNumber),
       queryFn: async ({ signal }: { signal?: AbortSignal }) => {
         const res = await fetch(`/api/progress/pages/${pageNumber}/active-mistakes`, {
           credentials: "include",

@@ -428,6 +428,12 @@ export default function Reader() {
           // ("cleared" rows are excluded server-side from that feed, but
           // invalidating is still cheap and keeps the path uniform.)
           queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
+          // The server may have auto-assigned a page recitation as a side
+          // effect (when the feature flag is on AND this mark completed the
+          // page). We don't know whether that fired without reading the
+          // response, so invalidate the progress-derived queries that would
+          // surface a freshly written recitation_log / page_progress row.
+          invalidateProgressData();
         },
         onError: () => {
           // Roll back optimistic state on failure
@@ -477,6 +483,10 @@ export default function Reader() {
           // Mirror persistAdd: keep /mistakes and the /ayahs badges in
           // sync after a per-ayah toggle.
           queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
+          // Removing a mistake can also flip the auto-assigned bucket
+          // server-side (e.g. relearn → hard). Refresh the same set of
+          // progress-derived queries persistAdd does.
+          invalidateProgressData();
         },
         onError: () => {
           rollback();

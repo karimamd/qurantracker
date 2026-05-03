@@ -34,6 +34,7 @@ import {
   getGetSurahDetailQueryKey,
   getGetDailyChartQueryKey,
   getGetProgressChartQueryKey,
+  getListHomeworkQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -275,8 +276,19 @@ function DuePagesSection() {
       { pageNumber, data: { quality } },
       {
         onSuccess: () => {
+          // Rating a due page from the dashboard writes page_progress and
+          // a recitation_log entry, which feeds many other views. Mirror
+          // the broader invalidation set used by the reader / undo paths
+          // so all dashboard cards (and any open detail screens) refresh.
           queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListJuzProgressQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListSurahProgressQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetDailyChartQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetProgressChartQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
+          queryClient.invalidateQueries({ predicate: q => String(q.queryKey[0]).startsWith("/api/homework/") });
         },
         onError: () => toast({ title: t("errors.failedRecord"), variant: "destructive" }),
       }

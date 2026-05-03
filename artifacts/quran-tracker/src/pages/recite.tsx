@@ -6,6 +6,7 @@ import {
   getListSurahProgressQueryKey,
   getGetRecentActivityQueryKey,
   getListHomeworkQueryKey,
+  getGetMistakesQueryKey,
 } from "@workspace/api-client-react";
 import type { BatchRecitationBodyQuality } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,6 +97,10 @@ export default function Recite() {
           queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
           queryClient.invalidateQueries({ predicate: q => String(q.queryKey[0]).startsWith("/api/homework/") });
+          // A batch recitation can resolve any active per-ayah mistakes
+          // (server-side rules clear them when the page is recited). Refresh
+          // the global mistakes feed so /mistakes and badges reflect that.
+          queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
           setTimeout(() => setSubmitted(false), 3000);
         },
       }

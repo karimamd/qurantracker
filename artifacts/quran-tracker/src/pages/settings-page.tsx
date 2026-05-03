@@ -34,7 +34,7 @@ export default function SettingsPage() {
   const updateSettings = useUpdateSettings();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [excellentDays, setExcellentDays] = useState("");
   const [goodDays, setGoodDays] = useState("");
@@ -97,6 +97,7 @@ export default function SettingsPage() {
 
   const handleLanguageChange = (value: string) => {
     const lang: SupportedLanguage = value === "ar" ? "ar" : "en";
+    const previous = i18n.language === "ar" ? "ar" : "en";
     setLanguageState(lang);
     // Apply immediately for snappy UX, then persist.
     setLanguage(lang);
@@ -105,6 +106,13 @@ export default function SettingsPage() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+        },
+        onError: () => {
+          // Roll the i18n side effect back so the UI doesn't end up in a
+          // language the server never agreed to.
+          setLanguage(previous);
+          setLanguageState(previous);
+          toast({ title: t("settings.saveFailed"), variant: "destructive" });
         },
       }
     );
