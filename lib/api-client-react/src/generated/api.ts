@@ -37,12 +37,15 @@ import type {
   ProgressChartEntry,
   ProgressOverview,
   RecordRecitationBody,
+  RecordTelawaReadBody,
   RenamePageBody,
   Rob3ProgressItem,
   ScopeBody,
   Settings,
   SurahDetail,
   SurahProgress,
+  TelawaStats,
+  TelawaToday,
   UpdateHomeworkBody,
   UpdateHomeworkItemBody,
   UpdateSettingsBody,
@@ -2294,3 +2297,320 @@ export const useUndoRecitation = <
 > => {
   return useMutation(getUndoRecitationMutationOptions(options));
 };
+
+/**
+ * @summary Get today's Telawa batch and rotation cursor
+ */
+export const getGetTelawaTodayUrl = () => {
+  return `/api/telawa/today`;
+};
+
+export const getTelawaToday = async (
+  options?: RequestInit,
+): Promise<TelawaToday> => {
+  return customFetch<TelawaToday>(getGetTelawaTodayUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTelawaTodayQueryKey = () => {
+  return [`/api/telawa/today`] as const;
+};
+
+export const getGetTelawaTodayQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTelawaToday>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaToday>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTelawaTodayQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTelawaToday>>> = ({
+    signal,
+  }) => getTelawaToday({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaToday>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTelawaTodayQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTelawaToday>>
+>;
+export type GetTelawaTodayQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get today's Telawa batch and rotation cursor
+ */
+
+export function useGetTelawaToday<
+  TData = Awaited<ReturnType<typeof getTelawaToday>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaToday>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTelawaTodayQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Mark the next page in the Telawa rotation as read
+ */
+export const getRecordTelawaReadUrl = () => {
+  return `/api/telawa/read`;
+};
+
+export const recordTelawaRead = async (
+  recordTelawaReadBody: RecordTelawaReadBody,
+  options?: RequestInit,
+): Promise<TelawaToday> => {
+  return customFetch<TelawaToday>(getRecordTelawaReadUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(recordTelawaReadBody),
+  });
+};
+
+export const getRecordTelawaReadMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordTelawaRead>>,
+    TError,
+    { data: BodyType<RecordTelawaReadBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordTelawaRead>>,
+  TError,
+  { data: BodyType<RecordTelawaReadBody> },
+  TContext
+> => {
+  const mutationKey = ["recordTelawaRead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordTelawaRead>>,
+    { data: BodyType<RecordTelawaReadBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return recordTelawaRead(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordTelawaReadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordTelawaRead>>
+>;
+export type RecordTelawaReadMutationBody = BodyType<RecordTelawaReadBody>;
+export type RecordTelawaReadMutationError = ErrorType<void>;
+
+/**
+ * @summary Mark the next page in the Telawa rotation as read
+ */
+export const useRecordTelawaRead = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordTelawaRead>>,
+    TError,
+    { data: BodyType<RecordTelawaReadBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof recordTelawaRead>>,
+  TError,
+  { data: BodyType<RecordTelawaReadBody> },
+  TContext
+> => {
+  return useMutation(getRecordTelawaReadMutationOptions(options));
+};
+
+/**
+ * @summary Undo the most recent Telawa read entry
+ */
+export const getUndoTelawaReadUrl = () => {
+  return `/api/telawa/read/last`;
+};
+
+export const undoTelawaRead = async (
+  options?: RequestInit,
+): Promise<TelawaToday> => {
+  return customFetch<TelawaToday>(getUndoTelawaReadUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getUndoTelawaReadMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof undoTelawaRead>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof undoTelawaRead>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["undoTelawaRead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof undoTelawaRead>>,
+    void
+  > = () => {
+    return undoTelawaRead(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UndoTelawaReadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof undoTelawaRead>>
+>;
+
+export type UndoTelawaReadMutationError = ErrorType<void>;
+
+/**
+ * @summary Undo the most recent Telawa read entry
+ */
+export const useUndoTelawaRead = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof undoTelawaRead>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof undoTelawaRead>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getUndoTelawaReadMutationOptions(options));
+};
+
+/**
+ * @summary Get Telawa stats (totals, current cycle, last 30 days activity)
+ */
+export const getGetTelawaStatsUrl = () => {
+  return `/api/telawa/stats`;
+};
+
+export const getTelawaStats = async (
+  options?: RequestInit,
+): Promise<TelawaStats> => {
+  return customFetch<TelawaStats>(getGetTelawaStatsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTelawaStatsQueryKey = () => {
+  return [`/api/telawa/stats`] as const;
+};
+
+export const getGetTelawaStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTelawaStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTelawaStatsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTelawaStats>>> = ({
+    signal,
+  }) => getTelawaStats({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTelawaStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTelawaStats>>
+>;
+export type GetTelawaStatsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get Telawa stats (totals, current cycle, last 30 days activity)
+ */
+
+export function useGetTelawaStats<
+  TData = Awaited<ReturnType<typeof getTelawaStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTelawaStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 import { randomUUID } from "node:crypto";
 import { getAuth, clerkClient } from "@clerk/express";
-import { db, pageProgressTable, recitationLogTable, homeworkSessionsTable, homeworkItemsTable, settingsTable, ayahMistakesTable } from "@workspace/db";
+import { db, pageProgressTable, recitationLogTable, homeworkSessionsTable, homeworkItemsTable, settingsTable, ayahMistakesTable, telawaLogTable } from "@workspace/db";
 import { and, eq, exists, isNull, notExists, sql } from "drizzle-orm";
 
 declare global {
@@ -120,6 +120,10 @@ async function migrateGuestData(guestUserId: string, newUserId: string, log: Req
         .update(ayahMistakesTable)
         .set({ userId: newUserId })
         .where(eq(ayahMistakesTable.userId, guestUserId));
+      const telawa = await tx
+        .update(telawaLogTable)
+        .set({ userId: newUserId })
+        .where(eq(telawaLogTable.userId, guestUserId));
 
       return {
         settingsDropped: droppedSettings.rowCount ?? 0,
@@ -130,6 +134,7 @@ async function migrateGuestData(guestUserId: string, newUserId: string, log: Req
         sessionsMoved: sessions.rowCount ?? 0,
         itemsMoved: items.rowCount ?? 0,
         ayahMistakesMoved: ayahMistakes.rowCount ?? 0,
+        telawaMoved: telawa.rowCount ?? 0,
       };
     });
     log?.info({ guestUserId, newUserId, ...counts }, "Migrated guest data to signed-in user");
@@ -187,6 +192,7 @@ async function maybeClaimOrphansForUser(userId: string, log: Request["log"]): Pr
       db.update(homeworkItemsTable).set({ userId }).where(isNull(homeworkItemsTable.userId)),
       db.update(settingsTable).set({ userId }).where(isNull(settingsTable.userId)),
       db.update(ayahMistakesTable).set({ userId }).where(isNull(ayahMistakesTable.userId)),
+      db.update(telawaLogTable).set({ userId }).where(isNull(telawaLogTable.userId)),
     ]);
     log?.info(
       {
@@ -199,6 +205,7 @@ async function maybeClaimOrphansForUser(userId: string, log: Request["log"]): Pr
           homeworkItems: results[3].rowCount ?? null,
           settings: results[4].rowCount ?? null,
           ayahMistakes: results[5].rowCount ?? null,
+          telawa: results[6].rowCount ?? null,
         },
       },
       "Orphan rows claimed for owner",

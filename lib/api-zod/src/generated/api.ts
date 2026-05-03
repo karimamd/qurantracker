@@ -25,17 +25,29 @@ export const GetSettingsResponse = zod.object({
   hardDays: zod.number(),
   relearnDays: zod.number(),
   language: zod.enum(["en", "ar"]),
+  telawaPagesPerDay: zod
+    .number()
+    .describe(
+      "Number of pages per day for the recurring Telawa (read-only) rotation. Default 5.",
+    ),
 });
 
 /**
  * @summary Update user settings
  */
+export const updateSettingsBodyTelawaPagesPerDayMax = 604;
+
 export const UpdateSettingsBody = zod.object({
   excellentDays: zod.number().optional(),
   goodDays: zod.number().optional(),
   hardDays: zod.number().optional(),
   relearnDays: zod.number().optional(),
   language: zod.enum(["en", "ar"]).optional(),
+  telawaPagesPerDay: zod
+    .number()
+    .min(1)
+    .max(updateSettingsBodyTelawaPagesPerDayMax)
+    .optional(),
 });
 
 export const UpdateSettingsResponse = zod.object({
@@ -45,6 +57,11 @@ export const UpdateSettingsResponse = zod.object({
   hardDays: zod.number(),
   relearnDays: zod.number(),
   language: zod.enum(["en", "ar"]),
+  telawaPagesPerDay: zod
+    .number()
+    .describe(
+      "Number of pages per day for the recurring Telawa (read-only) rotation. Default 5.",
+    ),
 });
 
 /**
@@ -995,4 +1012,145 @@ export const UndoRecitationResponse = zod.object({
     .describe(
       "Number of 14-day overdue periods that have downgraded the quality (0 when not overdue, capped so effectiveQuality does not pass relearn).",
     ),
+});
+
+/**
+ * @summary Get today's Telawa batch and rotation cursor
+ */
+export const GetTelawaTodayResponse = zod.object({
+  pagesPerDay: zod.number(),
+  nextPage: zod
+    .number()
+    .describe("Next page number in the rotation cursor (1..604)"),
+  cycleNumber: zod
+    .number()
+    .describe(
+      "Current cycle number (1-based). Increments after page 604 is read.",
+    ),
+  totalRead: zod
+    .number()
+    .describe("Total Telawa reads ever recorded for the user."),
+  readToday: zod
+    .number()
+    .describe(
+      "Number of Telawa reads recorded since the start of today (UTC).",
+    ),
+  upcomingPages: zod
+    .array(zod.number())
+    .describe(
+      "Next pagesPerDay pages to read, starting from the cursor and wrapping at 604.",
+    ),
+  recentReads: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        pageNumber: zod.number(),
+        cycleNumber: zod.number(),
+        readAt: zod.coerce.date(),
+      }),
+    )
+    .describe("Pages read today (most recent first), for display only."),
+});
+
+/**
+ * @summary Mark the next page in the Telawa rotation as read
+ */
+export const recordTelawaReadBodyPageNumberMax = 604;
+
+export const RecordTelawaReadBody = zod.object({
+  pageNumber: zod
+    .number()
+    .min(1)
+    .max(recordTelawaReadBodyPageNumberMax)
+    .describe("Must equal the current cursor (TelawaToday.nextPage)."),
+});
+
+export const RecordTelawaReadResponse = zod.object({
+  pagesPerDay: zod.number(),
+  nextPage: zod
+    .number()
+    .describe("Next page number in the rotation cursor (1..604)"),
+  cycleNumber: zod
+    .number()
+    .describe(
+      "Current cycle number (1-based). Increments after page 604 is read.",
+    ),
+  totalRead: zod
+    .number()
+    .describe("Total Telawa reads ever recorded for the user."),
+  readToday: zod
+    .number()
+    .describe(
+      "Number of Telawa reads recorded since the start of today (UTC).",
+    ),
+  upcomingPages: zod
+    .array(zod.number())
+    .describe(
+      "Next pagesPerDay pages to read, starting from the cursor and wrapping at 604.",
+    ),
+  recentReads: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        pageNumber: zod.number(),
+        cycleNumber: zod.number(),
+        readAt: zod.coerce.date(),
+      }),
+    )
+    .describe("Pages read today (most recent first), for display only."),
+});
+
+/**
+ * @summary Undo the most recent Telawa read entry
+ */
+export const UndoTelawaReadResponse = zod.object({
+  pagesPerDay: zod.number(),
+  nextPage: zod
+    .number()
+    .describe("Next page number in the rotation cursor (1..604)"),
+  cycleNumber: zod
+    .number()
+    .describe(
+      "Current cycle number (1-based). Increments after page 604 is read.",
+    ),
+  totalRead: zod
+    .number()
+    .describe("Total Telawa reads ever recorded for the user."),
+  readToday: zod
+    .number()
+    .describe(
+      "Number of Telawa reads recorded since the start of today (UTC).",
+    ),
+  upcomingPages: zod
+    .array(zod.number())
+    .describe(
+      "Next pagesPerDay pages to read, starting from the cursor and wrapping at 604.",
+    ),
+  recentReads: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        pageNumber: zod.number(),
+        cycleNumber: zod.number(),
+        readAt: zod.coerce.date(),
+      }),
+    )
+    .describe("Pages read today (most recent first), for display only."),
+});
+
+/**
+ * @summary Get Telawa stats (totals, current cycle, last 30 days activity)
+ */
+export const GetTelawaStatsResponse = zod.object({
+  totalRead: zod.number(),
+  currentCycle: zod.number(),
+  nextPage: zod.number(),
+  pagesPerDay: zod.number(),
+  readToday: zod.number(),
+  last30Days: zod.array(
+    zod.object({
+      date: zod.string().describe("Date as YYYY-MM-DD (UTC)"),
+      count: zod.number(),
+    }),
+  ),
 });

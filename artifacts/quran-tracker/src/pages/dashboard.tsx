@@ -5,6 +5,7 @@ import {
   useGetDailyChart,
   useGetProgressChart,
   useListHomework,
+  useGetTelawaToday,
   useUpdatePageProgress,
   useUndoRecitation,
   getListPageProgressQueryKey,
@@ -21,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QualityBadge } from "@/components/quality-badge";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight, Undo2 } from "lucide-react";
+import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight, Undo2, Repeat } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -173,6 +174,60 @@ function ActiveHomeworkSection() {
           </div>
           <Progress value={pct} className="h-2" />
           <p className="text-xs text-muted-foreground mt-1.5">{t("dashboard.pagesCompleted", { done: active.completedItems, total: active.totalItems })}</p>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function TelawaCard() {
+  const { t } = useTranslation();
+  const { data, isLoading } = useGetTelawaToday();
+
+  if (isLoading) return <Skeleton className="h-20 rounded-xl" />;
+  if (!data) return null;
+
+  const pct = Math.min(100, Math.round((data.readToday / Math.max(1, data.pagesPerDay)) * 100));
+  const remaining = Math.max(0, data.pagesPerDay - data.readToday);
+
+  return (
+    <Link href="/telawa">
+      <Card
+        className="border shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer"
+        data-testid="dashboard-telawa-card"
+      >
+        <CardContent className="py-4 px-5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-primary uppercase tracking-wide mb-0.5 flex items-center gap-1.5">
+                <Repeat className="w-3.5 h-3.5" />
+                {t("telawa.dashboard.title")}
+              </p>
+              <p className="font-semibold text-sm truncate">
+                {t("telawa.dashboard.subtitle", { next: data.nextPage, cycle: data.cycleNumber })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 ms-3">
+              <div className="text-end">
+                <p className="text-xs text-muted-foreground">
+                  {t("telawa.dashboard.todayProgress", {
+                    done: data.readToday,
+                    total: data.pagesPerDay,
+                  })}
+                </p>
+                <p className="text-xs font-medium">
+                  {remaining > 0
+                    ? t("telawa.dashboard.remaining", { count: remaining })
+                    : t("telawa.dashboard.allDone")}
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground rtl:rotate-180" />
+            </div>
+          </div>
+          <Progress value={pct} className="h-2" />
+          <p className="text-xs text-muted-foreground mt-1.5">
+            {t("telawa.dashboard.totalRead", { count: data.totalRead })}
+          </p>
         </CardContent>
       </Card>
     </Link>
@@ -758,6 +813,8 @@ export default function Dashboard() {
       </div>
 
       <ActiveHomeworkSection />
+
+      <TelawaCard />
 
       <ProgressChartSection />
 

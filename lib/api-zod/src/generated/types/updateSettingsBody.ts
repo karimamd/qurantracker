@@ -13,4 +13,9 @@ export interface UpdateSettingsBody {
   hardDays?: number;
   relearnDays?: number;
   language?: UpdateSettingsBodyLanguage;
+  /**
+   * @minimum 1
+   * @maximum 604
+   */
+  telawaPagesPerDay?: number;
 }

@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const [goodDays, setGoodDays] = useState("");
   const [hardDays, setHardDays] = useState("");
   const [relearnDays, setRelearnDays] = useState("");
+  const [telawaPagesPerDay, setTelawaPagesPerDay] = useState("");
   const [language, setLanguageState] = useState<SupportedLanguage>("en");
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function SettingsPage() {
       setGoodDays(String(settings.goodDays));
       setHardDays(String(settings.hardDays));
       setRelearnDays(String(settings.relearnDays));
+      setTelawaPagesPerDay(String(settings.telawaPagesPerDay));
       const lang = settings.language === "ar" ? "ar" : "en";
       setLanguageState(lang);
     }
@@ -51,6 +53,7 @@ export default function SettingsPage() {
   };
 
   const handleSave = () => {
+    const tppd = parseInt(telawaPagesPerDay, 10);
     updateSettings.mutate(
       {
         data: {
@@ -58,6 +61,7 @@ export default function SettingsPage() {
           goodDays: parseInt(goodDays, 10),
           hardDays: parseInt(hardDays, 10),
           relearnDays: parseInt(relearnDays, 10),
+          telawaPagesPerDay: Number.isFinite(tppd) && tppd >= 1 && tppd <= 604 ? tppd : undefined,
         },
       },
       {
@@ -138,6 +142,25 @@ export default function SettingsPage() {
               </div>
             </div>
           ))}
+
+          <div className="flex items-center justify-between p-3 rounded-lg border-s-4 border-l-primary bg-muted/30" data-testid="setting-telawa">
+            <div>
+              <div className="font-medium text-sm">{t("settings.telawa.label")}</div>
+              <div className="text-xs text-muted-foreground">{t("settings.telawa.description")}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={604}
+                className="w-20 text-center"
+                value={telawaPagesPerDay}
+                onChange={(e) => setTelawaPagesPerDay(e.target.value)}
+                data-testid="input-telawa-pages-per-day"
+              />
+              <span className="text-sm text-muted-foreground">{t("settings.telawa.pagesUnit")}</span>
+            </div>
+          </div>
 
           <Button onClick={handleSave} disabled={updateSettings.isPending} className="w-full" data-testid="btn-save-settings">
             <Save className="w-4 h-4 me-2" />

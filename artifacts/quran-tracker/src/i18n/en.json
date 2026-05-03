@@ -6,6 +6,7 @@
   "nav": {
     "homework": "Homework",
     "dashboard": "Dashboard",
+    "telawa": "Telawa",
     "reader": "Reader",
     "juz": "Juz",
     "rub": "Rub'",
@@ -163,6 +164,55 @@
       "label": "Display language",
       "english": "English",
       "arabic": "العربية"
+    },
+    "telawa": {
+      "label": "Telawa pages per day",
+      "description": "How many pages to recite each day in the recurring rotation across all 604 pages.",
+      "pagesUnit": "pages"
+    }
+  },
+  "telawa": {
+    "title": "Telawa",
+    "subtitle": "Read all 604 pages in a continuous rotation. Reading-only — your memorization stats are not affected.",
+    "read": "Read",
+    "undoLast": "Undo last",
+    "undoing": "Undoing...",
+    "undoSuccess": "Last read undone",
+    "undoFailed": "Failed to undo",
+    "recordFailed": "Could not record this read",
+    "note": "This rotation is read-only. It never changes your memorization due dates or scope, and it loops back to page 1 after 604.",
+    "stats": {
+      "today": "Today",
+      "cycle": "Cycle",
+      "cycleDesc": "Each cycle = all 604 pages",
+      "nextPage": "Next page",
+      "ofTotal": "of {{total}}",
+      "totalRead": "Total reads",
+      "totalDesc": "Pages read across all cycles"
+    },
+    "todayPlan": {
+      "title": "Today's pages",
+      "description": "Read in order. Tap Read on the highlighted page to advance.",
+      "readToday": "Read today",
+      "allDone_one": "Done for today — {{count}} page complete. You can keep reading or come back tomorrow.",
+      "allDone_other": "Done for today — {{count}} pages complete. You can keep reading or come back tomorrow."
+    },
+    "last30": {
+      "title": "Last 30 days",
+      "subtitle": "Telawa pages per day",
+      "empty": "No Telawa pages read in the last 30 days yet.",
+      "tooltip_one": "{{count}} page",
+      "tooltip_other": "{{count}} pages"
+    },
+    "dashboard": {
+      "title": "Telawa rotation",
+      "subtitle": "Next: page {{next}} · Cycle {{cycle}}",
+      "todayProgress": "{{done}} / {{total}} today",
+      "remaining_one": "{{count}} left today",
+      "remaining_other": "{{count}} left today",
+      "allDone": "Done for today",
+      "totalRead_one": "{{count}} page read all-time",
+      "totalRead_other": "{{count}} pages read all-time"
     }
   },
   "homework": {

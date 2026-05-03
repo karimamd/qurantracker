@@ -14,4 +14,6 @@ export interface Settings {
   hardDays: number;
   relearnDays: number;
   language: SettingsLanguage;
+  /** Number of pages per day for the recurring Telawa (read-only) rotation. Default 5. */
+  telawaPagesPerDay: number;
 }

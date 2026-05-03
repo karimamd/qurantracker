@@ -24,6 +24,8 @@ export interface Settings {
   hardDays: number;
   relearnDays: number;
   language: SettingsLanguage;
+  /** Number of pages per day for the recurring Telawa (read-only) rotation. Default 5. */
+  telawaPagesPerDay: number;
 }
 
 export type UpdateSettingsBodyLanguage =
@@ -40,6 +42,11 @@ export interface UpdateSettingsBody {
   hardDays?: number;
   relearnDays?: number;
   language?: UpdateSettingsBodyLanguage;
+  /**
+   * @minimum 1
+   * @maximum 604
+   */
+  telawaPagesPerDay?: number;
 }
 
 export interface ProgressOverview {
@@ -460,6 +467,53 @@ export interface ActivityEntry {
   /** @nullable */
   mistakes: number | null;
   recitedAt: string;
+}
+
+export interface TelawaReadEntry {
+  id: number;
+  pageNumber: number;
+  cycleNumber: number;
+  readAt: string;
+}
+
+export interface TelawaToday {
+  pagesPerDay: number;
+  /** Next page number in the rotation cursor (1..604) */
+  nextPage: number;
+  /** Current cycle number (1-based). Increments after page 604 is read. */
+  cycleNumber: number;
+  /** Total Telawa reads ever recorded for the user. */
+  totalRead: number;
+  /** Number of Telawa reads recorded since the start of today (UTC). */
+  readToday: number;
+  /** Next pagesPerDay pages to read, starting from the cursor and wrapping at 604. */
+  upcomingPages: number[];
+  /** Pages read today (most recent first), for display only. */
+  recentReads: TelawaReadEntry[];
+}
+
+export interface RecordTelawaReadBody {
+  /**
+   * Must equal the current cursor (TelawaToday.nextPage).
+   * @minimum 1
+   * @maximum 604
+   */
+  pageNumber: number;
+}
+
+export interface TelawaDailyCount {
+  /** Date as YYYY-MM-DD (UTC) */
+  date: string;
+  count: number;
+}
+
+export interface TelawaStats {
+  totalRead: number;
+  currentCycle: number;
+  nextPage: number;
+  pagesPerDay: number;
+  readToday: number;
+  last30Days: TelawaDailyCount[];
 }
 
 export type ListPageProgressParams = {

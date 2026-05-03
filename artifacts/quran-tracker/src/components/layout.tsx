@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info, AlertTriangle, Repeat } from "lucide-react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { UserButton, useUser, useClerk, useAuth } from "@clerk/react";
@@ -10,6 +10,7 @@ import { isGuestMode, exitGuestMode } from "@/lib/guest-mode";
 const navItems = [
   { href: "/homework", key: "homework", testId: "homework", icon: ClipboardList },
   { href: "/", key: "dashboard", testId: "dashboard", icon: LayoutDashboard },
+  { href: "/telawa", key: "telawa", testId: "telawa", icon: Repeat },
   { href: "/reader", key: "reader", testId: "reader", icon: BookMarked },
   { href: "/juz", key: "juz", testId: "juz", icon: Layers },
   { href: "/rub", key: "rub", testId: "rub'", icon: Grid3x3 },
