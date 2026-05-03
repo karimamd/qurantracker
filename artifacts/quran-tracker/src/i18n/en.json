@@ -330,6 +330,28 @@
       "label": "Ayah view default size",
       "description": "Default font size used when opening a single ayah on the Ayahs page. Adjustments inside the ayah view itself are session-only.",
       "unit": "px"
+    },
+    "backup": {
+      "title": "Backup & restore",
+      "description": "Download every page, recitation, mistake, homework session and Telawa entry as a single JSON file — then restore it on another device or after signing in.",
+      "exportLabel": "Download a backup",
+      "exportHint": "Saves a quran-tracker-backup-YYYY-MM-DD.json file to your device.",
+      "exportBtn": "Download backup",
+      "exporting": "Preparing…",
+      "exportSuccess": "Backup downloaded",
+      "exportFailed": "Could not download backup",
+      "importLabel": "Restore from a backup",
+      "importHint": "Replaces all of your current data with the contents of the file.",
+      "importBtn": "Choose backup file…",
+      "importing": "Restoring…",
+      "importSuccess": "Backup restored",
+      "importSuccessDesc": "{{n}} records restored.",
+      "importFailed": "Could not restore backup",
+      "importInvalid": "That file doesn't look like a valid Quran Tracker backup.",
+      "confirmTitle": "Replace all of your data?",
+      "confirmBody": "Restoring will permanently overwrite every page, recitation, mistake, homework session and Telawa entry on this account with the contents of {{file}}. This cannot be undone.",
+      "confirmConfirm": "Yes, restore",
+      "confirmCancel": "Cancel"
     }
   },
   "ayahsList": {

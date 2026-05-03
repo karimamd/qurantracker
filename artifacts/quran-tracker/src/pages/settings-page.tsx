@@ -4,11 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
-import { Save } from "lucide-react";
+import { Save, Download, Upload } from "lucide-react";
 import { setLanguage, type SupportedLanguage } from "@/i18n";
 
 export default function SettingsPage() {
@@ -226,6 +236,179 @@ export default function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <BackupCard />
     </div>
+  );
+}
+
+/**
+ * Lightweight self-serve backup: download every user-owned row as a single
+ * JSON file, or restore from one. Mounted on the Settings page as a sibling
+ * to the intervals card. Uses plain fetch + same-origin cookies so it works
+ * for both Clerk-signed-in users and guest accounts.
+ */
+function BackupCard() {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/backup/export", { credentials: "include" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      // Pull the filename out of the server-set Content-Disposition so the
+      // date stamp matches what the route generated. Fall back to a generic
+      // name if the header is missing for any reason.
+      const cd = res.headers.get("Content-Disposition") ?? "";
+      const match = /filename="([^"]+)"/.exec(cd);
+      const filename = match?.[1] ?? `quran-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: t("settings.backup.exportSuccess") });
+    } catch {
+      toast({ title: t("settings.backup.exportFailed"), variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handlePickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    // Always reset the input so picking the same file twice in a row still
+    // fires the change event.
+    e.target.value = "";
+    if (file) setPendingFile(file);
+  };
+
+  const handleConfirmImport = async () => {
+    const file = pendingFile;
+    if (!file) return;
+    setPendingFile(null);
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      let body: unknown;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        toast({ title: t("settings.backup.importInvalid"), variant: "destructive" });
+        setIsImporting(false);
+        return;
+      }
+      const res = await fetch("/api/backup/import", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        if (res.status === 400) {
+          toast({ title: t("settings.backup.importInvalid"), variant: "destructive" });
+        } else {
+          toast({ title: t("settings.backup.importFailed"), variant: "destructive" });
+        }
+        setIsImporting(false);
+        return;
+      }
+      const data = (await res.json()) as { counts?: Record<string, number> };
+      const total = Object.values(data.counts ?? {}).reduce((s, n) => s + n, 0);
+      // Wipe every cached query so each screen refetches against the freshly
+      // restored rows.
+      await queryClient.invalidateQueries();
+      toast({
+        title: t("settings.backup.importSuccess"),
+        description: t("settings.backup.importSuccessDesc", { n: total }),
+      });
+    } catch {
+      toast({ title: t("settings.backup.importFailed"), variant: "destructive" });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  return (
+    <>
+      <Card className="border shadow-sm" data-testid="settings-backup-card">
+        <CardHeader>
+          <CardTitle className="text-base">{t("settings.backup.title")}</CardTitle>
+          <CardDescription>{t("settings.backup.description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg border-s-4 border-l-primary bg-muted/30">
+            <div className="min-w-0">
+              <div className="font-medium text-sm">{t("settings.backup.exportLabel")}</div>
+              <div className="text-xs text-muted-foreground">{t("settings.backup.exportHint")}</div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              disabled={isExporting}
+              data-testid="btn-backup-export"
+              className="shrink-0"
+            >
+              <Download className="w-4 h-4 me-2" />
+              {isExporting ? t("settings.backup.exporting") : t("settings.backup.exportBtn")}
+            </Button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg border-s-4 border-l-amber-500 bg-muted/30">
+            <div className="min-w-0">
+              <div className="font-medium text-sm">{t("settings.backup.importLabel")}</div>
+              <div className="text-xs text-muted-foreground">{t("settings.backup.importHint")}</div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+              data-testid="btn-backup-import"
+              className="shrink-0"
+            >
+              <Upload className="w-4 h-4 me-2" />
+              {isImporting ? t("settings.backup.importing") : t("settings.backup.importBtn")}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={handlePickFile}
+              data-testid="input-backup-file"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={pendingFile !== null} onOpenChange={(open) => !open && setPendingFile(null)}>
+        <AlertDialogContent data-testid="dialog-backup-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("settings.backup.confirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("settings.backup.confirmBody", { file: pendingFile?.name ?? "" })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="btn-backup-cancel">
+              {t("settings.backup.confirmCancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmImport} data-testid="btn-backup-confirm">
+              {t("settings.backup.confirmConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

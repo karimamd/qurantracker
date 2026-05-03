@@ -9,6 +9,7 @@ import settingsRouter from "./settings";
 import progressRouter from "./progress";
 import homeworkRouter from "./homework";
 import telawaRouter from "./telawa";
+import backupRouter from "./backup";
 
 const router: IRouter = Router();
 
@@ -17,5 +18,6 @@ router.use(settingsRouter);
 router.use(progressRouter);
 router.use(homeworkRouter);
 router.use(telawaRouter);
+router.use(backupRouter);
 
 export default router;
