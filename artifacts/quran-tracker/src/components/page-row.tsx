@@ -6,8 +6,6 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { PageLabel } from "@/components/page-label";
 import { PageQualityButtons } from "@/components/page-quality-buttons";
-import { QualityBadge } from "@/components/quality-badge";
-import { FirstAyahPreview } from "@/components/first-ayah-preview";
 import {
   type Quality,
   QUALITIES,
@@ -57,8 +55,6 @@ export function PageRow({
   pageNumber,
   customName,
   quality,
-  effectiveQuality,
-  qualityDowngrades,
   status,
   inScope,
   lastRecited,
@@ -74,7 +70,6 @@ export function PageRow({
   extraActions,
   onQualitySelect,
   qualityPending = false,
-  showFirstAyah = true,
   testIdPrefix = "page-row",
   rowId,
 }: PageRowProps) {
@@ -127,13 +122,6 @@ export function PageRow({
                 />
               </span>
               {extraBadges}
-              {hasQuality && (
-                <QualityBadge
-                  quality={quality}
-                  effectiveQuality={effectiveQuality}
-                  qualityDowngrades={qualityDowngrades}
-                />
-              )}
               {highlight && highlightLabel && (
                 <Badge
                   className="text-xs py-0 bg-violet-500 hover:bg-violet-500 text-white border-0"
@@ -159,15 +147,6 @@ export function PageRow({
                 </span>
               )}
             </div>
-
-            {showFirstAyah && (
-              <div className="mt-1.5 w-full min-w-0 overflow-hidden text-sm sm:text-base">
-                <FirstAyahPreview
-                  pageNumber={pageNumber}
-                  className="block w-full max-w-full whitespace-nowrap overflow-hidden text-ellipsis"
-                />
-              </div>
-            )}
 
             <div className="flex items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-1 flex-wrap">
               {surahLabel && <span className="whitespace-nowrap truncate max-w-full">{surahLabel}</span>}
