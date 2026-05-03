@@ -209,6 +209,7 @@
       "invalidPage": "اختر صفحة بين ١ و ٦٠٤",
       "invalidPagesPerDay": "اختر هدفًا يوميًا بين ١ و ٦٠٤ صفحة",
       "bannerTitle": "الختمة {{cycle}} · بدأت من الصفحة {{start}}",
+      "progressTooltip": "تمت قراءة {{read}} صفحة في هذه الختمة. {{skipped}} صفحة قبل الصفحة {{start}} ستُقرأ بعد عودة الدورة إلى البداية.",
       "pagesPerDayLabel": "الهدف اليومي (صفحات)",
       "pagesPerDayHint": "اختياري — اتركه فارغًا لاستخدام الإعداد الافتراضي ({{fallback}} صفحة/يوم).",
       "pagesPerDayUsingDefault": "افتراضي ({{value}}/يوم)",

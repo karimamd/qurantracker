@@ -282,19 +282,50 @@ export default function TelawaPage() {
               })}
             </span>
           </div>
-          <div className="flex-1 min-w-[140px] flex items-center gap-2">
-            <div className="h-1.5 bg-muted rounded-full flex-1 overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all"
-                style={{
-                  width: `${Math.min(100, Math.round((today.khatmah.readsInKhatmah / 604) * 100))}%`,
-                }}
-              />
-            </div>
-            <span className="text-xs tabular-nums text-muted-foreground" data-testid="telawa-khatmah-progress">
-              {today.khatmah.readsInKhatmah} / 604
-            </span>
-          </div>
+          {(() => {
+            // Visualize the 1..604 page rotation linearly. Pages before
+            // `startPage` that haven't been read yet are "skipped" — shown
+            // in a distinct (amber) tint so the bar makes the cursor
+            // position obvious instead of always starting at the left.
+            const TOTAL = 604;
+            const startIdx = Math.max(0, Math.min(TOTAL - 1, today.khatmah.startPage - 1));
+            const reads = Math.max(0, Math.min(TOTAL, today.khatmah.readsInKhatmah));
+            const linearCapacity = TOTAL - startIdx;        // pages from startPage..604
+            const preWrap = Math.min(reads, linearCapacity); // read in natural order
+            const wrapped = Math.max(0, reads - linearCapacity); // read after wrapping past 604
+            const stillSkipped = Math.max(0, startIdx - wrapped); // skipped pages not yet read
+            const remaining = Math.max(0, TOTAL - startIdx - preWrap); // pages after the cursor
+            const pct = (n: number) => (n / TOTAL) * 100;
+            // The numeric label includes the visually-skipped portion so the
+            // counter "starts from where the Khatmah began" instead of 0/604.
+            const cursorPosition = stillSkipped + wrapped + preWrap; // 0..604
+            return (
+              <div className="flex-1 min-w-[140px] flex items-center gap-2">
+                <div
+                  className="h-1.5 bg-muted rounded-full flex-1 overflow-hidden flex"
+                  title={t("telawa.khatmah.progressTooltip", {
+                    read: reads,
+                    skipped: stillSkipped,
+                    start: today.khatmah.startPage,
+                  })}
+                >
+                  <div className="h-full bg-primary transition-all" style={{ width: `${pct(wrapped)}%` }} />
+                  <div
+                    className="h-full bg-amber-300/70 dark:bg-amber-400/40 transition-all"
+                    style={{ width: `${pct(stillSkipped)}%` }}
+                  />
+                  <div className="h-full bg-primary transition-all" style={{ width: `${pct(preWrap)}%` }} />
+                  <div className="h-full" style={{ width: `${pct(remaining)}%` }} />
+                </div>
+                <span
+                  className="text-xs tabular-nums text-muted-foreground"
+                  data-testid="telawa-khatmah-progress"
+                >
+                  {cursorPosition} / {TOTAL}
+                </span>
+              </div>
+            );
+          })()}
           <Dialog
             open={goalDialogOpen}
             onOpenChange={(open) => {

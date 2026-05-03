@@ -205,6 +205,7 @@
       "invalidPage": "Pick a page between 1 and 604",
       "invalidPagesPerDay": "Pick a daily goal between 1 and 604 pages",
       "bannerTitle": "Khatmah {{cycle}} · started from page {{start}}",
+      "progressTooltip": "{{read}} pages read in this Khatmah. {{skipped}} pages before page {{start}} will be read after the rotation wraps.",
       "pagesPerDayLabel": "Daily goal (pages)",
       "pagesPerDayHint": "Optional — leave blank to use your default of {{fallback}} pages/day.",
       "pagesPerDayUsingDefault": "Using default ({{value}}/day)",
