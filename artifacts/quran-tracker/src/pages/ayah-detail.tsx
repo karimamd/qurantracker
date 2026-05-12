@@ -28,6 +28,10 @@ import {
   useRemoveActivePageMistake,
   getListActivePageMistakesQueryKey,
   getGetMistakesQueryKey,
+  useGetTelawaToday,
+  useListHomework,
+  useGetHomework,
+  getGetHomeworkQueryKey,
 } from "@workspace/api-client-react";
 import type { ActiveAyahMistake } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,6 +51,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   Languages,
   Link2,
   Minus,
@@ -175,6 +180,19 @@ export default function AyahDetail() {
     });
 
   const pageNumber = ayah?.pageNumber ?? 0;
+
+  // Context badges — is this ayah's page in today's Telawa batch or an active homework?
+  const { data: telawaToday } = useGetTelawaToday();
+  const { data: homeworkSessions } = useListHomework();
+  const activeHomeworkId = homeworkSessions?.find(s => s.status === "active")?.id ?? null;
+  const { data: activeHomeworkDetail } = useGetHomework(activeHomeworkId ?? 0, {
+    query: { enabled: activeHomeworkId !== null, queryKey: getGetHomeworkQueryKey(activeHomeworkId ?? 0) },
+  });
+  const isTelawaPage = pageNumber > 0 && (telawaToday?.upcomingPages.includes(pageNumber) ?? false);
+  const homeworkItem = pageNumber > 0
+    ? (activeHomeworkDetail?.items.find(item => item.pageNumber === pageNumber) ?? null)
+    : null;
+
   const pageMistakesQuery = useListActivePageMistakes(pageNumber, {
     query: {
       enabled: pageNumber > 0,
@@ -390,6 +408,18 @@ export default function AyahDetail() {
                 <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground border" data-testid="ayah-detail-page">
                   {t("common.page")} {ayah.pageNumber}
                 </span>
+                {isTelawaPage && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800" data-testid="ayah-detail-badge-telawa">
+                    <BookOpen className="w-3 h-3" />
+                    {t("reader.badgeTelawa")}
+                  </span>
+                )}
+                {homeworkItem && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800" data-testid="ayah-detail-badge-homework">
+                    <ClipboardList className="w-3 h-3" />
+                    {t(`reader.badgeHomework${homeworkItem.type === "memorize" ? "Memorize" : "Revise"}`)}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-1.5">
                 <Button
