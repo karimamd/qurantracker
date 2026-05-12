@@ -146,6 +146,7 @@ export default function Reader() {
         onSuccess: () => {
           invalidateTelawa();
           toast({ title: t("reader.telawaMarked", { page: pageNumber }) });
+          if (pageNumber < TOTAL_PAGES) goToPage(pageNumber + 1);
         },
         onError: () => toast({ title: t("telawa.recordFailed"), variant: "destructive" }),
       },
