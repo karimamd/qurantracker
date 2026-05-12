@@ -77,18 +77,22 @@ export default function SettingsPage() {
   }, [settings]);
 
   const handleToggleAutoAssign = (next: boolean) => {
-    // Optimistic so the switch animates smoothly even on slow networks.
+    // Optimistic: update local state immediately so the switch animates.
     setAutoAssign(next);
     updateSettings.mutate(
       { data: { autoAssignPageFromAyahs: next } },
       {
-        onSuccess: (data) => {
-          queryClient.setQueryData(getGetSettingsQueryKey(), data);
-          queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+        onSuccess: () => {
+          // Intentionally do NOT touch the React Query cache here.
+          // Calling setQueryData or invalidateQueries would re-run the
+          // useEffect([settings]) that rehydrates all local form inputs,
+          // wiping any unsaved threshold / day-buffer edits in progress.
+          // The value is already persisted on the server; the next full
+          // settings fetch (on page reload or after Save) will reflect it.
         },
         onError: () => {
-          // Roll back the local toggle if the mutation failed so the UI
-          // doesn't lie about the persisted state.
+          // Roll back the local toggle so the UI doesn't lie about the
+          // persisted state.
           setAutoAssign(!next);
         },
       }

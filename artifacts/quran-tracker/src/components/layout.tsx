@@ -16,7 +16,7 @@
  * cold.
  */
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info, AlertTriangle, Repeat, Sparkles, Compass } from "lucide-react";
+import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info, AlertTriangle, Repeat, Sparkles, Compass, WifiOff } from "lucide-react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { UserButton, useUser, useClerk, useAuth } from "@clerk/react";
@@ -24,6 +24,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useGetSettings } from "@workspace/api-client-react";
 import { isGuestMode, exitGuestMode } from "@/lib/guest-mode";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import { resolveBottomNavKeys } from "@/lib/bottom-nav";
 
 const navItems = [
@@ -73,6 +74,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     queryClient.clear();
     setLocation("/");
   };
+
+  const isOnline = useOnlineStatus();
 
   return (
     <div className="min-h-screen flex" data-testid="app-layout">
@@ -243,6 +246,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}
 
         <main className="flex-1 overflow-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
+          {!isOnline && (
+            <div
+              className="bg-slate-700 text-slate-100 px-4 md:px-6 py-2 flex items-center gap-2.5"
+              data-testid="offline-banner"
+              role="status"
+              aria-live="polite"
+            >
+              <WifiOff className="w-3.5 h-3.5 shrink-0" />
+              <p className="text-xs font-medium">{t("offline.banner")}</p>
+            </div>
+          )}
           {guestMode && (
             <div
               className="bg-amber-50 border-b border-amber-200 px-4 md:px-6 py-2.5 flex items-center gap-3"

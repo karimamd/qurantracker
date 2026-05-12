@@ -2,6 +2,53 @@ export type CustomFetchOptions = RequestInit & {
   responseType?: "json" | "text" | "blob" | "auto";
 };
 
+// ---------------------------------------------------------------------------
+// Offline mutation queuing
+// ---------------------------------------------------------------------------
+
+/**
+ * Thrown by customFetch when a non-GET request fails due to a network error
+ * and an offline handler is registered. The request has been queued for
+ * replay when the device comes back online.
+ */
+export class OfflineQueuedError extends Error {
+  readonly name = "OfflineQueuedError";
+  readonly requestInfo: { method: string; url: string };
+
+  constructor(requestInfo: { method: string; url: string }) {
+    super(`Request queued offline: ${requestInfo.method} ${requestInfo.url}`);
+    Object.setPrototypeOf(this, new.target.prototype);
+    this.requestInfo = requestInfo;
+  }
+}
+
+/**
+ * Type guard — returns true when the thrown error is an OfflineQueuedError.
+ * Use this in mutation `onError` callbacks to suppress the error toast and
+ * show a "saved locally" message instead.
+ */
+export function isOfflineQueued(error: unknown): error is OfflineQueuedError {
+  return error instanceof OfflineQueuedError;
+}
+
+type OfflineHandler = (req: {
+  url: string;
+  method: string;
+  body: string | null;
+  contentType: string | null;
+}) => Promise<void> | void;
+
+let _offlineHandler: OfflineHandler | null = null;
+
+/**
+ * Register a handler that is called before throwing OfflineQueuedError.
+ * The handler receives the serialised request so it can persist it to
+ * IndexedDB for later replay.  Pass null to remove.
+ */
+export function setOfflineHandler(handler: OfflineHandler | null): void {
+  _offlineHandler = handler;
+}
+
 export type ErrorType<T = unknown> = ApiError<T>;
 
 export type BodyType<T> = T;
@@ -360,7 +407,23 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers, credentials: "include" });
+  let response: Response;
+  try {
+    response = await fetch(input, { ...init, method, headers, credentials: "include" });
+  } catch (err) {
+    if (
+      err instanceof TypeError &&
+      method !== "GET" &&
+      method !== "HEAD" &&
+      _offlineHandler
+    ) {
+      const body = typeof init.body === "string" ? init.body : null;
+      const contentType = headers.get("content-type");
+      await Promise.resolve(_offlineHandler({ url: requestInfo.url, method, body, contentType }));
+      throw new OfflineQueuedError(requestInfo);
+    }
+    throw err;
+  }
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

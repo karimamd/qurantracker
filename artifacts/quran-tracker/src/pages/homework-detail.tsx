@@ -8,6 +8,7 @@ import {
   getGetProgressOverviewQueryKey,
   getListPageProgressQueryKey,
   getListActivePageMistakesQueryKey,
+  isOfflineQueued,
   type ActiveAyahMistake,
 } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
@@ -194,7 +195,10 @@ export default function HomeworkDetail() {
       { homeworkId, itemId, data: { completed: isCompleted, quality } },
       {
         onSuccess: invalidate,
-        onError: () => toast({ title: t("homework.updateFailed"), variant: "destructive" }),
+        onError: (err) => {
+          if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
+          toast({ title: t("homework.updateFailed"), variant: "destructive" });
+        },
       }
     );
   };
@@ -204,7 +208,10 @@ export default function HomeworkDetail() {
       { homeworkId, itemId, data: { completed: false } },
       {
         onSuccess: invalidate,
-        onError: () => toast({ title: t("homework.clearFailed"), variant: "destructive" }),
+        onError: (err) => {
+          if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
+          toast({ title: t("homework.clearFailed"), variant: "destructive" });
+        },
       }
     );
   };

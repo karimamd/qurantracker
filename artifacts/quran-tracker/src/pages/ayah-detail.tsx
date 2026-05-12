@@ -34,6 +34,7 @@ import {
   getGetHomeworkQueryKey,
 } from "@workspace/api-client-react";
 import type { ActiveAyahMistake } from "@workspace/api-client-react";
+import { isOfflineQueued } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -229,7 +230,10 @@ export default function AyahDetail() {
             queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
             invalidateMistakes();
           },
-          onError: () => toast({ title: t("reader.markFailed"), variant: "destructive" }),
+          onError: (err) => {
+            if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
+            toast({ title: t("reader.markFailed"), variant: "destructive" });
+          },
         },
       );
       return;
@@ -250,7 +254,10 @@ export default function AyahDetail() {
           queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
           invalidateMistakes();
         },
-        onError: () => toast({ title: t("reader.markFailed"), variant: "destructive" }),
+        onError: (err) => {
+          if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
+          toast({ title: t("reader.markFailed"), variant: "destructive" });
+        },
       },
     );
   };

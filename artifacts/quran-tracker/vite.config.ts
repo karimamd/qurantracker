@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { VitePWA } from "vite-plugin-pwa";
 
 // PORT is only required at dev/preview time (it binds the server). The
 // production build is a pure static asset emit and runs without it during
@@ -27,6 +28,41 @@ export default defineConfig({
     react(),
     tailwindcss({ optimize: false }),
     runtimeErrorOverlay(),
+    VitePWA({
+      registerType: "autoUpdate",
+      devOptions: { enabled: false },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2,json}"],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url, request }) =>
+              url.pathname.startsWith("/api/") &&
+              !url.pathname.startsWith("/api/__clerk") &&
+              request.method === "GET",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-runtime-cache",
+              networkTimeoutSeconds: 8,
+              expiration: { maxEntries: 300, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
+      manifest: {
+        name: "Quran Memorization Tracker",
+        short_name: "Quran Tracker",
+        description: "Track your Quran memorization progress with spaced repetition",
+        theme_color: "#2d6a4f",
+        background_color: "#ffffff",
+        display: "standalone",
+        start_url: "/",
+        icons: [
+          { src: "/favicon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+          { src: "/logo.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
+        ],
+      },
+    }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [

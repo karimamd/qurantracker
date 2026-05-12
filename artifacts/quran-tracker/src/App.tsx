@@ -22,7 +22,7 @@
  */
 import { useEffect, useRef } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { ClerkProvider, SignIn, SignUp, useAuth, useClerk } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
@@ -52,8 +52,7 @@ import SettingsPage from "@/pages/settings-page";
 import Welcome from "@/pages/welcome";
 import NotFound from "@/pages/not-found";
 import { isGuestMode } from "@/lib/guest-mode";
-
-const queryClient = new QueryClient();
+import { queryClient } from "@/lib/query-client";
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,

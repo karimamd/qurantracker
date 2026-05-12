@@ -32,6 +32,21 @@ router.patch("/settings", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  // Cross-field guard: when both thresholds are supplied together,
+  // enforce hardMax >= goodMax server-side so the quality ladder is
+  // always well-ordered regardless of what the client sends.
+  const { mistakesGoodMax, mistakesHardMax } = parsed.data;
+  if (
+    mistakesGoodMax !== undefined &&
+    mistakesHardMax !== undefined &&
+    mistakesHardMax < mistakesGoodMax
+  ) {
+    res.status(400).json({
+      error: "mistakesHardMax must be >= mistakesGoodMax",
+    });
+    return;
+  }
+
   const current = await getSettings(req.userId!);
   const [updated] = await db
     .update(settingsTable)

@@ -50,6 +50,7 @@ import {
   getGetHomeworkQueryKey,
 } from "@workspace/api-client-react";
 import type { PageProgress, ActiveAyahMistake } from "@workspace/api-client-react";
+import { isOfflineQueued } from "@workspace/api-client-react";
 import { useParams, useLocation, useSearch } from "wouter";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -162,7 +163,10 @@ export default function Reader() {
           toast({ title: t("reader.telawaMarked", { page: pageNumber }) });
           if (pageNumber < TOTAL_PAGES) goToPage(pageNumber + 1);
         },
-        onError: () => toast({ title: t("telawa.recordFailed"), variant: "destructive" }),
+        onError: (err) => {
+          if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
+          toast({ title: t("telawa.recordFailed"), variant: "destructive" });
+        },
       },
     );
   };
@@ -389,7 +393,10 @@ export default function Reader() {
           // mistake / link / cleared marks are all persistent now and stay
           // visible until the user explicitly reverses them in the reader.
         },
-        onError: () => toast({ title: t("reader.recordFailed"), variant: "destructive" }),
+        onError: (err) => {
+          if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
+          toast({ title: t("reader.recordFailed"), variant: "destructive" });
+        },
       }
     );
   };
@@ -459,8 +466,10 @@ export default function Reader() {
           // surface a freshly written recitation_log / page_progress row.
           invalidateProgressData();
         },
-        onError: () => {
-          // Roll back optimistic state on failure
+        onError: (err) => {
+          // When offline the request is queued — keep local state as-is
+          if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
+          // Roll back optimistic state on a real failure
           if (mistakeType === "memorization") {
             setMistakeAyahs(prev => {
               const n = new Set(prev);
@@ -512,7 +521,8 @@ export default function Reader() {
           // progress-derived queries persistAdd does.
           invalidateProgressData();
         },
-        onError: () => {
+        onError: (err) => {
+          if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
           rollback();
           toast({ title: t("reader.markFailed"), variant: "destructive" });
         },
@@ -632,8 +642,8 @@ export default function Reader() {
           queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
           toast({ title: t("reader.clearAllMarksDone", { page: targetPage }) });
         },
-        onError: () => {
-          // Roll the optimistic clear back so the user can see what was lost.
+        onError: (err) => {
+          if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
           setMistakeAyahs(prevMistakes);
           setLinkAyahs(prevLinks);
           setClearedAyahs(prevCleared);
