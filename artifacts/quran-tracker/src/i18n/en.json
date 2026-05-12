@@ -688,6 +688,8 @@
     "badgeTelawa": "Telawa",
     "badgeHomeworkMemorize": "Homework · Memorize",
     "badgeHomeworkRevise": "Homework · Revise",
+    "openAyahDetail": "Open ayah detail",
+    "ariaOpenAyahDetail": "Open detail page for ayah {{n}}",
     "telawaMarked": "Page {{page}} recorded as Telawa read",
     "startKhatmah": "Start Khatmah here",
     "startKhatmahTitle": "Begin a new Khatmah (full 604-page rotation) starting from this page",

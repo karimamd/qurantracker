@@ -60,7 +60,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat, Sparkles, Minus, Plus, Eraser, BookOpen, ClipboardList } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat, Sparkles, Minus, Plus, Eraser, BookOpen, ClipboardList, ArrowUpRight } from "lucide-react";
 import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
@@ -1241,6 +1241,16 @@ export default function Reader() {
                                 data-testid={`reader-ayah-mistake-${a.number}`}
                               >
                                 <X className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { stopBubble(e); setLocation(`/ayahs/${a.number}`); }}
+                                className="w-6 h-6 inline-flex items-center justify-center rounded border text-xs transition-colors border-border bg-background text-muted-foreground hover:text-primary hover:border-primary/50"
+                                title={t("reader.openAyahDetail")}
+                                aria-label={t("reader.ariaOpenAyahDetail", { n: a.numberInSurah })}
+                                data-testid={`reader-ayah-detail-${a.number}`}
+                              >
+                                <ArrowUpRight className="w-3 h-3" />
                               </button>
                             </span>
                           )}
