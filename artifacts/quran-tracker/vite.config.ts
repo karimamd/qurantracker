@@ -32,7 +32,16 @@ export default defineConfig({
       registerType: "autoUpdate",
       devOptions: { enabled: false },
       workbox: {
+        // Precache all standard static assets. Exclude the three large
+        // bundled Quran-data JSON files (quran-dump, tafsir-muyassar,
+        // wbw) — they are already managed by the app's own IndexedDB
+        // cache layer and would exceed Workbox's 2 MiB per-file limit.
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2,json}"],
+        globIgnores: [
+          "**/quran-dump*.json",
+          "**/tafsir-muyassar*.json",
+          "**/wbw*.json",
+        ],
         runtimeCaching: [
           {
             urlPattern: ({ url, request }) =>
