@@ -28,6 +28,9 @@ import {
   useClearAllActivePageMistakes,
   useRecordTelawaRead,
   useStartKhatmah,
+  useGetTelawaToday,
+  useListHomework,
+  useGetHomework,
   useGetSettings,
   useUpdateSettings,
   getGetSettingsQueryKey,
@@ -44,6 +47,7 @@ import {
   getListHomeworkQueryKey,
   getGetMistakesQueryKey,
   getListActivePageMistakesQueryKey,
+  getGetHomeworkQueryKey,
 } from "@workspace/api-client-react";
 import type { PageProgress, ActiveAyahMistake } from "@workspace/api-client-react";
 import { useParams, useLocation, useSearch } from "wouter";
@@ -56,7 +60,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat, Sparkles, Minus, Plus, Eraser } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat, Sparkles, Minus, Plus, Eraser, BookOpen, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
@@ -132,6 +136,16 @@ export default function Reader() {
   const recordTelawaRead = useRecordTelawaRead();
   const startKhatmah = useStartKhatmah();
   const queryClient = useQueryClient();
+
+  // Context badges — is this page part of today's Telawa batch or an active homework?
+  const { data: telawaToday } = useGetTelawaToday();
+  const { data: homeworkSessions } = useListHomework();
+  const activeHomeworkId = homeworkSessions?.find(s => s.status === "active")?.id ?? null;
+  const { data: activeHomeworkDetail } = useGetHomework(activeHomeworkId ?? 0, {
+    query: { enabled: activeHomeworkId !== null, queryKey: getGetHomeworkQueryKey(activeHomeworkId ?? 0) },
+  });
+  const isTelawaPage = telawaToday?.upcomingPages.includes(pageNumber) ?? false;
+  const homeworkItem = activeHomeworkDetail?.items.find(item => item.pageNumber === pageNumber) ?? null;
   const { toast } = useToast();
 
   const invalidateTelawa = () => {
@@ -947,6 +961,18 @@ export default function Reader() {
               <QualityBadge quality={currentPage.quality} effectiveQuality={currentPage.effectiveQuality} qualityDowngrades={currentPage.qualityDowngrades} />
             ) : null}
             {currentPage && <StatusBadge status={currentPage.status} />}
+            {isTelawaPage && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800 shrink-0" data-testid="reader-badge-telawa">
+                <BookOpen className="w-3 h-3" />
+                {t("reader.badgeTelawa")}
+              </span>
+            )}
+            {homeworkItem && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 shrink-0" data-testid="reader-badge-homework">
+                <ClipboardList className="w-3 h-3" />
+                {t(`reader.badgeHomework${homeworkItem.type === "memorize" ? "Memorize" : "Revise"}`)}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5 flex-wrap justify-end ms-auto">
             {(mistakeAyahs.size > 0 || linkAyahs.size > 0 || clearedAyahs.size > 0) && (
