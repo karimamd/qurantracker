@@ -939,19 +939,20 @@ export default function Reader() {
             {currentPage && <StatusBadge status={currentPage.status} />}
           </div>
           <div className="flex items-center gap-1.5 flex-wrap justify-end ms-auto">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleMarkTelawa}
-              disabled={recordTelawaRead.isPending}
-              data-testid="reader-mark-telawa"
-              title={t("reader.markTelawaTitle")}
-              className="h-7 px-2 text-xs"
-            >
-              <Repeat className="w-3.5 h-3.5 me-1" />
-              {t("reader.markTelawa")}
-            </Button>
+            {(mistakeAyahs.size > 0 || linkAyahs.size > 0 || clearedAyahs.size > 0) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearAllMarks}
+                disabled={clearAllMistakes.isPending}
+                title={t("reader.clearAllMarksTitle")}
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:border-destructive/50"
+                data-testid="btn-clear-all-marks"
+              >
+                <Eraser className="w-3.5 h-3.5 me-1" />
+                {t("reader.clearAllMarks")}
+              </Button>
+            )}
             <Button
               type="button"
               size="sm"
@@ -1271,23 +1272,6 @@ export default function Reader() {
             </Button>
           </div>
 
-          {(mistakeAyahs.size > 0 || linkAyahs.size > 0 || clearedAyahs.size > 0) && (
-            <div className="border-t pt-3 flex justify-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearAllMarks}
-                disabled={clearAllMistakes.isPending}
-                title={t("reader.clearAllMarksTitle")}
-                className="text-muted-foreground hover:text-destructive hover:border-destructive/50"
-                data-testid="btn-clear-all-marks"
-              >
-                <Eraser className="w-4 h-4 me-2" />
-                {t("reader.clearAllMarks")}
-              </Button>
-            </div>
-          )}
-
           <div className="border-t pt-3">
             <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
               <div className="text-sm font-medium">{t("reader.markRecitedTitle")}</div>
@@ -1323,6 +1307,22 @@ export default function Reader() {
             {currentPage && !currentPage.inScope && currentQuality === null && (
               <p className="text-[11px] text-muted-foreground mt-2">{t("reader.notInScopeNote")}</p>
             )}
+          </div>
+
+          <div className="border-t pt-3 flex justify-center">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleMarkTelawa}
+              disabled={recordTelawaRead.isPending}
+              data-testid="reader-mark-telawa"
+              title={t("reader.markTelawaTitle")}
+              className="px-4 text-xs"
+            >
+              <Repeat className="w-3.5 h-3.5 me-1" />
+              {t("reader.markTelawa")}
+            </Button>
           </div>
         </CardContent>
       </Card>
