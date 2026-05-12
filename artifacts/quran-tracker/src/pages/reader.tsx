@@ -102,7 +102,12 @@ export default function Reader() {
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [search]);
   const practiceAppliedRef = useRef<string | null>(null);
-  const initialPage = clampPage(params.page ? parseInt(params.page, 10) : 1);
+  const LAST_PAGE_KEY = "qt_reader_last_page";
+  const initialPage = clampPage(
+    params.page
+      ? parseInt(params.page, 10)
+      : parseInt(localStorage.getItem(LAST_PAGE_KEY) ?? "1", 10),
+  );
 
   const [pageNumber, setPageNumber] = useState<number>(initialPage);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -233,6 +238,10 @@ export default function Reader() {
       }
     }, 50);
   }, [practiceTargetGlobal, ayahs, pageNumber]);
+
+  useEffect(() => {
+    localStorage.setItem(LAST_PAGE_KEY, String(pageNumber));
+  }, [pageNumber]);
 
   const goToPage = (n: number) => {
     const clamped = clampPage(n);
