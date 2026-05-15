@@ -36,7 +36,7 @@ The frontend is built with `React`, `Vite`, `Tailwind CSS`, and `shadcn/ui`, ens
 - **Batch Recitation Recording**: Allows recording recitation quality for a range of pages simultaneously.
 - **Quran Reader**: Displays Uthmani text one page at a time with layered fallback for text resolution (IndexedDB, bundled dump, external API). Includes practice mode, navigation, and inline quality marking.
 - **Persistent Quran text cache**: IndexedDB for caching Quran text, tafsir, and word-by-word data, ensuring offline-first functionality.
-- **Per-ayah Mistake Tracking**: Tracks memorization and link mistakes at the ayah level, persisting them for later review.
+- **Per-ayah Mistake Tracking**: Tracks memorization and link mistakes at the ayah level, persisting them for later review. "cleared" (correct recitation) and "link" (transition to previous ayah) can now coexist on the same ayah — an ayah can be correctly recited but still have a linking issue. Only "cleared" and "memorization" remain mutually exclusive.
 - **Mistakes Page**: Analytics view for tracking and practicing mistakes.
 - **Rub' (Parts) Tab**: Lists all 240 Rub' al-Hizb with search, progress stats, and inline quality pickers.
 - **Aggregate Quality**: Dynamically derived quality for Rub', Juz, and Surah based on average mistake count.

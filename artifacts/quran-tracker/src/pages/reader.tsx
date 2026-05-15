@@ -218,9 +218,9 @@ export default function Reader() {
 
   // Seed mistake / link / cleared marks from the server's persisted "active"
   // set so they remain visible across navigation, refresh, and even fresh
-  // sessions until the user explicitly reverses them in the reader. The
-  // server enforces that cleared is mutually exclusive with memorization /
-  // link on the same ayah, so the three sets here will never overlap.
+  // sessions until the user explicitly reverses them in the reader.
+  // "cleared" and "memorization" are mutually exclusive; "link" is independent
+  // and can coexist with either, so clearedAyahs and linkAyahs may overlap.
   useEffect(() => {
     if (!activeMistakes) return;
     const m = new Set<number>();

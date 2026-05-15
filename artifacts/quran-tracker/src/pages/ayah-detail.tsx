@@ -203,13 +203,20 @@ export default function AyahDetail() {
   const addMistake = useAddActivePageMistake();
   const removeMistake = useRemoveActivePageMistake();
 
-  const currentMark = useMemo<Mark | null>(() => {
-    if (!ayah || !pageMistakesQuery.data) return null;
-    const m = (pageMistakesQuery.data as ActiveAyahMistake[]).find(
-      (am) => am.globalAyahNumber === ayah.globalAyahNumber,
-    );
-    return (m?.mistakeType as Mark | undefined) ?? null;
+  // An ayah can now have up to two active marks simultaneously: one of
+  // {cleared, memorization} (mutually exclusive) plus an independent "link"
+  // mark. Track each mark type separately instead of collapsing into one.
+  const activeMarkSet = useMemo<Set<Mark>>(() => {
+    if (!ayah || !pageMistakesQuery.data) return new Set();
+    const marks = (pageMistakesQuery.data as ActiveAyahMistake[])
+      .filter((am) => am.globalAyahNumber === ayah.globalAyahNumber)
+      .map((am) => am.mistakeType as Mark);
+    return new Set(marks);
   }, [ayah, pageMistakesQuery.data]);
+
+  const isClear = activeMarkSet.has("cleared");
+  const isMemo = activeMarkSet.has("memorization");
+  const isLink = activeMarkSet.has("link");
 
   const invalidateMistakes = () => {
     queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
@@ -220,9 +227,12 @@ export default function AyahDetail() {
     const targetPage = ayah.pageNumber;
     queryClient.cancelQueries({ queryKey: getListActivePageMistakesQueryKey(targetPage) });
 
-    // Toggle: tapping the active mark clears it (resolves the active row
-    // server-side); tapping a different mark switches to it.
-    if (currentMark === mark) {
+    const isActive = activeMarkSet.has(mark);
+
+    // Toggle: tapping an active mark removes it; tapping an inactive mark adds it.
+    // "cleared" and "memorization" are mutually exclusive (the server resolves
+    // whichever one is opposite). "link" is fully independent of both.
+    if (isActive) {
       removeMistake.mutate(
         { pageNumber: targetPage, data: { globalAyahNumber: ayah.globalAyahNumber, mistakeType: mark } },
         {
@@ -616,9 +626,9 @@ export default function AyahDetail() {
             <div className="flex items-center justify-center gap-2 flex-wrap" data-testid="ayah-detail-actions">
               <Button
                 size="lg"
-                variant={currentMark === "cleared" ? "default" : "outline"}
+                variant={isClear ? "default" : "outline"}
                 onClick={() => setMark("cleared")}
-                className={currentMark === "cleared" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
+                className={isClear ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
                 data-testid="ayah-detail-mark-clear"
               >
                 <Check className="w-4 h-4 me-1.5" />
@@ -626,9 +636,9 @@ export default function AyahDetail() {
               </Button>
               <Button
                 size="lg"
-                variant={currentMark === "memorization" ? "default" : "outline"}
+                variant={isMemo ? "default" : "outline"}
                 onClick={() => setMark("memorization")}
-                className={currentMark === "memorization" ? "bg-rose-600 hover:bg-rose-700 text-white" : ""}
+                className={isMemo ? "bg-rose-600 hover:bg-rose-700 text-white" : ""}
                 data-testid="ayah-detail-mark-mistake"
               >
                 <X className="w-4 h-4 me-1.5" />
@@ -636,9 +646,9 @@ export default function AyahDetail() {
               </Button>
               <Button
                 size="lg"
-                variant={currentMark === "link" ? "default" : "outline"}
+                variant={isLink ? "default" : "outline"}
                 onClick={() => setMark("link")}
-                className={currentMark === "link" ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
+                className={isLink ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
                 data-testid="ayah-detail-mark-link"
               >
                 <Link2 className="w-4 h-4 me-1.5" />
