@@ -552,15 +552,8 @@ export default function Reader() {
         n.add(ayahNumber);
         return n;
       });
-      // Adding a link mistake supersedes any prior "cleared" tick on this
-      // ayah; mirror the server's auto-resolve in local state so the UI
-      // updates instantly without waiting for the next refetch.
-      setClearedAyahs(prev => {
-        if (!prev.has(ayahNumber)) return prev;
-        const n = new Set(prev);
-        n.delete(ayahNumber);
-        return n;
-      });
+      // Link is independent of cleared/memorization — do NOT touch either
+      // of those sets here. The server no longer auto-resolves them.
       persistAdd(ayahNumber, "link");
     }
   };
@@ -582,13 +575,8 @@ export default function Reader() {
         next.add(ayahNumber);
         return next;
       });
+      // "cleared" only supersedes "memorization" — leave linkAyahs alone.
       setMistakeAyahs(prev => {
-        if (!prev.has(ayahNumber)) return prev;
-        const next = new Set(prev);
-        next.delete(ayahNumber);
-        return next;
-      });
-      setLinkAyahs(prev => {
         if (!prev.has(ayahNumber)) return prev;
         const next = new Set(prev);
         next.delete(ayahNumber);

@@ -613,11 +613,16 @@ router.post("/progress/pages/:pageNumber/active-mistakes", async (req, res): Pro
     return;
   }
 
-  // Marks that are mutually exclusive with the one being added — a "cleared"
-  // tick supersedes any active memorization/link mistake on the same ayah,
-  // and adding a memorization or link mistake supersedes a previous tick.
+  // Mutual-exclusion rule:
+  //   - "cleared" and "memorization" are mutually exclusive: adding one resolves the other.
+  //   - "link" is fully independent and can coexist with either "cleared" or "memorization".
+  // So only cleared↔memorization supersede each other; link never supersedes anything.
   const opposites: ("memorization" | "link" | "cleared")[] =
-    body.data.mistakeType === "cleared" ? ["memorization", "link"] : ["cleared"];
+    body.data.mistakeType === "cleared"
+      ? ["memorization"]
+      : body.data.mistakeType === "memorization"
+      ? ["cleared"]
+      : []; // "link" — independent, never supersedes another mark
 
   await db.transaction(async (tx) => {
     // Per-user advisory lock so concurrent toggles can't race and create duplicates.
@@ -625,10 +630,8 @@ router.post("/progress/pages/:pageNumber/active-mistakes", async (req, res): Pro
       sql`select pg_advisory_xact_lock(${ACTIVE_MISTAKE_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
     );
 
-    // Resolve any active marks on this ayah that contradict the new one. Doing
-    // this inside the same transaction (and under the advisory lock above)
-    // keeps the (ayah → at most one of {cleared} OR {memorization,link})
-    // invariant atomic from any reader's point of view.
+    // Resolve any active marks on this ayah that contradict the new one.
+    // "cleared" resolves "memorization" and vice-versa; "link" resolves nothing.
     await tx
       .update(ayahMistakesTable)
       .set({ resolvedAt: new Date() })
