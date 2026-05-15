@@ -40,4 +40,6 @@ export interface Settings {
    * @maximum 100
    */
   mistakesHardMax: number;
+  /** When true, per-ayah marks (cleared/mistake/link) older than 14 days are excluded from the active list shown in the Reader and Ayah detail screens. Page recitation status is unaffected. Default false. */
+  autoExpireAyahMarks: boolean;
 }

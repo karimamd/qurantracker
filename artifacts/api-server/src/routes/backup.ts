@@ -97,6 +97,9 @@ const SettingsImport = z.object({
   autoAssignPageFromAyahs: z.boolean().optional(),
   mistakesGoodMax: z.number().int().min(0).max(100).optional(),
   mistakesHardMax: z.number().int().min(0).max(100).optional(),
+  // Optional for backward compatibility — older backups omit this field
+  // and restore with the schema default (false).
+  autoExpireAyahMarks: z.boolean().optional(),
 });
 
 const PageProgressImport = z.object({
@@ -206,6 +209,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       autoAssignPageFromAyahs: settings.autoAssignPageFromAyahs,
       mistakesGoodMax: settings.mistakesGoodMax,
       mistakesHardMax: settings.mistakesHardMax,
+      autoExpireAyahMarks: settings.autoExpireAyahMarks,
     },
     pageProgress: pageProgress.map((r) => ({
       pageNumber: r.pageNumber,

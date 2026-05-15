@@ -534,6 +534,7 @@ const ACTIVE_MISTAKE_LOCK_NAMESPACE = 0x61_79_61_68; // "ayah"
 async function listActiveMistakesForPage(
   userId: string,
   pageNumber: number,
+  autoExpire = false,
 ): Promise<{
   surahNumber: number;
   ayahNumberInSurah: number;
@@ -553,6 +554,10 @@ async function listActiveMistakesForPage(
         eq(ayahMistakesTable.userId, userId),
         eq(ayahMistakesTable.pageNumber, pageNumber),
         sql`${ayahMistakesTable.resolvedAt} is null`,
+        // When auto-expire is on, filter out marks created more than 14 days
+        // ago so they are no longer shown as "active" in the Reader / Ayah
+        // detail screens. The rows stay in the DB for analytics.
+        autoExpire ? gte(ayahMistakesTable.createdAt, sql`now() - interval '14 days'`) : undefined,
       ),
     );
 
@@ -591,7 +596,8 @@ router.get("/progress/pages/:pageNumber/active-mistakes", async (req, res): Prom
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const list = await listActiveMistakesForPage(userId, params.data.pageNumber);
+  const { autoExpireAyahMarks } = await getSettings(userId);
+  const list = await listActiveMistakesForPage(userId, params.data.pageNumber, autoExpireAyahMarks);
   res.json(ListActivePageMistakesResponse.parse(list));
 });
 
@@ -675,7 +681,8 @@ router.post("/progress/pages/:pageNumber/active-mistakes", async (req, res): Pro
   // so it can never block the active-mistake response.
   await maybeAutoAssignPageRecitation(userId, pageNumber);
 
-  const list = await listActiveMistakesForPage(userId, pageNumber);
+  const { autoExpireAyahMarks: expirePost } = await getSettings(userId);
+  const list = await listActiveMistakesForPage(userId, pageNumber, expirePost);
   res.json(AddActivePageMistakeResponse.parse(list));
 });
 
@@ -716,7 +723,8 @@ router.delete("/progress/pages/:pageNumber/active-mistakes", async (req, res): P
   // Good cap. Same swallow-and-warn semantics as the POST handler.
   await maybeAutoAssignPageRecitation(userId, pageNumber);
 
-  const list = await listActiveMistakesForPage(userId, pageNumber);
+  const { autoExpireAyahMarks: expireDel } = await getSettings(userId);
+  const list = await listActiveMistakesForPage(userId, pageNumber, expireDel);
   res.json(RemoveActivePageMistakeResponse.parse(list));
 });
 
@@ -749,7 +757,8 @@ router.delete("/progress/pages/:pageNumber/active-mistakes/all", async (req, res
       );
   });
 
-  const list = await listActiveMistakesForPage(userId, pageNumber);
+  const { autoExpireAyahMarks: expireClear } = await getSettings(userId);
+  const list = await listActiveMistakesForPage(userId, pageNumber, expireClear);
   res.json(ClearAllActivePageMistakesResponse.parse(list));
 });
 

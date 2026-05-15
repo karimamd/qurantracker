@@ -337,6 +337,11 @@
       "description": "When every ayah on a page has been marked today (cleared or with mistakes), automatically record a recitation for the whole page. The quality is computed from the day's total mistakes using the thresholds below. A new recitation is only logged when the resulting quality differs from any recitation already recorded today for the same page.",
       "label": "Auto-record from ayah marks"
     },
+    "autoExpire": {
+      "title": "Auto-expire ayah marks",
+      "description": "When enabled, per-ayah marks (cleared, mistakes, and link issues) that are older than 14 days are automatically hidden from the Reader and Ayah detail screens. The marks are kept in the database for history — only the live display is affected. Page recitation status is never changed.",
+      "label": "Hide marks older than 2 weeks"
+    },
     "mistakeThresholds": {
       "title": "Mistake thresholds",
       "description": "How many total page mistakes map to each quality. Excellent is always 0 mistakes. Anything above the Hard threshold is recorded as Relearn.",

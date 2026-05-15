@@ -57,6 +57,9 @@ export default function SettingsPage() {
   // button so users see one confirmation toast for the whole card.
   const [mistakesGoodMax, setMistakesGoodMax] = useState("");
   const [mistakesHardMax, setMistakesHardMax] = useState("");
+  // Auto-expire per-ayah marks after 14 days. Toggled instantly like
+  // autoAssign — no Save button needed.
+  const [autoExpireAyahMarks, setAutoExpireAyahMarks] = useState(false);
 
   useEffect(() => {
     if (settings) {
@@ -71,6 +74,7 @@ export default function SettingsPage() {
       setAutoAssign(settings.autoAssignPageFromAyahs);
       setMistakesGoodMax(String(settings.mistakesGoodMax));
       setMistakesHardMax(String(settings.mistakesHardMax));
+      setAutoExpireAyahMarks(settings.autoExpireAyahMarks);
       const lang = settings.language === "ar" ? "ar" : "en";
       setLanguageState(lang);
     }
@@ -94,6 +98,18 @@ export default function SettingsPage() {
           // Roll back the local toggle so the UI doesn't lie about the
           // persisted state.
           setAutoAssign(!next);
+        },
+      }
+    );
+  };
+
+  const handleToggleAutoExpireAyahMarks = (next: boolean) => {
+    setAutoExpireAyahMarks(next);
+    updateSettings.mutate(
+      { data: { autoExpireAyahMarks: next } },
+      {
+        onError: () => {
+          setAutoExpireAyahMarks(!next);
         },
       }
     );
@@ -320,6 +336,24 @@ export default function SettingsPage() {
               onCheckedChange={handleToggleAutoAssign}
               data-testid="switch-auto-assign-page"
               aria-label={t("settings.autoAssign.label")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("settings.autoExpire.title")}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t("settings.autoExpire.description")}
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-3 p-3 rounded-lg border-s-4 border-l-amber-500 bg-muted/30" data-testid="setting-auto-expire-toggle">
+            <div className="text-sm font-medium">{t("settings.autoExpire.label")}</div>
+            <Switch
+              checked={autoExpireAyahMarks}
+              onCheckedChange={handleToggleAutoExpireAyahMarks}
+              data-testid="switch-auto-expire-ayah-marks"
+              aria-label={t("settings.autoExpire.label")}
             />
           </div>
 

@@ -42,4 +42,5 @@ export interface UpdateSettingsBody {
    * @maximum 100
    */
   mistakesHardMax?: number;
+  autoExpireAyahMarks?: boolean;
 }

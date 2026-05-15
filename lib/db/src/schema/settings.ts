@@ -63,6 +63,12 @@ export const settingsTable = pgTable("settings", {
   // feature above. Defaults match the spec: Good ≤ 2, Hard ≤ 6.
   mistakesGoodMax: integer("mistakes_good_max").notNull().default(2),
   mistakesHardMax: integer("mistakes_hard_max").notNull().default(6),
+  // When true, per-ayah marks (cleared / memorization / link) whose
+  // `created_at` is older than 14 days are excluded from the "active" list
+  // that the Reader and Ayah-detail screens display. The marks remain in the
+  // DB for analytics; only the live view is filtered. Page recitation status
+  // (page_progress / recitation_log) is never affected. Default off.
+  autoExpireAyahMarks: boolean("auto_expire_ayah_marks").notNull().default(false),
 }, (table) => ({
   userIdUnique: uniqueIndex("settings_user_id_unique").on(table.userId),
 }));

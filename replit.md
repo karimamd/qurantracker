@@ -36,7 +36,9 @@ The frontend is built with `React`, `Vite`, `Tailwind CSS`, and `shadcn/ui`, ens
 - **Batch Recitation Recording**: Allows recording recitation quality for a range of pages simultaneously.
 - **Quran Reader**: Displays Uthmani text one page at a time with layered fallback for text resolution (IndexedDB, bundled dump, external API). Includes practice mode, navigation, and inline quality marking.
 - **Persistent Quran text cache**: IndexedDB for caching Quran text, tafsir, and word-by-word data, ensuring offline-first functionality.
-- **Per-ayah Mistake Tracking**: Tracks memorization and link mistakes at the ayah level, persisting them for later review. "cleared" (correct recitation) and "link" (transition to previous ayah) can now coexist on the same ayah — an ayah can be correctly recited but still have a linking issue. Only "cleared" and "memorization" remain mutually exclusive.
+- **Per-ayah Mistake Tracking**: Tracks memorization and link mistakes at the ayah level, persisting them for later review. "cleared" (correct recitation) and "link" (transition to previous ayah) can coexist on the same ayah — an ayah can be correctly recited but still have a linking issue. Only "cleared" and "memorization" remain mutually exclusive.
+- **Auto-expire ayah marks**: Configurable toggle (`settings.autoExpireAyahMarks`, default off) — when enabled, per-ayah marks older than 14 days are excluded from the active list shown in the Reader and Ayah detail screens. Marks stay in the DB for history; page recitation status (page_progress / recitation_log) is never affected. Included in backup import/export.
+- **Link mark advances reveal in hide mode**: In the Reader's hide/practice mode, tapping the link-mistake button on the frontier (latest revealed) ayah now advances the reveal to the next ayah, consistent with the "mistake" and "clear" buttons.
 - **Mistakes Page**: Analytics view for tracking and practicing mistakes.
 - **Rub' (Parts) Tab**: Lists all 240 Rub' al-Hizb with search, progress stats, and inline quality pickers.
 - **Aggregate Quality**: Dynamically derived quality for Rub', Juz, and Surah based on average mistake count.

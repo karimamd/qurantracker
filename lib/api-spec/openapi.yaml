@@ -802,6 +802,9 @@ components:
           minimum: 0
           maximum: 100
           description: Inclusive max total page mistakes that still maps to "hard"; anything above maps to "relearn". Must be ≥ mistakesGoodMax. Default 6.
+        autoExpireAyahMarks:
+          type: boolean
+          description: When true, per-ayah marks (cleared/mistake/link) older than 14 days are excluded from the active list shown in the Reader and Ayah detail screens. Page recitation status is unaffected. Default false.
       required:
         - id
         - excellentDays
@@ -816,6 +819,7 @@ components:
         - autoAssignPageFromAyahs
         - mistakesGoodMax
         - mistakesHardMax
+        - autoExpireAyahMarks
 
     UpdateSettingsBody:
       type: object
@@ -859,6 +863,8 @@ components:
           type: integer
           minimum: 0
           maximum: 100
+        autoExpireAyahMarks:
+          type: boolean
 
     ProgressOverview:
       type: object

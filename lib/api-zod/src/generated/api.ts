@@ -89,6 +89,11 @@ export const GetSettingsResponse = zod.object({
     .describe(
       'Inclusive max total page mistakes that still maps to \"hard\"; anything above maps to \"relearn\". Must be ≥ mistakesGoodMax. Default 6.',
     ),
+  autoExpireAyahMarks: zod
+    .boolean()
+    .describe(
+      "When true, per-ayah marks (cleared\/mistake\/link) older than 14 days are excluded from the active list shown in the Reader and Ayah detail screens. Page recitation status is unaffected. Default false.",
+    ),
 });
 
 /**
@@ -162,6 +167,7 @@ export const UpdateSettingsBody = zod.object({
     .min(updateSettingsBodyMistakesHardMaxMin)
     .max(updateSettingsBodyMistakesHardMaxMax)
     .optional(),
+  autoExpireAyahMarks: zod.boolean().optional(),
 });
 
 export const updateSettingsResponseBottomNavKeysMax = 5;
@@ -234,6 +240,11 @@ export const UpdateSettingsResponse = zod.object({
     .max(updateSettingsResponseMistakesHardMaxMax)
     .describe(
       'Inclusive max total page mistakes that still maps to \"hard\"; anything above maps to \"relearn\". Must be ≥ mistakesGoodMax. Default 6.',
+    ),
+  autoExpireAyahMarks: zod
+    .boolean()
+    .describe(
+      "When true, per-ayah marks (cleared\/mistake\/link) older than 14 days are excluded from the active list shown in the Reader and Ayah detail screens. Page recitation status is unaffected. Default false.",
     ),
 });
 
