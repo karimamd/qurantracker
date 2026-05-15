@@ -275,6 +275,7 @@
     "pagesCompleted": "{{done}}/{{total}} صفحات مكتملة",
     "pagesAttention": "صفحات تحتاج إلى مراجعة",
     "pagesCount": "{{count}} صفحات",
+    "openInReader": "فتح في القارئ",
     "allCaughtUp": "كل شيء على ما يرام!",
     "noPagesDue": "لا توجد صفحات متأخّرة أو قريبة الموعد.",
     "daysOverdue": "متأخّر {{count}} يوم",

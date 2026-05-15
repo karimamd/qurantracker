@@ -271,6 +271,7 @@
     "pagesCompleted": "{{done}}/{{total}} pages completed",
     "pagesAttention": "Pages Requiring Attention",
     "pagesCount": "{{count}} pages",
+    "openInReader": "Open in Reader",
     "allCaughtUp": "All caught up!",
     "noPagesDue": "No pages overdue or due soon.",
     "daysOverdue": "{{count}}d overdue",

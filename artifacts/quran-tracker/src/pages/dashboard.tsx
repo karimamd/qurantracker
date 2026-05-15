@@ -355,6 +355,17 @@ function DuePagesSection() {
                         {daysLabel}
                       </span>
                     )}
+                    <Link href={`/reader/${page.pageNumber}`}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        title={t("dashboard.openInReader")}
+                        data-testid={`due-page-open-reader-${page.pageNumber}`}
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                      </Button>
+                    </Link>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 ps-4">
