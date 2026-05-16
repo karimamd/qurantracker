@@ -1135,10 +1135,20 @@ export default function Reader() {
                         );
                       }
 
-                      const cleanedText = a.text.replace(
-                        /^\ufeff?بِسْمِ\s+[اٱ]للَّهِ\s+[اٱ]لرَّحْمَ?ٰ?نِ\s+[اٱ]لرَّحِيمِ\s*/u,
-                        group.isFirstAyah && i === 0 && group.surahNumber !== 1 ? "" : "$&",
-                      );
+                      // Strip the Basmallah that the API embeds at the start of ayah 1
+                      // for every surah (except Al-Fatiha, where it IS the ayah text).
+                      // We already render a centred Basmallah above the surah heading, so
+                      // showing it again inside the ayah would duplicate it.
+                      // Use a permissive lazy match anchored to the end of الرَّحِيمِ so
+                      // Unicode diacritic variants (sukun U+0652 vs U+06E1, alef variants,
+                      // etc.) all match reliably.
+                      const cleanedText =
+                        group.isFirstAyah && i === 0 && group.surahNumber !== 1
+                          ? a.text.replace(
+                              /^[\u200f\ufeff]?[\s\S]*?(?:ٱلرَّحِيمِ|الرَّحِيمِ|الرَّحِيمِ)\s*/u,
+                              "",
+                            )
+                          : a.text;
 
                       const isSelectedShowAll = !hideMode && selectedAyahShowAll === a.number;
                       const showMarkButtons = hideMode || isSelectedShowAll;
