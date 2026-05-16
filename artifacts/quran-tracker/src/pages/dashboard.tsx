@@ -40,7 +40,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QualityBadge } from "@/components/quality-badge";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight, Undo2, Repeat } from "lucide-react";
+import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight, ChevronDown, Undo2, Repeat } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,7 +51,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   BarChart,
   Bar,
@@ -75,6 +75,7 @@ import { OnboardingScopeSetup } from "@/components/onboarding-scope-setup";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
+import { SURAHS } from "@/lib/quran-ref";
 
 type Quality = "excellent" | "good" | "hard" | "relearn";
 
@@ -253,21 +254,53 @@ function TelawaCard() {
 }
 
 function DuePagesSection() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data: overdue, isLoading: loadingOverdue } = useListPageProgress({ status: "overdue", inScope: true });
   const { data: dueSoon, isLoading: loadingDueSoon } = useListPageProgress({ status: "due_soon", inScope: true });
   const updatePage = useUpdatePageProgress();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [expandedSurahs, setExpandedSurahs] = useState<Set<number>>(new Set());
+  const initializedRef = useRef(false);
 
-  const allPages = [
+  const allPages = useMemo(() => [
     ...(overdue ?? []).map(p => ({ ...p, urgency: "overdue" as const })),
     ...(dueSoon ?? []).map(p => ({ ...p, urgency: "due_soon" as const })),
   ].sort((a, b) => {
     const da = a.dueDate ? new Date(a.dueDate).getTime() : 0;
     const db = b.dueDate ? new Date(b.dueDate).getTime() : 0;
     return da - db;
-  });
+  }), [overdue, dueSoon]);
+
+  // Group pages by surah. Pages spanning multiple surahs appear under each one.
+  const surahGroups = useMemo(() => {
+    const map = new Map<number, { surah: typeof SURAHS[number]; pages: typeof allPages }>();
+    for (const page of allPages) {
+      const matchedSurahs = SURAHS.filter(s => s.startPage <= page.pageNumber && s.endPage >= page.pageNumber);
+      for (const s of matchedSurahs) {
+        if (!map.has(s.number)) map.set(s.number, { surah: s, pages: [] });
+        map.get(s.number)!.pages.push(page);
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.surah.number - b.surah.number);
+  }, [allPages]);
+
+  // Start all groups expanded on first load.
+  useEffect(() => {
+    if (!initializedRef.current && surahGroups.length > 0) {
+      initializedRef.current = true;
+      setExpandedSurahs(new Set(surahGroups.map(g => g.surah.number)));
+    }
+  }, [surahGroups]);
+
+  const toggleSurah = (surahNumber: number) => {
+    setExpandedSurahs(prev => {
+      const next = new Set(prev);
+      if (next.has(surahNumber)) next.delete(surahNumber);
+      else next.add(surahNumber);
+      return next;
+    });
+  };
 
   const isLoading = loadingOverdue || loadingDueSoon;
 
@@ -276,10 +309,6 @@ function DuePagesSection() {
       { pageNumber, data: { quality } },
       {
         onSuccess: () => {
-          // Rating a due page from the dashboard writes page_progress and
-          // a recitation_log entry, which feeds many other views. Mirror
-          // the broader invalidation set used by the reader / undo paths
-          // so all dashboard cards (and any open detail screens) refresh.
           queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListJuzProgressQueryKey() });
@@ -311,6 +340,8 @@ function DuePagesSection() {
     );
   }
 
+  const isAr = i18n.language === "ar";
+
   return (
     <Card className="border shadow-sm" data-testid="due-pages-section">
       <CardHeader className="pb-2">
@@ -321,72 +352,117 @@ function DuePagesSection() {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="divide-y max-h-[28rem] overflow-y-auto">
-          {allPages.map(page => {
-            const isOverdue = page.urgency === "overdue";
-            const daysLabel = page.daysUntilDue !== null
-              ? isOverdue
-                ? t("dashboard.daysOverdue", { count: Math.abs(page.daysUntilDue) })
-                : t("dashboard.dueInDays", { count: page.daysUntilDue })
-              : null;
-            const q = page.quality as Quality | null;
+        <div className="divide-y max-h-[32rem] overflow-y-auto">
+          {surahGroups.map(({ surah, pages }) => {
+            const isExpanded = expandedSurahs.has(surah.number);
+            const overdueCount = pages.filter(p => p.urgency === "overdue").length;
+            const dueSoonCount = pages.filter(p => p.urgency === "due_soon").length;
 
             return (
-              <div
-                key={page.pageNumber}
-                className={`px-4 py-3 ${isOverdue ? "bg-rose-50/50" : "bg-amber-50/30"}`}
-                data-testid={`due-page-${page.pageNumber}`}
-              >
-                <div className="flex items-center gap-3 min-w-0 mb-2">
-                  <div className={`w-1.5 h-7 rounded-full shrink-0 ${isOverdue ? "bg-rose-500" : "bg-amber-400"}`} />
-                  <div className="min-w-0 flex-1">
-                    <PageLabel
-                      pageNumber={page.pageNumber}
-                      customName={page.customName}
-                      prefixClassName="font-medium text-sm"
-                      nameClassName="text-sm"
-                    />
-                    <div className="text-xs text-muted-foreground truncate">{page.surahs.split(",")[0]}</div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <QualityBadge quality={page.quality} effectiveQuality={page.effectiveQuality} qualityDowngrades={page.qualityDowngrades} />
-                    {daysLabel && (
-                      <span className={`text-xs font-medium ${isOverdue ? "text-rose-600" : "text-amber-600"}`}>
-                        {daysLabel}
+              <div key={surah.number}>
+                {/* Surah group header (collapsible) */}
+                <button
+                  type="button"
+                  onClick={() => toggleSurah(surah.number)}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 bg-muted/40 hover:bg-muted/70 transition-colors text-start"
+                >
+                  {isExpanded
+                    ? <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                    : <ChevronRight className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                  }
+                  <span className="flex-1 min-w-0 flex items-baseline gap-1.5 truncate">
+                    <span className="font-medium text-sm" dir="rtl">{surah.arabic}</span>
+                    {!isAr && (
+                      <span className="text-xs text-muted-foreground truncate">{surah.number}. {surah.name}</span>
+                    )}
+                  </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {overdueCount > 0 && (
+                      <span className="text-xs font-medium text-rose-600 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.5 leading-none">
+                        {overdueCount}
                       </span>
                     )}
-                    <Link href={`/reader/${page.pageNumber}`}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                        title={t("dashboard.openInReader")}
-                        data-testid={`due-page-open-reader-${page.pageNumber}`}
-                      >
-                        <BookOpen className="w-3.5 h-3.5" />
-                      </Button>
-                    </Link>
+                    {dueSoonCount > 0 && (
+                      <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">
+                        {dueSoonCount}
+                      </span>
+                    )}
                   </div>
-                </div>
-                <div className="flex items-center gap-1 ps-4">
-                  {QUALITY_VALUES.map((value) => {
-                    const isActive = q === value;
-                    const style = qualityStyle[value];
-                    return (
-                      <button
-                        key={value}
-                        onClick={() => handleQuality(page.pageNumber, value)}
-                        disabled={updatePage.isPending}
-                        className={`text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
-                          isActive ? style.active : `border-border bg-background text-muted-foreground ${style.hover}`
-                        }`}
-                        data-testid={`due-page-quality-${page.pageNumber}-${value}`}
-                      >
-                        {t(`quality.${value}`)}
-                      </button>
-                    );
-                  })}
-                </div>
+                </button>
+
+                {/* Expanded page rows */}
+                {isExpanded && (
+                  <div className="divide-y">
+                    {pages.map(page => {
+                      const isOverdue = page.urgency === "overdue";
+                      const daysLabel = page.daysUntilDue !== null
+                        ? isOverdue
+                          ? t("dashboard.daysOverdue", { count: Math.abs(page.daysUntilDue) })
+                          : t("dashboard.dueInDays", { count: page.daysUntilDue })
+                        : null;
+                      const q = page.quality as Quality | null;
+
+                      return (
+                        <div
+                          key={page.pageNumber}
+                          className={`px-4 py-3 ${isOverdue ? "bg-rose-50/50" : "bg-amber-50/30"}`}
+                          data-testid={`due-page-${page.pageNumber}`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0 mb-2">
+                            <div className={`w-1.5 h-7 rounded-full shrink-0 ${isOverdue ? "bg-rose-500" : "bg-amber-400"}`} />
+                            <div className="min-w-0 flex-1">
+                              <PageLabel
+                                pageNumber={page.pageNumber}
+                                customName={page.customName}
+                                prefixClassName="font-medium text-sm"
+                                nameClassName="text-sm"
+                              />
+                              <div className="text-xs text-muted-foreground truncate">{page.surahs.split(",")[0]}</div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <QualityBadge quality={page.quality} effectiveQuality={page.effectiveQuality} qualityDowngrades={page.qualityDowngrades} />
+                              {daysLabel && (
+                                <span className={`text-xs font-medium ${isOverdue ? "text-rose-600" : "text-amber-600"}`}>
+                                  {daysLabel}
+                                </span>
+                              )}
+                              <Link href={`/reader/${page.pageNumber}`}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  title={t("dashboard.openInReader")}
+                                  data-testid={`due-page-open-reader-${page.pageNumber}`}
+                                >
+                                  <BookOpen className="w-3.5 h-3.5" />
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 ps-4">
+                            {QUALITY_VALUES.map((value) => {
+                              const isActive = q === value;
+                              const style = qualityStyle[value];
+                              return (
+                                <button
+                                  key={value}
+                                  onClick={() => handleQuality(page.pageNumber, value)}
+                                  disabled={updatePage.isPending}
+                                  className={`text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
+                                    isActive ? style.active : `border-border bg-background text-muted-foreground ${style.hover}`
+                                  }`}
+                                  data-testid={`due-page-quality-${page.pageNumber}-${value}`}
+                                >
+                                  {t(`quality.${value}`)}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
