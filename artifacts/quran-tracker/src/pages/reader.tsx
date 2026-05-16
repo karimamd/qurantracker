@@ -273,6 +273,9 @@ export default function Reader() {
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     }
+    // In hide mode, start the new page with just the first ayah revealed so
+    // the user can immediately begin reciting without a blank screen.
+    if (hideMode) setRevealedCount(1);
   };
 
   // Keyboard navigation
