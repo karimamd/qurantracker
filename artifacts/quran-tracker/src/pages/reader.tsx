@@ -245,7 +245,7 @@ export default function Reader() {
     if (idx === -1) return;
     practiceAppliedRef.current = key;
     setHideMode(true);
-    setRevealedCount(idx); // hide the target so the user can practice predicting it
+    setRevealedCount(idx + 1); // reveal up to and including the target so it is visible and highlighted
     // Don't reset mistake / link / cleared sets — all three are persisted.
     // Scroll the target placeholder/highlight into view shortly after render
     setTimeout(() => {
