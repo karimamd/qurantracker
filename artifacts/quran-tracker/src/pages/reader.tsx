@@ -533,7 +533,7 @@ export default function Reader() {
     );
   };
 
-  const handleAyahLink = (ayahNumber: number, isLatest: boolean) => {
+  const handleAyahLink = (ayahNumber: number) => {
     const isOn = linkAyahs.has(ayahNumber);
     if (isOn) {
       // Optimistic remove
@@ -558,11 +558,6 @@ export default function Reader() {
       // Link is independent of cleared/memorization — do NOT touch either
       // of those sets here. The server no longer auto-resolves them.
       persistAdd(ayahNumber, "link");
-      // In hide mode, marking the frontier ayah as a link issue should reveal
-      // the next ayah, just like marking "mistake" or "clear" does.
-      if (hideMode && isLatest && revealedCount < totalAyahs) {
-        setRevealedCount(c => c + 1);
-      }
     }
   };
 
@@ -1173,7 +1168,7 @@ export default function Reader() {
                           {showMarkButtons && canLink && (
                             <button
                               type="button"
-                              onClick={(e) => { stopBubble(e); handleAyahLink(a.number, isLatest); }}
+                              onClick={(e) => { stopBubble(e); handleAyahLink(a.number); }}
                               dir="ltr"
                               className={`inline-flex items-center justify-center mx-1 w-6 h-6 rounded border align-middle font-sans transition-colors ${
                                 isLink
