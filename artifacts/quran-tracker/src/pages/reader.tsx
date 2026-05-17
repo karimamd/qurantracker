@@ -1304,6 +1304,25 @@ export default function Reader() {
 
       <Card className="border shadow-sm">
         <CardContent className="px-4 py-3 space-y-3">
+          {/* Telawa button — promoted to top when this page is next in the telawa queue */}
+          {isTelawaPage && (
+            <div className="flex justify-center">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleMarkTelawa}
+                disabled={recordTelawaRead.isPending}
+                data-testid="reader-mark-telawa"
+                title={t("reader.markTelawaTitle")}
+                className="px-4 text-xs"
+              >
+                <Repeat className="w-3.5 h-3.5 me-1" />
+                {t("reader.markTelawa")}
+              </Button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-2">
             {/* Arabic reads right-to-left, so Next is on the left and Previous is on the right. */}
             <Button
@@ -1366,21 +1385,24 @@ export default function Reader() {
             )}
           </div>
 
-          <div className="border-t pt-3 flex justify-center">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleMarkTelawa}
-              disabled={recordTelawaRead.isPending}
-              data-testid="reader-mark-telawa"
-              title={t("reader.markTelawaTitle")}
-              className="px-4 text-xs"
-            >
-              <Repeat className="w-3.5 h-3.5 me-1" />
-              {t("reader.markTelawa")}
-            </Button>
-          </div>
+          {/* Telawa button — kept at bottom when this page is not next in the telawa queue */}
+          {!isTelawaPage && (
+            <div className="border-t pt-3 flex justify-center">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleMarkTelawa}
+                disabled={recordTelawaRead.isPending}
+                data-testid="reader-mark-telawa"
+                title={t("reader.markTelawaTitle")}
+                className="px-4 text-xs"
+              >
+                <Repeat className="w-3.5 h-3.5 me-1" />
+                {t("reader.markTelawa")}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
