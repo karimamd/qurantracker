@@ -282,7 +282,9 @@ function DuePagesSection() {
         map.get(s.number)!.pages.push(page);
       }
     }
-    return Array.from(map.values()).sort((a, b) => a.surah.number - b.surah.number);
+    return Array.from(map.values())
+      .sort((a, b) => a.surah.number - b.surah.number)
+      .map(g => ({ ...g, pages: [...g.pages].sort((a, b) => a.pageNumber - b.pageNumber) }));
   }, [allPages]);
 
   // Start all groups expanded on first load.

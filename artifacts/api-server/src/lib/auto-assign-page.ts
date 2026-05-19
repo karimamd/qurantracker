@@ -31,7 +31,7 @@
  * from racing into duplicate auto-recordings.
  */
 import { db, settingsTable, pageProgressTable, recitationLogTable, ayahMistakesTable } from "@workspace/db";
-import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import pageAyahsData from "./page-ayahs.json" with { type: "json" };
 import { calculateDueDate, ensurePageExists } from "./progress-helpers";
 import { logger } from "./logger";
@@ -57,6 +57,12 @@ export function getGlobalAyahsForPage(pageNumber: number): number[] {
 function startOfToday(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function startOfTomorrow(): Date {
+  const d = startOfToday();
+  d.setDate(d.getDate() + 1);
   return d;
 }
 
@@ -102,14 +108,13 @@ export async function maybeAutoAssignPageRecitation(
     if (!settings || !settings.autoAssign) return;
 
     const dayStart = startOfToday();
+    const dayEnd = startOfTomorrow();
 
-    // All currently-active marks for this page that were placed today.
-    // We project the minimum we need: (globalAyah, mistakeType).
-    const todayMarks = await db
-      .select({
-        globalAyahNumber: ayahMistakesTable.globalAyahNumber,
-        mistakeType: ayahMistakesTable.mistakeType,
-      })
+    // Coverage check: every ayah on the page must have at least one
+    // currently-active mark placed TODAY (bounded [dayStart, dayEnd) to
+    // exclude future-dated rows from bad clocks or imports).
+    const todayCoverageMarks = await db
+      .select({ globalAyahNumber: ayahMistakesTable.globalAyahNumber })
       .from(ayahMistakesTable)
       .where(
         and(
@@ -117,29 +122,37 @@ export async function maybeAutoAssignPageRecitation(
           eq(ayahMistakesTable.pageNumber, pageNumber),
           sql`${ayahMistakesTable.resolvedAt} is null`,
           gte(ayahMistakesTable.recitedAt, dayStart),
+          lt(ayahMistakesTable.recitedAt, dayEnd),
           inArray(ayahMistakesTable.mistakeType, ["cleared", "memorization", "link"]),
         ),
       );
 
-    // Coverage check: every ayah on the page must have at least one mark.
-    const covered = new Set<number>(todayMarks.map((m) => m.globalAyahNumber));
+    const covered = new Set<number>(todayCoverageMarks.map((m) => m.globalAyahNumber));
     for (const g of ayahsOnPage) {
       if (!covered.has(g)) return;
     }
 
-    // Mistakes count: sum the memorization|link rows. Cleared rows do
-    // not contribute (per spec — a "tick" represents 0 mistakes).
-    let totalMistakes = 0;
-    for (const m of todayMarks) {
-      if (m.mistakeType === "memorization" || m.mistakeType === "link") {
-        totalMistakes++;
-      }
-    }
+    // Mistakes count: ALL currently-active memorization|link rows for
+    // this page (not day-filtered) — link marks from prior sessions
+    // still represent unresolved mistakes. Cleared rows contribute 0.
+    const allActiveMarks = await db
+      .select({ mistakeType: ayahMistakesTable.mistakeType })
+      .from(ayahMistakesTable)
+      .where(
+        and(
+          eq(ayahMistakesTable.userId, userId),
+          eq(ayahMistakesTable.pageNumber, pageNumber),
+          sql`${ayahMistakesTable.resolvedAt} is null`,
+          inArray(ayahMistakesTable.mistakeType, ["memorization", "link"]),
+        ),
+      );
+    const totalMistakes = allActiveMarks.length;
     const quality = bucketQuality(totalMistakes, settings.goodMax, settings.hardMax);
 
     // Avoid recording a duplicate when the user is just shuffling marks
     // around without changing the page's overall verdict. Look at the
-    // most recent recitation_log row TODAY for this page.
+    // most recent recitation_log row TODAY for this page (bounded to
+    // exclude future-dated rows).
     const [latestToday] = await db
       .select({ quality: recitationLogTable.quality })
       .from(recitationLogTable)
@@ -148,6 +161,7 @@ export async function maybeAutoAssignPageRecitation(
           eq(recitationLogTable.userId, userId),
           eq(recitationLogTable.pageNumber, pageNumber),
           gte(recitationLogTable.recitedAt, dayStart),
+          lt(recitationLogTable.recitedAt, dayEnd),
         ),
       )
       .orderBy(desc(recitationLogTable.recitedAt))
@@ -177,6 +191,7 @@ export async function maybeAutoAssignPageRecitation(
             eq(recitationLogTable.userId, userId),
             eq(recitationLogTable.pageNumber, pageNumber),
             gte(recitationLogTable.recitedAt, dayStart),
+            lt(recitationLogTable.recitedAt, dayEnd),
           ),
         )
         .orderBy(desc(recitationLogTable.recitedAt))

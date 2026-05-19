@@ -144,12 +144,13 @@ export default function SettingsPage() {
     const avfs = parseInt(ayahViewFontSize, 10);
     const mgm = parseInt(mistakesGoodMax, 10);
     const mhm = parseInt(mistakesHardMax, 10);
-    // Both thresholds are required to be in 0..100 AND hard ≥ good.
-    // If either is out of range or the ordering inverts we surface a
+    // Both thresholds are required to be in 0..100 AND hard > good
+    // (strictly — equality collapses the "good" bucket to nothing).
+    // If either is out of range or the ordering is wrong we surface a
     // toast and bail rather than half-saving the form.
     const goodValid = Number.isFinite(mgm) && mgm >= 0 && mgm <= 100;
     const hardValid = Number.isFinite(mhm) && mhm >= 0 && mhm <= 100;
-    if (goodValid && hardValid && mhm < mgm) {
+    if (goodValid && hardValid && mhm <= mgm) {
       toast({ title: t("settings.mistakeThresholds.hardBelowGood"), variant: "destructive" });
       return;
     }
@@ -357,7 +358,7 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="space-y-2">
+          {autoAssign && <div className="space-y-2">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t("settings.mistakeThresholds.title")}
             </div>
@@ -395,7 +396,7 @@ export default function SettingsPage() {
                 <span className="text-sm text-muted-foreground">{t("settings.mistakeThresholds.mistakesUnit")}</span>
               </div>
             </div>
-          </div>
+          </div>}
         </CardContent>
       </Card>
 
