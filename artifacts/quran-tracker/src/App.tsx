@@ -258,8 +258,8 @@ function ClerkProviderWithRoutes() {
           <ErrorBoundary>
             <Switch>
               <Route path="/" component={HomeRedirect} />
-              <Route path="/sign-in" nest component={SignInPage} />
-              <Route path="/sign-up" nest component={SignUpPage} />
+              <Route path="/sign-in/*?" component={SignInPage} />
+              <Route path="/sign-up/*?" component={SignUpPage} />
               <Route path="*" component={ProtectedApp} />
             </Switch>
           </ErrorBoundary>
