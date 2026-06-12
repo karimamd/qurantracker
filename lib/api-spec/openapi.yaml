@@ -747,6 +747,97 @@ paths:
               schema:
                 $ref: "#/components/schemas/TelawaStats"
 
+  /telawa/scope/today:
+    get:
+      operationId: getTelawaScopeToday
+      tags: [telawa]
+      summary: Get today's In-Scope Round-Robin batch and cycle progress
+      description: |
+        The In-Scope Round-Robin cycles through only the pages currently in
+        the user's memorization scope (page_progress.in_scope = true), with a
+        daily page goal. A page counts as read this cycle when it has either an
+        explicit Telawa-scope read or any quality recitation since the cycle
+        started. When every in-scope page is covered, the cycle auto-completes
+        and the next one opens.
+      responses:
+        "200":
+          description: Today's In-Scope Round-Robin batch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelawaScopeToday"
+
+  /telawa/scope/read:
+    post:
+      operationId: recordTelawaScopeRead
+      tags: [telawa]
+      summary: Mark an in-scope page as read in the round-robin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordTelawaScopeReadBody"
+      responses:
+        "200":
+          description: Updated today's In-Scope Round-Robin batch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelawaScopeToday"
+
+  /telawa/scope/read/last:
+    delete:
+      operationId: undoTelawaScopeRead
+      tags: [telawa]
+      summary: Undo the most recent explicit In-Scope Round-Robin read entry
+      responses:
+        "200":
+          description: Updated today's In-Scope Round-Robin batch after undo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelawaScopeToday"
+        "404":
+          description: Nothing to undo
+
+  /telawa/scope/active:
+    patch:
+      operationId: updateActiveScopeCycle
+      tags: [telawa]
+      summary: Update fields on the active In-Scope Round-Robin cycle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateScopeCycleBody"
+      responses:
+        "200":
+          description: Updated today's In-Scope Round-Robin batch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelawaScopeToday"
+
+  /telawa/homework-reading:
+    get:
+      operationId: getTelawaHomeworkReading
+      tags: [telawa]
+      summary: Get Homework reading-goal progress across active homework pages
+      description: |
+        Returns the distinct pages drawn from the user's active (not yet
+        overdue) homework sessions, each with its weekly read count. The
+        weekly count includes both quality recitations and explicit Telawa
+        reads in the trailing 7 days.
+      responses:
+        "200":
+          description: Homework reading-goal progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelawaHomeworkReading"
+
 components:
   schemas:
     HealthStatus:
@@ -805,6 +896,11 @@ components:
         autoExpireAyahMarks:
           type: boolean
           description: When true, per-ayah marks (cleared/mistake/link) older than 14 days are excluded from the active list shown in the Reader and Ayah detail screens. Page recitation status is unaffected. Default false.
+        homeworkWeeklyReadGoal:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: Global weekly per-page read target for Homework pages. A page's weekly progress counts both quality recitations and explicit Telawa reads in the trailing 7 days. Default 3.
       required:
         - id
         - excellentDays
@@ -820,6 +916,7 @@ components:
         - mistakesGoodMax
         - mistakesHardMax
         - autoExpireAyahMarks
+        - homeworkWeeklyReadGoal
 
     UpdateSettingsBody:
       type: object
@@ -865,6 +962,10 @@ components:
           maximum: 100
         autoExpireAyahMarks:
           type: boolean
+        homeworkWeeklyReadGoal:
+          type: integer
+          minimum: 1
+          maximum: 50
 
     ProgressOverview:
       type: object
@@ -1753,3 +1854,117 @@ components:
       required:
         - date
         - count
+
+    TelawaScopeReadEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        pageNumber:
+          type: integer
+        cycleNumber:
+          type: integer
+        readAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - pageNumber
+        - cycleNumber
+        - readAt
+
+    TelawaScopeToday:
+      type: object
+      description: Today's In-Scope Round-Robin batch and active-cycle progress.
+      properties:
+        pagesPerDay:
+          type: integer
+          description: Effective daily page goal (per-cycle override or settings default).
+        cycleNumber:
+          type: integer
+          description: Current round-robin cycle number (1-based per user).
+        totalInScope:
+          type: integer
+          description: Number of pages currently in the user's memorization scope.
+        readInCycle:
+          type: integer
+          description: Distinct in-scope pages covered this cycle (explicit read OR recitation since cycle start).
+        readToday:
+          type: integer
+          description: Distinct in-scope pages covered today (explicit read OR recitation today).
+        pagesPerDayOverride:
+          type: ["integer", "null"]
+          description: Per-cycle daily goal override; null when inheriting settings.telawaPagesPerDay.
+        upcomingPages:
+          type: array
+          description: Next in-scope pages not yet covered this cycle, up to pagesPerDay.
+          items:
+            type: integer
+        recentReads:
+          type: array
+          description: Explicit scope reads recorded today (most recent first), for display/undo.
+          items:
+            $ref: "#/components/schemas/TelawaScopeReadEntry"
+      required:
+        - pagesPerDay
+        - cycleNumber
+        - totalInScope
+        - readInCycle
+        - readToday
+        - pagesPerDayOverride
+        - upcomingPages
+        - recentReads
+
+    RecordTelawaScopeReadBody:
+      type: object
+      properties:
+        pageNumber:
+          type: integer
+          minimum: 1
+          maximum: 604
+          description: In-scope page number (1..604) to mark read this cycle.
+      required:
+        - pageNumber
+
+    UpdateScopeCycleBody:
+      type: object
+      description: Patch fields on the user's active In-Scope Round-Robin cycle.
+      properties:
+        pagesPerDay:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 604
+          description: |
+            New daily page goal for the active cycle. Pass `null` to clear the
+            per-cycle override and fall back to settings.telawaPagesPerDay.
+
+    TelawaHomeworkReadingPage:
+      type: object
+      properties:
+        pageNumber:
+          type: integer
+        name:
+          type: string
+        weekCount:
+          type: integer
+          description: Recitations + explicit Telawa reads for this page in the trailing 7 days.
+      required:
+        - pageNumber
+        - name
+        - weekCount
+
+    TelawaHomeworkReading:
+      type: object
+      description: Homework reading-goal progress across active homework pages.
+      properties:
+        weeklyGoal:
+          type: integer
+          description: Per-page weekly read target from settings.homeworkWeeklyReadGoal.
+        pages:
+          type: array
+          items:
+            $ref: "#/components/schemas/TelawaHomeworkReadingPage"
+      required:
+        - weeklyGoal
+        - pages

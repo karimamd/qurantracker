@@ -70,6 +70,12 @@ export interface Settings {
   mistakesHardMax: number;
   /** When true, per-ayah marks (cleared/mistake/link) older than 14 days are excluded from the active list shown in the Reader and Ayah detail screens. Page recitation status is unaffected. Default false. */
   autoExpireAyahMarks: boolean;
+  /**
+   * Global weekly per-page read target for Homework pages. A page's weekly progress counts both quality recitations and explicit Telawa reads in the trailing 7 days. Default 3.
+   * @minimum 1
+   * @maximum 50
+   */
+  homeworkWeeklyReadGoal: number;
 }
 
 export type UpdateSettingsBodyLanguage =
@@ -134,6 +140,11 @@ export interface UpdateSettingsBody {
    */
   mistakesHardMax?: number;
   autoExpireAyahMarks?: boolean;
+  /**
+   * @minimum 1
+   * @maximum 50
+   */
+  homeworkWeeklyReadGoal?: number;
 }
 
 export interface ProgressOverview {
@@ -695,6 +706,77 @@ export interface TelawaStats {
   pagesPerDay: number;
   readToday: number;
   last30Days: TelawaDailyCount[];
+}
+
+export interface TelawaScopeReadEntry {
+  id: number;
+  pageNumber: number;
+  cycleNumber: number;
+  readAt: string;
+}
+
+/**
+ * Today's In-Scope Round-Robin batch and active-cycle progress.
+ */
+export interface TelawaScopeToday {
+  /** Effective daily page goal (per-cycle override or settings default). */
+  pagesPerDay: number;
+  /** Current round-robin cycle number (1-based per user). */
+  cycleNumber: number;
+  /** Number of pages currently in the user's memorization scope. */
+  totalInScope: number;
+  /** Distinct in-scope pages covered this cycle (explicit read OR recitation since cycle start). */
+  readInCycle: number;
+  /** Distinct in-scope pages covered today (explicit read OR recitation today). */
+  readToday: number;
+  /**
+   * Per-cycle daily goal override; null when inheriting settings.telawaPagesPerDay.
+   * @nullable
+   */
+  pagesPerDayOverride: number | null;
+  /** Next in-scope pages not yet covered this cycle, up to pagesPerDay. */
+  upcomingPages: number[];
+  /** Explicit scope reads recorded today (most recent first), for display/undo. */
+  recentReads: TelawaScopeReadEntry[];
+}
+
+export interface RecordTelawaScopeReadBody {
+  /**
+   * In-scope page number (1..604) to mark read this cycle.
+   * @minimum 1
+   * @maximum 604
+   */
+  pageNumber: number;
+}
+
+/**
+ * Patch fields on the user's active In-Scope Round-Robin cycle.
+ */
+export interface UpdateScopeCycleBody {
+  /**
+   * New daily page goal for the active cycle. Pass `null` to clear the
+per-cycle override and fall back to settings.telawaPagesPerDay.
+
+   * @minimum 1
+   * @maximum 604
+   */
+  pagesPerDay?: number | null;
+}
+
+export interface TelawaHomeworkReadingPage {
+  pageNumber: number;
+  name: string;
+  /** Recitations + explicit Telawa reads for this page in the trailing 7 days. */
+  weekCount: number;
+}
+
+/**
+ * Homework reading-goal progress across active homework pages.
+ */
+export interface TelawaHomeworkReading {
+  /** Per-page weekly read target from settings.homeworkWeeklyReadGoal. */
+  weeklyGoal: number;
+  pages: TelawaHomeworkReadingPage[];
 }
 
 export type ListPageProgressParams = {

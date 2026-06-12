@@ -26,6 +26,8 @@ export const getSettingsResponseMistakesGoodMaxMax = 100;
 export const getSettingsResponseMistakesHardMaxMin = 0;
 export const getSettingsResponseMistakesHardMaxMax = 100;
 
+export const getSettingsResponseHomeworkWeeklyReadGoalMax = 50;
+
 export const GetSettingsResponse = zod.object({
   id: zod.number(),
   excellentDays: zod.number(),
@@ -94,6 +96,13 @@ export const GetSettingsResponse = zod.object({
     .describe(
       "When true, per-ayah marks (cleared\/mistake\/link) older than 14 days are excluded from the active list shown in the Reader and Ayah detail screens. Page recitation status is unaffected. Default false.",
     ),
+  homeworkWeeklyReadGoal: zod
+    .number()
+    .min(1)
+    .max(getSettingsResponseHomeworkWeeklyReadGoalMax)
+    .describe(
+      "Global weekly per-page read target for Homework pages. A page's weekly progress counts both quality recitations and explicit Telawa reads in the trailing 7 days. Default 3.",
+    ),
 });
 
 /**
@@ -114,6 +123,8 @@ export const updateSettingsBodyMistakesGoodMaxMax = 100;
 
 export const updateSettingsBodyMistakesHardMaxMin = 0;
 export const updateSettingsBodyMistakesHardMaxMax = 100;
+
+export const updateSettingsBodyHomeworkWeeklyReadGoalMax = 50;
 
 export const UpdateSettingsBody = zod.object({
   excellentDays: zod.number().optional(),
@@ -168,6 +179,11 @@ export const UpdateSettingsBody = zod.object({
     .max(updateSettingsBodyMistakesHardMaxMax)
     .optional(),
   autoExpireAyahMarks: zod.boolean().optional(),
+  homeworkWeeklyReadGoal: zod
+    .number()
+    .min(1)
+    .max(updateSettingsBodyHomeworkWeeklyReadGoalMax)
+    .optional(),
 });
 
 export const updateSettingsResponseBottomNavKeysMax = 5;
@@ -177,6 +193,8 @@ export const updateSettingsResponseMistakesGoodMaxMax = 100;
 
 export const updateSettingsResponseMistakesHardMaxMin = 0;
 export const updateSettingsResponseMistakesHardMaxMax = 100;
+
+export const updateSettingsResponseHomeworkWeeklyReadGoalMax = 50;
 
 export const UpdateSettingsResponse = zod.object({
   id: zod.number(),
@@ -245,6 +263,13 @@ export const UpdateSettingsResponse = zod.object({
     .boolean()
     .describe(
       "When true, per-ayah marks (cleared\/mistake\/link) older than 14 days are excluded from the active list shown in the Reader and Ayah detail screens. Page recitation status is unaffected. Default false.",
+    ),
+  homeworkWeeklyReadGoal: zod
+    .number()
+    .min(1)
+    .max(updateSettingsResponseHomeworkWeeklyReadGoalMax)
+    .describe(
+      "Global weekly per-page read target for Homework pages. A page's weekly progress counts both quality recitations and explicit Telawa reads in the trailing 7 days. Default 3.",
     ),
 });
 
@@ -1692,3 +1717,272 @@ export const GetTelawaStatsResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * The In-Scope Round-Robin cycles through only the pages currently in
+the user's memorization scope (page_progress.in_scope = true), with a
+daily page goal. A page counts as read this cycle when it has either an
+explicit Telawa-scope read or any quality recitation since the cycle
+started. When every in-scope page is covered, the cycle auto-completes
+and the next one opens.
+
+ * @summary Get today's In-Scope Round-Robin batch and cycle progress
+ */
+export const GetTelawaScopeTodayResponse = zod
+  .object({
+    pagesPerDay: zod
+      .number()
+      .describe(
+        "Effective daily page goal (per-cycle override or settings default).",
+      ),
+    cycleNumber: zod
+      .number()
+      .describe("Current round-robin cycle number (1-based per user)."),
+    totalInScope: zod
+      .number()
+      .describe("Number of pages currently in the user's memorization scope."),
+    readInCycle: zod
+      .number()
+      .describe(
+        "Distinct in-scope pages covered this cycle (explicit read OR recitation since cycle start).",
+      ),
+    readToday: zod
+      .number()
+      .describe(
+        "Distinct in-scope pages covered today (explicit read OR recitation today).",
+      ),
+    pagesPerDayOverride: zod
+      .number()
+      .nullable()
+      .describe(
+        "Per-cycle daily goal override; null when inheriting settings.telawaPagesPerDay.",
+      ),
+    upcomingPages: zod
+      .array(zod.number())
+      .describe(
+        "Next in-scope pages not yet covered this cycle, up to pagesPerDay.",
+      ),
+    recentReads: zod
+      .array(
+        zod.object({
+          id: zod.number(),
+          pageNumber: zod.number(),
+          cycleNumber: zod.number(),
+          readAt: zod.coerce.date(),
+        }),
+      )
+      .describe(
+        "Explicit scope reads recorded today (most recent first), for display\/undo.",
+      ),
+  })
+  .describe("Today's In-Scope Round-Robin batch and active-cycle progress.");
+
+/**
+ * @summary Mark an in-scope page as read in the round-robin
+ */
+export const recordTelawaScopeReadBodyPageNumberMax = 604;
+
+export const RecordTelawaScopeReadBody = zod.object({
+  pageNumber: zod
+    .number()
+    .min(1)
+    .max(recordTelawaScopeReadBodyPageNumberMax)
+    .describe("In-scope page number (1..604) to mark read this cycle."),
+});
+
+export const RecordTelawaScopeReadResponse = zod
+  .object({
+    pagesPerDay: zod
+      .number()
+      .describe(
+        "Effective daily page goal (per-cycle override or settings default).",
+      ),
+    cycleNumber: zod
+      .number()
+      .describe("Current round-robin cycle number (1-based per user)."),
+    totalInScope: zod
+      .number()
+      .describe("Number of pages currently in the user's memorization scope."),
+    readInCycle: zod
+      .number()
+      .describe(
+        "Distinct in-scope pages covered this cycle (explicit read OR recitation since cycle start).",
+      ),
+    readToday: zod
+      .number()
+      .describe(
+        "Distinct in-scope pages covered today (explicit read OR recitation today).",
+      ),
+    pagesPerDayOverride: zod
+      .number()
+      .nullable()
+      .describe(
+        "Per-cycle daily goal override; null when inheriting settings.telawaPagesPerDay.",
+      ),
+    upcomingPages: zod
+      .array(zod.number())
+      .describe(
+        "Next in-scope pages not yet covered this cycle, up to pagesPerDay.",
+      ),
+    recentReads: zod
+      .array(
+        zod.object({
+          id: zod.number(),
+          pageNumber: zod.number(),
+          cycleNumber: zod.number(),
+          readAt: zod.coerce.date(),
+        }),
+      )
+      .describe(
+        "Explicit scope reads recorded today (most recent first), for display\/undo.",
+      ),
+  })
+  .describe("Today's In-Scope Round-Robin batch and active-cycle progress.");
+
+/**
+ * @summary Undo the most recent explicit In-Scope Round-Robin read entry
+ */
+export const UndoTelawaScopeReadResponse = zod
+  .object({
+    pagesPerDay: zod
+      .number()
+      .describe(
+        "Effective daily page goal (per-cycle override or settings default).",
+      ),
+    cycleNumber: zod
+      .number()
+      .describe("Current round-robin cycle number (1-based per user)."),
+    totalInScope: zod
+      .number()
+      .describe("Number of pages currently in the user's memorization scope."),
+    readInCycle: zod
+      .number()
+      .describe(
+        "Distinct in-scope pages covered this cycle (explicit read OR recitation since cycle start).",
+      ),
+    readToday: zod
+      .number()
+      .describe(
+        "Distinct in-scope pages covered today (explicit read OR recitation today).",
+      ),
+    pagesPerDayOverride: zod
+      .number()
+      .nullable()
+      .describe(
+        "Per-cycle daily goal override; null when inheriting settings.telawaPagesPerDay.",
+      ),
+    upcomingPages: zod
+      .array(zod.number())
+      .describe(
+        "Next in-scope pages not yet covered this cycle, up to pagesPerDay.",
+      ),
+    recentReads: zod
+      .array(
+        zod.object({
+          id: zod.number(),
+          pageNumber: zod.number(),
+          cycleNumber: zod.number(),
+          readAt: zod.coerce.date(),
+        }),
+      )
+      .describe(
+        "Explicit scope reads recorded today (most recent first), for display\/undo.",
+      ),
+  })
+  .describe("Today's In-Scope Round-Robin batch and active-cycle progress.");
+
+/**
+ * @summary Update fields on the active In-Scope Round-Robin cycle
+ */
+export const updateActiveScopeCycleBodyPagesPerDayMax = 604;
+
+export const UpdateActiveScopeCycleBody = zod
+  .object({
+    pagesPerDay: zod
+      .number()
+      .min(1)
+      .max(updateActiveScopeCycleBodyPagesPerDayMax)
+      .nullish()
+      .describe(
+        "New daily page goal for the active cycle. Pass `null` to clear the\nper-cycle override and fall back to settings.telawaPagesPerDay.\n",
+      ),
+  })
+  .describe("Patch fields on the user's active In-Scope Round-Robin cycle.");
+
+export const UpdateActiveScopeCycleResponse = zod
+  .object({
+    pagesPerDay: zod
+      .number()
+      .describe(
+        "Effective daily page goal (per-cycle override or settings default).",
+      ),
+    cycleNumber: zod
+      .number()
+      .describe("Current round-robin cycle number (1-based per user)."),
+    totalInScope: zod
+      .number()
+      .describe("Number of pages currently in the user's memorization scope."),
+    readInCycle: zod
+      .number()
+      .describe(
+        "Distinct in-scope pages covered this cycle (explicit read OR recitation since cycle start).",
+      ),
+    readToday: zod
+      .number()
+      .describe(
+        "Distinct in-scope pages covered today (explicit read OR recitation today).",
+      ),
+    pagesPerDayOverride: zod
+      .number()
+      .nullable()
+      .describe(
+        "Per-cycle daily goal override; null when inheriting settings.telawaPagesPerDay.",
+      ),
+    upcomingPages: zod
+      .array(zod.number())
+      .describe(
+        "Next in-scope pages not yet covered this cycle, up to pagesPerDay.",
+      ),
+    recentReads: zod
+      .array(
+        zod.object({
+          id: zod.number(),
+          pageNumber: zod.number(),
+          cycleNumber: zod.number(),
+          readAt: zod.coerce.date(),
+        }),
+      )
+      .describe(
+        "Explicit scope reads recorded today (most recent first), for display\/undo.",
+      ),
+  })
+  .describe("Today's In-Scope Round-Robin batch and active-cycle progress.");
+
+/**
+ * Returns the distinct pages drawn from the user's active (not yet
+overdue) homework sessions, each with its weekly read count. The
+weekly count includes both quality recitations and explicit Telawa
+reads in the trailing 7 days.
+
+ * @summary Get Homework reading-goal progress across active homework pages
+ */
+export const GetTelawaHomeworkReadingResponse = zod
+  .object({
+    weeklyGoal: zod
+      .number()
+      .describe(
+        "Per-page weekly read target from settings.homeworkWeeklyReadGoal.",
+      ),
+    pages: zod.array(
+      zod.object({
+        pageNumber: zod.number(),
+        name: zod.string(),
+        weekCount: zod
+          .number()
+          .describe(
+            "Recitations + explicit Telawa reads for this page in the trailing 7 days.",
+          ),
+      }),
+    ),
+  })
+  .describe("Homework reading-goal progress across active homework pages.");

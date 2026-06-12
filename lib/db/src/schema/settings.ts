@@ -69,6 +69,12 @@ export const settingsTable = pgTable("settings", {
   // DB for analytics; only the live view is filtered. Page recitation status
   // (page_progress / recitation_log) is never affected. Default off.
   autoExpireAyahMarks: boolean("auto_expire_ayah_marks").notNull().default(false),
+  // Global weekly per-page read target for Homework pages. A homework page's
+  // weekly progress counts BOTH quality recitations (recitation_log) and
+  // explicit Telawa reads (telawa_log / telawa_scope_log) within the trailing
+  // 7-day window. Used by the Homework Reading goal card and the per-page
+  // progress bars on the homework detail screen.
+  homeworkWeeklyReadGoal: integer("homework_weekly_read_goal").notNull().default(3),
 }, (table) => ({
   userIdUnique: uniqueIndex("settings_user_id_unique").on(table.userId),
 }));

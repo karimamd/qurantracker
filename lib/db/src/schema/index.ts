@@ -22,3 +22,4 @@ export * from "./homework";
 export * from "./ayah-mistakes";
 export * from "./telawa";
 export * from "./telawa-khatmah";
+export * from "./telawa-scope";

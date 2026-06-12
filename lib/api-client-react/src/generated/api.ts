@@ -40,6 +40,7 @@ import type {
   ProgressOverview,
   RecordRecitationBody,
   RecordTelawaReadBody,
+  RecordTelawaScopeReadBody,
   RemoveActiveMistakeBody,
   RenamePageBody,
   Rob3ProgressItem,
@@ -48,11 +49,14 @@ import type {
   StartKhatmahBody,
   SurahDetail,
   SurahProgress,
+  TelawaHomeworkReading,
+  TelawaScopeToday,
   TelawaStats,
   TelawaToday,
   UpdateActiveKhatmahBody,
   UpdateHomeworkBody,
   UpdateHomeworkItemBody,
+  UpdateScopeCycleBody,
   UpdateSettingsBody,
 } from "./api.schemas";
 
@@ -3161,6 +3165,423 @@ export function useGetTelawaStats<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetTelawaStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * The In-Scope Round-Robin cycles through only the pages currently in
+the user's memorization scope (page_progress.in_scope = true), with a
+daily page goal. A page counts as read this cycle when it has either an
+explicit Telawa-scope read or any quality recitation since the cycle
+started. When every in-scope page is covered, the cycle auto-completes
+and the next one opens.
+
+ * @summary Get today's In-Scope Round-Robin batch and cycle progress
+ */
+export const getGetTelawaScopeTodayUrl = () => {
+  return `/api/telawa/scope/today`;
+};
+
+export const getTelawaScopeToday = async (
+  options?: RequestInit,
+): Promise<TelawaScopeToday> => {
+  return customFetch<TelawaScopeToday>(getGetTelawaScopeTodayUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTelawaScopeTodayQueryKey = () => {
+  return [`/api/telawa/scope/today`] as const;
+};
+
+export const getGetTelawaScopeTodayQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTelawaScopeToday>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaScopeToday>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTelawaScopeTodayQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTelawaScopeToday>>
+  > = ({ signal }) => getTelawaScopeToday({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaScopeToday>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTelawaScopeTodayQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTelawaScopeToday>>
+>;
+export type GetTelawaScopeTodayQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get today's In-Scope Round-Robin batch and cycle progress
+ */
+
+export function useGetTelawaScopeToday<
+  TData = Awaited<ReturnType<typeof getTelawaScopeToday>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaScopeToday>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTelawaScopeTodayQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Mark an in-scope page as read in the round-robin
+ */
+export const getRecordTelawaScopeReadUrl = () => {
+  return `/api/telawa/scope/read`;
+};
+
+export const recordTelawaScopeRead = async (
+  recordTelawaScopeReadBody: RecordTelawaScopeReadBody,
+  options?: RequestInit,
+): Promise<TelawaScopeToday> => {
+  return customFetch<TelawaScopeToday>(getRecordTelawaScopeReadUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(recordTelawaScopeReadBody),
+  });
+};
+
+export const getRecordTelawaScopeReadMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordTelawaScopeRead>>,
+    TError,
+    { data: BodyType<RecordTelawaScopeReadBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordTelawaScopeRead>>,
+  TError,
+  { data: BodyType<RecordTelawaScopeReadBody> },
+  TContext
+> => {
+  const mutationKey = ["recordTelawaScopeRead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordTelawaScopeRead>>,
+    { data: BodyType<RecordTelawaScopeReadBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return recordTelawaScopeRead(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordTelawaScopeReadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordTelawaScopeRead>>
+>;
+export type RecordTelawaScopeReadMutationBody =
+  BodyType<RecordTelawaScopeReadBody>;
+export type RecordTelawaScopeReadMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark an in-scope page as read in the round-robin
+ */
+export const useRecordTelawaScopeRead = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordTelawaScopeRead>>,
+    TError,
+    { data: BodyType<RecordTelawaScopeReadBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof recordTelawaScopeRead>>,
+  TError,
+  { data: BodyType<RecordTelawaScopeReadBody> },
+  TContext
+> => {
+  return useMutation(getRecordTelawaScopeReadMutationOptions(options));
+};
+
+/**
+ * @summary Undo the most recent explicit In-Scope Round-Robin read entry
+ */
+export const getUndoTelawaScopeReadUrl = () => {
+  return `/api/telawa/scope/read/last`;
+};
+
+export const undoTelawaScopeRead = async (
+  options?: RequestInit,
+): Promise<TelawaScopeToday> => {
+  return customFetch<TelawaScopeToday>(getUndoTelawaScopeReadUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getUndoTelawaScopeReadMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof undoTelawaScopeRead>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof undoTelawaScopeRead>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["undoTelawaScopeRead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof undoTelawaScopeRead>>,
+    void
+  > = () => {
+    return undoTelawaScopeRead(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UndoTelawaScopeReadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof undoTelawaScopeRead>>
+>;
+
+export type UndoTelawaScopeReadMutationError = ErrorType<void>;
+
+/**
+ * @summary Undo the most recent explicit In-Scope Round-Robin read entry
+ */
+export const useUndoTelawaScopeRead = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof undoTelawaScopeRead>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof undoTelawaScopeRead>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getUndoTelawaScopeReadMutationOptions(options));
+};
+
+/**
+ * @summary Update fields on the active In-Scope Round-Robin cycle
+ */
+export const getUpdateActiveScopeCycleUrl = () => {
+  return `/api/telawa/scope/active`;
+};
+
+export const updateActiveScopeCycle = async (
+  updateScopeCycleBody: UpdateScopeCycleBody,
+  options?: RequestInit,
+): Promise<TelawaScopeToday> => {
+  return customFetch<TelawaScopeToday>(getUpdateActiveScopeCycleUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateScopeCycleBody),
+  });
+};
+
+export const getUpdateActiveScopeCycleMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateActiveScopeCycle>>,
+    TError,
+    { data: BodyType<UpdateScopeCycleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateActiveScopeCycle>>,
+  TError,
+  { data: BodyType<UpdateScopeCycleBody> },
+  TContext
+> => {
+  const mutationKey = ["updateActiveScopeCycle"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateActiveScopeCycle>>,
+    { data: BodyType<UpdateScopeCycleBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateActiveScopeCycle(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateActiveScopeCycleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateActiveScopeCycle>>
+>;
+export type UpdateActiveScopeCycleMutationBody = BodyType<UpdateScopeCycleBody>;
+export type UpdateActiveScopeCycleMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update fields on the active In-Scope Round-Robin cycle
+ */
+export const useUpdateActiveScopeCycle = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateActiveScopeCycle>>,
+    TError,
+    { data: BodyType<UpdateScopeCycleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateActiveScopeCycle>>,
+  TError,
+  { data: BodyType<UpdateScopeCycleBody> },
+  TContext
+> => {
+  return useMutation(getUpdateActiveScopeCycleMutationOptions(options));
+};
+
+/**
+ * Returns the distinct pages drawn from the user's active (not yet
+overdue) homework sessions, each with its weekly read count. The
+weekly count includes both quality recitations and explicit Telawa
+reads in the trailing 7 days.
+
+ * @summary Get Homework reading-goal progress across active homework pages
+ */
+export const getGetTelawaHomeworkReadingUrl = () => {
+  return `/api/telawa/homework-reading`;
+};
+
+export const getTelawaHomeworkReading = async (
+  options?: RequestInit,
+): Promise<TelawaHomeworkReading> => {
+  return customFetch<TelawaHomeworkReading>(getGetTelawaHomeworkReadingUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTelawaHomeworkReadingQueryKey = () => {
+  return [`/api/telawa/homework-reading`] as const;
+};
+
+export const getGetTelawaHomeworkReadingQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTelawaHomeworkReading>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaHomeworkReading>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetTelawaHomeworkReadingQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTelawaHomeworkReading>>
+  > = ({ signal }) => getTelawaHomeworkReading({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaHomeworkReading>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTelawaHomeworkReadingQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTelawaHomeworkReading>>
+>;
+export type GetTelawaHomeworkReadingQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get Homework reading-goal progress across active homework pages
+ */
+
+export function useGetTelawaHomeworkReading<
+  TData = Awaited<ReturnType<typeof getTelawaHomeworkReading>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaHomeworkReading>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTelawaHomeworkReadingQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

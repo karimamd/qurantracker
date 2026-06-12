@@ -33,7 +33,7 @@ import {
   UpdateHomeworkItemBody,
   UpdateHomeworkItemResponse,
 } from "@workspace/api-zod";
-import { ensurePageExists, getSettings, calculateDueDate, getDefaultPageName } from "../lib/progress-helpers";
+import { ensurePageExists, getSettings, calculateDueDate, getDefaultPageName, getWeeklyReadCounts } from "../lib/progress-helpers";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -203,24 +203,9 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
   weekStart.setDate(weekStart.getDate() - 6);
   weekStart.setHours(0, 0, 0, 0);
 
-  const weekCounts = pageNumbers.length > 0
-    ? await db
-        .select({
-          pageNumber: recitationLogTable.pageNumber,
-          weekCount: count(),
-        })
-        .from(recitationLogTable)
-        .where(
-          and(
-            eq(recitationLogTable.userId, userId),
-            inArray(recitationLogTable.pageNumber, pageNumbers),
-            gte(recitationLogTable.recitedAt, weekStart)
-          )
-        )
-        .groupBy(recitationLogTable.pageNumber)
-    : [];
-
-  const weekCountMap = new Map(weekCounts.map(t => [t.pageNumber, Number(t.weekCount)]));
+  // Weekly count includes BOTH quality recitations and explicit Telawa reads
+  // (Khatmah + in-scope round-robin) in the trailing 7 days — "either counts".
+  const weekCountMap = await getWeeklyReadCounts(userId, pageNumbers, weekStart);
 
   const detail = {
     id: session.id,
@@ -458,16 +443,8 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - 6);
   weekStart.setHours(0, 0, 0, 0);
-  const [weekRow] = await db
-    .select({ weekCount: count() })
-    .from(recitationLogTable)
-    .where(
-      and(
-        eq(recitationLogTable.userId, userId),
-        eq(recitationLogTable.pageNumber, item.pageNumber),
-        gte(recitationLogTable.recitedAt, weekStart)
-      )
-    );
+  const weekCountMap = await getWeeklyReadCounts(userId, [item.pageNumber], weekStart);
+  const itemWeekCount = weekCountMap.get(item.pageNumber) ?? 0;
 
   const currentProgress = await db
     .select({
@@ -492,7 +469,7 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
     completed: globalQuality === "good" || globalQuality === "excellent",
     quality: globalQuality,
     completedAt: globalLastRecited,
-    weekCount: Number(weekRow?.weekCount ?? 0),
+    weekCount: itemWeekCount,
   }));
 });
 

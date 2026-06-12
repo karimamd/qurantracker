@@ -37,6 +37,8 @@ import {
   homeworkItemsTable,
   telawaKhatmahTable,
   telawaLogTable,
+  telawaScopeCycleTable,
+  telawaScopeLogTable,
 } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -100,6 +102,9 @@ const SettingsImport = z.object({
   // Optional for backward compatibility — older backups omit this field
   // and restore with the schema default (false).
   autoExpireAyahMarks: z.boolean().optional(),
+  // Optional for backward compatibility — older backups omit this field
+  // and restore with the schema default (3).
+  homeworkWeeklyReadGoal: z.number().int().min(1).max(50).optional(),
 });
 
 const PageProgressImport = z.object({
@@ -165,6 +170,23 @@ const TelawaLogImport = z.object({
   readAt: ts,
 });
 
+const TelawaScopeCycleImport = z.object({
+  /** Old id — referenced by TelawaScopeLogImport.cycleId for remap. */
+  id: z.number().int(),
+  cycleNumber: z.number().int().min(1),
+  pagesPerDay: z.number().int().min(1).max(604).nullable().optional(),
+  startedAt: ts,
+  completedAt: tsNullable.optional(),
+});
+
+const TelawaScopeLogImport = z.object({
+  pageNumber,
+  cycleNumber: z.number().int().min(1),
+  /** Refers to TelawaScopeCycleImport.id, or null. */
+  cycleId: z.number().int().nullable().optional(),
+  readAt: ts,
+});
+
 const BackupSchema = z.object({
   version: z.literal(BACKUP_VERSION),
   exportedAt: ts.optional(),
@@ -176,12 +198,16 @@ const BackupSchema = z.object({
   homeworkItems: z.array(HomeworkItemImport).default([]),
   telawaKhatmah: z.array(TelawaKhatmahImport).default([]),
   telawaLog: z.array(TelawaLogImport).default([]),
+  // Optional for backward compatibility — older backups predate the
+  // in-scope round-robin track and simply restore as empty.
+  telawaScopeCycle: z.array(TelawaScopeCycleImport).default([]),
+  telawaScopeLog: z.array(TelawaScopeLogImport).default([]),
 });
 
 router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const userId = req.userId!;
 
-  const [settings, pageProgress, recitationLog, ayahMistakes, homeworkSessions, homeworkItems, telawaKhatmah, telawaLog] =
+  const [settings, pageProgress, recitationLog, ayahMistakes, homeworkSessions, homeworkItems, telawaKhatmah, telawaLog, telawaScopeCycle, telawaScopeLog] =
     await Promise.all([
       getSettings(userId),
       db.select().from(pageProgressTable).where(eq(pageProgressTable.userId, userId)),
@@ -191,6 +217,8 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       db.select().from(homeworkItemsTable).where(eq(homeworkItemsTable.userId, userId)),
       db.select().from(telawaKhatmahTable).where(eq(telawaKhatmahTable.userId, userId)),
       db.select().from(telawaLogTable).where(eq(telawaLogTable.userId, userId)),
+      db.select().from(telawaScopeCycleTable).where(eq(telawaScopeCycleTable.userId, userId)),
+      db.select().from(telawaScopeLogTable).where(eq(telawaScopeLogTable.userId, userId)),
     ]);
 
   const payload = {
@@ -210,6 +238,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       mistakesGoodMax: settings.mistakesGoodMax,
       mistakesHardMax: settings.mistakesHardMax,
       autoExpireAyahMarks: settings.autoExpireAyahMarks,
+      homeworkWeeklyReadGoal: settings.homeworkWeeklyReadGoal,
     },
     pageProgress: pageProgress.map((r) => ({
       pageNumber: r.pageNumber,
@@ -265,6 +294,19 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       khatmahId: r.khatmahId,
       readAt: r.readAt,
     })),
+    telawaScopeCycle: telawaScopeCycle.map((r) => ({
+      id: r.id,
+      cycleNumber: r.cycleNumber,
+      pagesPerDay: r.pagesPerDay,
+      startedAt: r.startedAt,
+      completedAt: r.completedAt,
+    })),
+    telawaScopeLog: telawaScopeLog.map((r) => ({
+      pageNumber: r.pageNumber,
+      cycleNumber: r.cycleNumber,
+      cycleId: r.cycleId,
+      readAt: r.readAt,
+    })),
   };
 
   const stamp = new Date().toISOString().slice(0, 10);
@@ -303,6 +345,8 @@ router.post("/backup/import", requireAuth, importBodyParser, async (req, res): P
       // Wipe every user-scoped row first so the import is a clean replace
       // rather than a merge. Order doesn't matter since there are no FK
       // constraints, but we list them all for explicitness.
+      await tx.delete(telawaScopeLogTable).where(eq(telawaScopeLogTable.userId, userId));
+      await tx.delete(telawaScopeCycleTable).where(eq(telawaScopeCycleTable.userId, userId));
       await tx.delete(telawaLogTable).where(eq(telawaLogTable.userId, userId));
       await tx.delete(telawaKhatmahTable).where(eq(telawaKhatmahTable.userId, userId));
       await tx.delete(homeworkItemsTable).where(eq(homeworkItemsTable.userId, userId));
@@ -422,6 +466,34 @@ router.post("/backup/import", requireAuth, importBodyParser, async (req, res): P
         );
       }
 
+      const scopeCycleIdMap = new Map<number, number>();
+      for (const c of data.telawaScopeCycle) {
+        const [inserted] = await tx
+          .insert(telawaScopeCycleTable)
+          .values({
+            userId,
+            cycleNumber: c.cycleNumber,
+            pagesPerDay: c.pagesPerDay ?? null,
+            startedAt: c.startedAt,
+            completedAt: c.completedAt ?? null,
+          })
+          .returning({ id: telawaScopeCycleTable.id });
+        scopeCycleIdMap.set(c.id, inserted.id);
+      }
+
+      if (data.telawaScopeLog.length) {
+        await tx.insert(telawaScopeLogTable).values(
+          data.telawaScopeLog.map((r) => ({
+            userId,
+            pageNumber: r.pageNumber,
+            cycleNumber: r.cycleNumber,
+            cycleId:
+              r.cycleId == null ? null : scopeCycleIdMap.get(r.cycleId) ?? null,
+            readAt: r.readAt,
+          })),
+        );
+      }
+
       return {
         settings: data.settings ? 1 : 0,
         pageProgress: data.pageProgress.length,
@@ -431,6 +503,8 @@ router.post("/backup/import", requireAuth, importBodyParser, async (req, res): P
         homeworkItems: data.homeworkItems.length,
         telawaKhatmah: data.telawaKhatmah.length,
         telawaLog: data.telawaLog.length,
+        telawaScopeCycle: data.telawaScopeCycle.length,
+        telawaScopeLog: data.telawaScopeLog.length,
       };
     });
 

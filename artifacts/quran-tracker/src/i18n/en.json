@@ -342,6 +342,11 @@
       "description": "When enabled, per-ayah marks (cleared, mistakes, and link issues) that are older than 14 days are automatically hidden from the Reader and Ayah detail screens. The marks are kept in the database for history — only the live display is affected. Page recitation status is never changed.",
       "label": "Hide marks older than 2 weeks"
     },
+    "homeworkReadGoal": {
+      "label": "Homework weekly read goal",
+      "description": "How many times to read or recite each active homework page per week. Either reading or reciting counts.",
+      "unit": "× / week"
+    },
     "mistakeThresholds": {
       "title": "Mistake thresholds",
       "description": "How many total page mistakes map to each quality. Excellent is always 0 mistakes. Anything above the Hard threshold is recorded as Relearn.",
@@ -451,6 +456,43 @@
       "totalDesc": "Pages read across all cycles"
     },
     "openInReader": "Open in reader",
+    "scope": {
+      "title": "In-scope rotation",
+      "description": "Cycle through only your in-scope pages. Reading or reciting a page both count — no quality needed.",
+      "empty": "No pages are in your memorization scope yet. Add pages to your scope to start this rotation.",
+      "statToday": "Today",
+      "statCycle": "Cycle",
+      "statCoverage": "This cycle",
+      "upcoming": "Up next",
+      "readToday": "Read today",
+      "cycleComplete": "Cycle complete — every in-scope page is covered. A new cycle has started.",
+      "allDone_one": "Done for today — {{count}} page complete.",
+      "allDone_other": "Done for today — {{count}} pages complete.",
+      "undoLast": "Undo last",
+      "undoing": "Undoing...",
+      "undoSuccess": "Last read undone",
+      "undoFailed": "Failed to undo",
+      "recordFailed": "Could not record this read",
+      "editGoal": "Edit goal",
+      "pagesPerDayLabel": "Daily goal (pages)",
+      "pagesPerDayUsingDefault": "Using default ({{value}}/day)",
+      "pagesPerDayUsingOverride": "{{value}} pages/day",
+      "editGoalDialogTitle": "Daily goal for the rotation",
+      "editGoalDialogDescription": "Choose how many in-scope pages to read each day. Leave blank to use your default of {{fallback}}/day.",
+      "invalidPagesPerDay": "Pick a daily goal between 1 and 604 pages",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "goalUpdated": "Daily goal updated",
+      "goalUpdateFailed": "Could not update the daily goal",
+      "goalCleared": "Reverted to default daily goal"
+    },
+    "homeworkReading": {
+      "title": "Homework reading goal",
+      "description": "Read each active homework page at least {{goal}} times a week. Reciting or reading both count.",
+      "empty": "No active homework pages right now. Pages appear here while a homework session is open.",
+      "summary": "{{met}} of {{total}} pages have hit this week's goal"
+    },
     "khatmah": {
       "startNew": "Start new Khatmah",
       "starting": "Starting...",
@@ -547,7 +589,9 @@
     "ayahCoverage": "{{done}} / {{total}} ayahs clear",
     "ayahCoverageTitle": "Ayahs marked clear (no mistakes). Unmarked ayahs do not count.",
     "pagesProgress": "{{done}} / {{total}} pages done",
-    "pagesProgressTitle": "Pages with a recorded recitation quality in this homework, out of the total pages in it."
+    "pagesProgressTitle": "Pages with a recorded recitation quality in this homework, out of the total pages in it.",
+    "weeklyRead": "{{done}} / {{goal}} reads",
+    "weeklyReadTitle": "Reads (or recitations) of this page this week, toward your weekly goal of {{goal}}."
   },
   "juzList": {
     "title": "Juz Overview",

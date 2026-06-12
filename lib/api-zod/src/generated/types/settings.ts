@@ -42,4 +42,10 @@ export interface Settings {
   mistakesHardMax: number;
   /** When true, per-ayah marks (cleared/mistake/link) older than 14 days are excluded from the active list shown in the Reader and Ayah detail screens. Page recitation status is unaffected. Default false. */
   autoExpireAyahMarks: boolean;
+  /**
+   * Global weekly per-page read target for Homework pages. A page's weekly progress counts both quality recitations and explicit Telawa reads in the trailing 7 days. Default 3.
+   * @minimum 1
+   * @maximum 50
+   */
+  homeworkWeeklyReadGoal: number;
 }

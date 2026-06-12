@@ -43,4 +43,9 @@ export interface UpdateSettingsBody {
    */
   mistakesHardMax?: number;
   autoExpireAyahMarks?: boolean;
+  /**
+   * @minimum 1
+   * @maximum 50
+   */
+  homeworkWeeklyReadGoal?: number;
 }

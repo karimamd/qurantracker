@@ -18,8 +18,8 @@
  * surfaced as "hard" (and so on through "relearn"), without ever mutating
  * the stored quality. See computeEffectiveQuality below.
  */
-import { db, settingsTable, pageProgressTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, settingsTable, pageProgressTable, recitationLogTable, telawaLogTable, telawaScopeLogTable } from "@workspace/db";
+import { eq, and, inArray, gte, count } from "drizzle-orm";
 import { getJuzForPage, getRob3ForPage, getSurahsForPage } from "./quran-data";
 import pageNamesData from "./page-names.json" with { type: "json" };
 
@@ -184,6 +184,72 @@ export function aggregateQuality(
   }, 0);
   const avg = total / withQuality.length;
   return mistakesToQuality(avg);
+}
+
+/**
+ * Combined "weekly read count" per page: how many times each page was either
+ * recited (recitation_log) OR explicitly read in either Telawa track
+ * (telawa_log Khatmah reads + telawa_scope_log in-scope round-robin reads)
+ * within [weekStart, now]. "Either one counts" — every matching row in any of
+ * the three tables adds 1. Used by the Homework weekly read goal.
+ *
+ * Returns a Map keyed by pageNumber; pages with no activity are absent (treat
+ * as 0). Returns an empty map immediately when pageNumbers is empty.
+ */
+export async function getWeeklyReadCounts(
+  userId: string,
+  pageNumbers: number[],
+  weekStart: Date,
+): Promise<Map<number, number>> {
+  const map = new Map<number, number>();
+  if (pageNumbers.length === 0) return map;
+
+  const accumulate = (rows: Array<{ pageNumber: number; c: number }>): void => {
+    for (const r of rows) {
+      map.set(r.pageNumber, (map.get(r.pageNumber) ?? 0) + Number(r.c));
+    }
+  };
+
+  const [recRows, telawaRows, scopeRows] = await Promise.all([
+    db
+      .select({ pageNumber: recitationLogTable.pageNumber, c: count() })
+      .from(recitationLogTable)
+      .where(
+        and(
+          eq(recitationLogTable.userId, userId),
+          inArray(recitationLogTable.pageNumber, pageNumbers),
+          gte(recitationLogTable.recitedAt, weekStart),
+        ),
+      )
+      .groupBy(recitationLogTable.pageNumber),
+    db
+      .select({ pageNumber: telawaLogTable.pageNumber, c: count() })
+      .from(telawaLogTable)
+      .where(
+        and(
+          eq(telawaLogTable.userId, userId),
+          inArray(telawaLogTable.pageNumber, pageNumbers),
+          gte(telawaLogTable.readAt, weekStart),
+        ),
+      )
+      .groupBy(telawaLogTable.pageNumber),
+    db
+      .select({ pageNumber: telawaScopeLogTable.pageNumber, c: count() })
+      .from(telawaScopeLogTable)
+      .where(
+        and(
+          eq(telawaScopeLogTable.userId, userId),
+          inArray(telawaScopeLogTable.pageNumber, pageNumbers),
+          gte(telawaScopeLogTable.readAt, weekStart),
+        ),
+      )
+      .groupBy(telawaScopeLogTable.pageNumber),
+  ]);
+
+  accumulate(recRows);
+  accumulate(telawaRows);
+  accumulate(scopeRows);
+  return map;
 }
 
 export async function ensurePageExists(userId: string, pageNumber: number) {

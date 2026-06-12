@@ -23,6 +23,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { PageLabel } from "@/components/page-label";
+import { TelawaScopeCard } from "@/components/telawa-scope-card";
+import { TelawaHomeworkReadingCard } from "@/components/telawa-homework-reading-card";
 import { BookOpen, Check, Undo2, RotateCcw, CheckCircle, Repeat, ExternalLink, Sparkles, Target, Pencil } from "lucide-react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
@@ -579,6 +581,10 @@ export default function TelawaPage() {
           )}
         </CardContent>
       </Card>
+
+      <TelawaScopeCard />
+
+      <TelawaHomeworkReadingCard />
 
       <Card className="border shadow-sm" data-testid="telawa-30day-card">
         <CardHeader className="pb-2">

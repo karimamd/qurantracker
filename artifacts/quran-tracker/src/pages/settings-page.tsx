@@ -41,6 +41,7 @@ export default function SettingsPage() {
   const [hardDays, setHardDays] = useState("");
   const [relearnDays, setRelearnDays] = useState("");
   const [telawaPagesPerDay, setTelawaPagesPerDay] = useState("");
+  const [homeworkWeeklyReadGoal, setHomeworkWeeklyReadGoal] = useState("");
   const [readerFontSize, setReaderFontSize] = useState("");
   const [ayahViewFontSize, setAyahViewFontSize] = useState("");
   const [language, setLanguageState] = useState<SupportedLanguage>("en");
@@ -68,6 +69,7 @@ export default function SettingsPage() {
       setHardDays(String(settings.hardDays));
       setRelearnDays(String(settings.relearnDays));
       setTelawaPagesPerDay(String(settings.telawaPagesPerDay));
+      setHomeworkWeeklyReadGoal(String(settings.homeworkWeeklyReadGoal));
       setReaderFontSize(String(settings.readerFontSize));
       setAyahViewFontSize(String(settings.ayahViewFontSize));
       setBottomNavKeys([...resolveBottomNavKeys(settings.bottomNavKeys)]);
@@ -140,6 +142,7 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     const tppd = parseInt(telawaPagesPerDay, 10);
+    const hwrg = parseInt(homeworkWeeklyReadGoal, 10);
     const rfs = parseInt(readerFontSize, 10);
     const avfs = parseInt(ayahViewFontSize, 10);
     const mgm = parseInt(mistakesGoodMax, 10);
@@ -162,6 +165,10 @@ export default function SettingsPage() {
           hardDays: parseInt(hardDays, 10),
           relearnDays: parseInt(relearnDays, 10),
           telawaPagesPerDay: Number.isFinite(tppd) && tppd >= 1 && tppd <= 604 ? tppd : undefined,
+          // Per-page weekly read target for homework pages. Bounds mirror the
+          // OpenAPI schema (1-50); out-of-range drops the field so the rest of
+          // the form still saves.
+          homeworkWeeklyReadGoal: Number.isFinite(hwrg) && hwrg >= 1 && hwrg <= 50 ? hwrg : undefined,
           // Bounds match the OpenAPI schema (14-64). Drop the field when
           // the user typed something out of range so the server keeps the
           // existing value rather than 400'ing the whole save.
@@ -274,6 +281,25 @@ export default function SettingsPage() {
                 data-testid="input-telawa-pages-per-day"
               />
               <span className="text-sm text-muted-foreground">{t("settings.telawa.pagesUnit")}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-lg border-s-4 border-l-primary bg-muted/30" data-testid="setting-homework-weekly-read-goal">
+            <div>
+              <div className="font-medium text-sm">{t("settings.homeworkReadGoal.label")}</div>
+              <div className="text-xs text-muted-foreground">{t("settings.homeworkReadGoal.description")}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={50}
+                className="w-20 text-center"
+                value={homeworkWeeklyReadGoal}
+                onChange={(e) => setHomeworkWeeklyReadGoal(e.target.value)}
+                data-testid="input-homework-weekly-read-goal"
+              />
+              <span className="text-sm text-muted-foreground">{t("settings.homeworkReadGoal.unit")}</span>
             </div>
           </div>
 

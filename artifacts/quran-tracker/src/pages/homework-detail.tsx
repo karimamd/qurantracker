@@ -3,6 +3,7 @@ import {
   useUpdateHomework,
   useUpdateHomeworkItem,
   useListActivePageMistakes,
+  useGetSettings,
   getGetHomeworkQueryKey,
   getListHomeworkQueryKey,
   getGetProgressOverviewQueryKey,
@@ -118,8 +119,13 @@ export default function HomeworkDetail() {
   });
   const updateItem = useUpdateHomeworkItem();
   const updateHomework = useUpdateHomework();
+  const { data: settings } = useGetSettings();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Per-page weekly read target. "Either one counts" — weekCount already sums
+  // recitations + Telawa reads server-side, so the bar reflects all reading.
+  const weeklyReadGoal = Math.max(1, settings?.homeworkWeeklyReadGoal ?? 3);
 
   // Edit dialog state — pre-populated from `detail` whenever the dialog is
   // opened so the user sees their current title / due date / page lists,
@@ -320,6 +326,31 @@ export default function HomeworkDetail() {
                   extraBadges={
                     <>
                       <Badge variant="outline" className="text-xs py-0">{item.type === "memorize" ? t("homework.memorize") : t("homework.revise")}</Badge>
+                      {(() => {
+                        const wc = item.weekCount ?? 0;
+                        const met = wc >= weeklyReadGoal;
+                        const pct = Math.min(100, Math.round((wc / weeklyReadGoal) * 100));
+                        return (
+                          <span
+                            className={`text-xs py-0 inline-flex items-center gap-1.5 rounded-full border px-2 ${
+                              met
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border-border bg-muted text-muted-foreground"
+                            }`}
+                            data-testid={`hw-item-weekly-read-${item.id}`}
+                            title={t("homework.weeklyReadTitle", { goal: weeklyReadGoal })}
+                          >
+                            {met && <Check className="w-3 h-3" />}
+                            <span className="tabular-nums">{t("homework.weeklyRead", { done: wc, goal: weeklyReadGoal })}</span>
+                            <span className="w-10 h-1 rounded-full bg-foreground/10 overflow-hidden">
+                              <span
+                                className={`block h-full ${met ? "bg-emerald-500" : "bg-primary"}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </span>
+                          </span>
+                        );
+                      })()}
                       {cov && cov.total > 0 && (
                         <Badge
                           variant="outline"
