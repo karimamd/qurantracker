@@ -66,7 +66,7 @@ import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
 import { type Quality, QUALITIES, qualityStyle } from "@/lib/quality";
-import { usePageAyahs, usePrefetchPageAyahs, type ApiAyah } from "@/hooks/use-page-ayahs";
+import { usePageAyahs, usePrefetchPageAyahs, stripBasmalaText, type ApiAyah } from "@/hooks/use-page-ayahs";
 import { useTranslation } from "react-i18next";
 
 function clampPage(n: number): number {
@@ -1135,19 +1135,16 @@ export default function Reader() {
                         );
                       }
 
-                      // Strip the Basmallah that the API embeds at the start of ayah 1
-                      // for every surah (except Al-Fatiha, where it IS the ayah text).
-                      // We already render a centred Basmallah above the surah heading, so
-                      // showing it again inside the ayah would duplicate it.
-                      // Use a permissive lazy match anchored to the end of الرَّحِيمِ so
-                      // Unicode diacritic variants (sukun U+0652 vs U+06E1, alef variants,
-                      // etc.) all match reliably.
+                      // Strip the Basmala the source embeds at the start of ayah 1
+                      // for every surah except Al-Fatiha (where it IS the ayah text)
+                      // and At-Tawbah (which has none). The centred Basmala is rendered
+                      // separately above the surah heading, so leaving it on the ayah
+                      // would duplicate it. The data layer already strips this, but we
+                      // re-apply the same robust, idempotent helper here as a backstop
+                      // so a brittle regex can never let it slip through again.
                       const cleanedText =
                         group.isFirstAyah && i === 0 && group.surahNumber !== 1
-                          ? a.text.replace(
-                              /^[\u200f\ufeff]?[\s\S]*?(?:ٱلرَّحِيمِ|الرَّحِيمِ|الرَّحِيمِ)\s*/u,
-                              "",
-                            )
+                          ? stripBasmalaText(a.text)
                           : a.text;
 
                       const isSelectedShowAll = !hideMode && selectedAyahShowAll === a.number;

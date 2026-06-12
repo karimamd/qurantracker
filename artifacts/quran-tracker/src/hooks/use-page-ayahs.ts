@@ -44,42 +44,55 @@ import { stripTashkeel } from "@/lib/arabic-text";
 
 const BASMALA_BARE = "بسم الله الرحمن الرحيم";
 
+/**
+ * Strip a leading Basmala from a single ayah's raw text, returning the
+ * text unchanged when no Basmala prefix is present.
+ *
+ * The match walks the original text comparing a tashkeel-stripped copy of
+ * each character against the bare Basmala. This tolerates the source's
+ * inconsistent combining-mark order and alef variants (alef-wasla vs plain
+ * alef, dagger alef, U+0652 vs U+06E1 sukun, etc.) that make a literal
+ * regex unreliable. This is the single source of truth for Basmala
+ * removal — UI code must call this rather than re-implementing a regex.
+ */
+export function stripBasmalaText(original: string): string {
+  let i = 0;
+  let bareIdx = 0;
+  // Skip a leading BOM if present
+  while (i < original.length && /[\uFEFF]/.test(original[i])) i++;
+  while (i < original.length && bareIdx < BASMALA_BARE.length) {
+    const ch = original[i];
+    const stripped = stripTashkeel(ch);
+    if (stripped === "") {
+      i++;
+      continue;
+    }
+    if (stripped === BASMALA_BARE[bareIdx]) {
+      i++;
+      bareIdx++;
+      continue;
+    }
+    // Mismatch — not a Basmala prefix; bail out unchanged.
+    return original;
+  }
+  if (bareIdx < BASMALA_BARE.length) return original;
+  // Consume any trailing tashkeel/invisibles attached to the final consonant
+  // of the Basmala (e.g. the kasra on the last mim).
+  while (i < original.length && stripTashkeel(original[i]) === "") i++;
+  // Consume one or more whitespace separators between Basmala and the ayah.
+  while (i < original.length && /\s/.test(original[i])) i++;
+  if (i >= original.length) return original;
+
+  return original.slice(i);
+}
+
 export function stripBasmalaFromFirstAyah(ayahs: ApiAyah[]): ApiAyah[] {
   return ayahs.map(a => {
     if (a.numberInSurah !== 1) return a;
+    // Al-Fatiha (1): Basmala IS ayah 1. At-Tawbah (9): no Basmala at all.
     if (a.surah.number === 1 || a.surah.number === 9) return a;
-
-    // Walk the original text and find how many original characters correspond
-    // to the bare-Basmala prefix plus a trailing space.
-    const original = a.text;
-    let i = 0;
-    let bareIdx = 0;
-    // Skip a leading BOM if present
-    while (i < original.length && /[\uFEFF]/.test(original[i])) i++;
-    while (i < original.length && bareIdx < BASMALA_BARE.length) {
-      const ch = original[i];
-      const stripped = stripTashkeel(ch);
-      if (stripped === "") {
-        i++;
-        continue;
-      }
-      if (stripped === BASMALA_BARE[bareIdx]) {
-        i++;
-        bareIdx++;
-        continue;
-      }
-      // Mismatch — not a Basmala prefix; bail out unchanged.
-      return a;
-    }
-    if (bareIdx < BASMALA_BARE.length) return a;
-    // Consume any trailing tashkeel/invisibles attached to the final consonant
-    // of the Basmala (e.g. the kasra on the last mim).
-    while (i < original.length && stripTashkeel(original[i]) === "") i++;
-    // Consume one or more whitespace separators between Basmala and the ayah.
-    while (i < original.length && /\s/.test(original[i])) i++;
-    if (i >= original.length) return a;
-
-    return { ...a, text: original.slice(i) };
+    const stripped = stripBasmalaText(a.text);
+    return stripped === a.text ? a : { ...a, text: stripped };
   });
 }
 
@@ -109,7 +122,10 @@ async function fetchPageAyahsFromNetwork(
 // layer are persisted to IndexedDB for instant future loads.
 export async function fetchPageAyahs(pageNumber: number, signal?: AbortSignal): Promise<ApiAyah[]> {
   const cached = await getCachedPage(pageNumber);
-  if (cached) return cached;
+  // Re-run normalisation on cache hits too: entries written by older app
+  // versions (or before the Basmala rules were corrected) may still carry
+  // the leading Basmala. Stripping is idempotent on already-clean text.
+  if (cached) return stripBasmalaFromFirstAyah(cached);
 
   const fromDump = await getPageFromDump(pageNumber);
   if (fromDump) {

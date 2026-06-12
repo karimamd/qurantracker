@@ -11,7 +11,7 @@
 import { get, set, keys, del } from "idb-keyval";
 import type { ApiAyah } from "@/hooks/use-page-ayahs";
 
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const KEY_PREFIX = `quran-page-v${CACHE_VERSION}:`;
 
 function key(pageNumber: number): string {
