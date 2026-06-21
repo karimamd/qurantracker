@@ -487,6 +487,17 @@ export default function Reader() {
           // response, so invalidate the progress-derived queries that would
           // surface a freshly written recitation_log / page_progress row.
           invalidateProgressData();
+          // When this was the last in-flight mark, force a definitive fresh
+          // refetch of page progress. invalidateProgressData() alone is not
+          // enough: if an earlier mark's invalidation already started an
+          // in-flight refetch (before auto-assign committed), React Query
+          // may resolve that stale fetch first and only schedule a second
+          // refetch later. refetchQueries cancels the in-flight attempt and
+          // starts a new one right now, guaranteeing the auto-assign result
+          // reaches the client on the very next render cycle.
+          if (pendingMarkCount.current === 0) {
+            queryClient.refetchQueries({ queryKey: getListPageProgressQueryKey() });
+          }
         },
         onError: (err) => {
           pendingMarkCount.current = Math.max(0, pendingMarkCount.current - 1);
@@ -545,6 +556,11 @@ export default function Reader() {
           // server-side (e.g. relearn → hard). Refresh the same set of
           // progress-derived queries persistAdd does.
           invalidateProgressData();
+          // Same forced-refetch as persistAdd: ensure the page status
+          // reflects any quality change once all pending marks settle.
+          if (pendingMarkCount.current === 0) {
+            queryClient.refetchQueries({ queryKey: getListPageProgressQueryKey() });
+          }
         },
         onError: (err) => {
           pendingMarkCount.current = Math.max(0, pendingMarkCount.current - 1);
