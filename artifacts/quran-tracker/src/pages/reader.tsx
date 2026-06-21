@@ -134,6 +134,12 @@ export default function Reader() {
   const addActiveMistake = useAddActivePageMistake();
   const removeActiveMistake = useRemoveActivePageMistake();
   const clearAllMistakes = useClearAllActivePageMistakes();
+  // Tracks the number of mark mutations currently in-flight. The seed
+  // effect must not overwrite optimistic local state while this is > 0 —
+  // doing so causes marks to visually flash off when two ayahs are tapped
+  // in quick succession (mutation A's onSuccess rewrites cache with A-only
+  // data, the effect fires and wipes B's optimistic state before B settles).
+  const pendingMarkCount = useRef(0);
   const recordTelawaRead = useRecordTelawaRead();
   const startKhatmah = useStartKhatmah();
   const queryClient = useQueryClient();
@@ -221,8 +227,19 @@ export default function Reader() {
   // sessions until the user explicitly reverses them in the reader.
   // "cleared" and "memorization" are mutually exclusive; "link" is independent
   // and can coexist with either, so clearedAyahs and linkAyahs may overlap.
+  //
+  // IMPORTANT: skip the seed while any mark mutation is in-flight. Each
+  // persistAdd/persistRemove writes the server's authoritative response to
+  // the React Query cache via setQueryData (onSuccess), which triggers this
+  // effect. If a second mutation is still pending with an optimistic local
+  // update, letting the seed fire would overwrite that optimistic update with
+  // the first mutation's server data — making the second mark visually
+  // disappear until its own response arrives. The pendingMarkCount ref guards
+  // against this: the seed only runs when all mutations have settled, at
+  // which point the cache already holds the fully-reconciled server state.
   useEffect(() => {
     if (!activeMistakes) return;
+    if (pendingMarkCount.current > 0) return;
     const m = new Set<number>();
     const l = new Set<number>();
     const c = new Set<number>();
@@ -442,6 +459,7 @@ export default function Reader() {
     // setQueryData in onSuccess will then be the next thing the seed
     // effect sees.
     queryClient.cancelQueries({ queryKey: getListActivePageMistakesQueryKey(targetPage) });
+    pendingMarkCount.current++;
     addActiveMistake.mutate(
       {
         pageNumber: targetPage,
@@ -454,6 +472,7 @@ export default function Reader() {
       },
       {
         onSuccess: (data) => {
+          pendingMarkCount.current = Math.max(0, pendingMarkCount.current - 1);
           // Authoritative server response — write directly to cache so the
           // seeding effect never clobbers optimistic state with stale data.
           queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
@@ -470,6 +489,7 @@ export default function Reader() {
           invalidateProgressData();
         },
         onError: (err) => {
+          pendingMarkCount.current = Math.max(0, pendingMarkCount.current - 1);
           // When offline the request is queued — keep local state as-is
           if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
           // Roll back optimistic state on a real failure
@@ -508,6 +528,7 @@ export default function Reader() {
     // Same rationale as persistAdd: cancel pre-mutation in-flight GETs so
     // they can't overwrite the authoritative onSuccess cache write.
     queryClient.cancelQueries({ queryKey: getListActivePageMistakesQueryKey(targetPage) });
+    pendingMarkCount.current++;
     removeActiveMistake.mutate(
       {
         pageNumber: targetPage,
@@ -515,6 +536,7 @@ export default function Reader() {
       },
       {
         onSuccess: (data) => {
+          pendingMarkCount.current = Math.max(0, pendingMarkCount.current - 1);
           queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
           // Mirror persistAdd: keep /mistakes and the /ayahs badges in
           // sync after a per-ayah toggle.
@@ -525,6 +547,7 @@ export default function Reader() {
           invalidateProgressData();
         },
         onError: (err) => {
+          pendingMarkCount.current = Math.max(0, pendingMarkCount.current - 1);
           if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
           rollback();
           toast({ title: t("reader.markFailed"), variant: "destructive" });

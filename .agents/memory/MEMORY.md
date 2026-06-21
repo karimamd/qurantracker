@@ -1,2 +1,3 @@
 - [Guest-mode e2e seeding](guest-mode-e2e-seeding.md) — guest_id is an httpOnly per-context cookie; seed test data via in-browser fetch, not separate [API] steps.
 - [mockup-sandbox typecheck/workflow fails](mockup-sandbox-broken.md) — pre-existing missing-vite failure unrelated to feature work; do not chase it.
+- [React Query optimistic-update race in Reader](rq-optimistic-race.md) — pendingMarkCount ref guards seed effect from overwriting optimistic state during rapid mark mutations.
