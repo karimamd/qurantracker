@@ -604,12 +604,14 @@ export default function Reader() {
     if (mark === "clear") {
       // The tick is a positive overwrite for this ayah: it persists a
       // "cleared" mark and the server atomically resolves any active
-      // memorization / link mistakes for the same ayah inside the same
-      // transaction. We only need to call persistAdd("cleared") — the
-      // single response refreshes the active-mistakes cache, which the
-      // seed effect above turns into the final source of truth for the
-      // mistake / link / cleared sets.
-      const wasCleared = clearedAyahs.has(ayahNumber);
+      // memorization mistake for the same ayah inside the same
+      // transaction. We always POST — even when the ayah already shows as
+      // cleared — so the mark's recitedAt is refreshed to today. This is
+      // what lets the auto-assign feature recognise a page the user is
+      // re-reciting today even though some ayahs were first cleared on an
+      // earlier day; skipping the round-trip used to leave those marks
+      // stuck on their original date and the page never counted as
+      // "marked today", so its status never updated.
       // Optimistically reflect the new state immediately for snappy UI;
       // the seed effect will reconcile to the server's authoritative set.
       setClearedAyahs(prev => {
@@ -624,19 +626,17 @@ export default function Reader() {
         next.delete(ayahNumber);
         return next;
       });
-      // Skip the network round-trip when the ayah was already cleared on
-      // the server — re-posting would be a no-op anyway.
-      if (!wasCleared) persistAdd(ayahNumber, "cleared");
+      persistAdd(ayahNumber, "cleared");
     } else {
-      const wasMistake = mistakeAyahs.has(ayahNumber);
-      if (!wasMistake) {
-        setMistakeAyahs(prev => {
-          const next = new Set(prev);
-          next.add(ayahNumber);
-          return next;
-        });
-        persistAdd(ayahNumber, "memorization");
-      }
+      // Always POST the memorization mark, even if it already shows as
+      // marked, so its recitedAt advances to today (see the "clear"
+      // branch above for why this matters to auto-assign).
+      setMistakeAyahs(prev => {
+        const next = new Set(prev);
+        next.add(ayahNumber);
+        return next;
+      });
+      persistAdd(ayahNumber, "memorization");
       // Adding a memorization mistake supersedes any prior "cleared" tick
       // on this ayah — mirror the server's auto-resolve locally.
       setClearedAyahs(prev => {

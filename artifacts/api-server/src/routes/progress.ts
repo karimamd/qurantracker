@@ -671,6 +671,18 @@ router.post("/progress/pages/:pageNumber/active-mistakes", async (req, res): Pro
         globalAyahNumber: body.data.globalAyahNumber,
         mistakeType: body.data.mistakeType,
       });
+    } else {
+      // The mark already exists and is still active. Re-affirming it
+      // (the user tapped the same button again while re-reciting the
+      // page today) refreshes its recitedAt to now so the auto-assign
+      // coverage check — which only counts marks placed "today" — sees
+      // the ayah as marked today. Without this, a mark first placed on an
+      // earlier day stays stuck on its original date and the page never
+      // counts as fully marked today, so its status never auto-updates.
+      await tx
+        .update(ayahMistakesTable)
+        .set({ recitedAt: new Date() })
+        .where(eq(ayahMistakesTable.id, existing[0].id));
     }
   });
 
