@@ -573,31 +573,20 @@ export default function Reader() {
   };
 
   const handleAyahLink = (ayahNumber: number) => {
-    const isOn = linkAyahs.has(ayahNumber);
-    if (isOn) {
-      // Optimistic remove
-      setLinkAyahs(prev => {
-        const n = new Set(prev);
-        n.delete(ayahNumber);
-        return n;
-      });
-      persistRemove(ayahNumber, "link", () => {
-        setLinkAyahs(prev => {
-          const n = new Set(prev);
-          n.add(ayahNumber);
-          return n;
-        });
-      });
-    } else {
-      setLinkAyahs(prev => {
-        const n = new Set(prev);
-        n.add(ayahNumber);
-        return n;
-      });
-      // Link is independent of cleared/memorization — do NOT touch either
-      // of those sets here. The server no longer auto-resolves them.
-      persistAdd(ayahNumber, "link");
-    }
+    // Tapping the link button always (re-)records the link mark, refreshing
+    // its recitedAt to today — consistent with the clear and mistake buttons.
+    // We intentionally do NOT toggle it off here: a tap on an ayah whose link
+    // mark is stale (from an earlier day) re-affirms it for today, which is
+    // what the auto-assign feature needs to count the page as marked today.
+    // Removal of a link mark is done via "Clear all marks".
+    // Link is independent of cleared/memorization — do NOT touch either of
+    // those sets here. The server no longer auto-resolves them.
+    setLinkAyahs(prev => {
+      const n = new Set(prev);
+      n.add(ayahNumber);
+      return n;
+    });
+    persistAdd(ayahNumber, "link");
   };
 
   const handleAyahMark = (ayahNumber: number, mark: "clear" | "mistake", isLatest: boolean) => {
