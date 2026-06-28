@@ -896,36 +896,45 @@ router.post("/progress/recite-batch", async (req, res): Promise<void> => {
   const settings = await getSettings(userId);
   const recitedAt = parsed.data.recitedAt ? new Date(parsed.data.recitedAt) : new Date();
   const dueDate = calculateDueDate(recitedAt, parsed.data.quality, settings);
-  const results = [];
 
-  for (const pageNumber of parsed.data.pageNumbers) {
-    if (pageNumber < 1 || pageNumber > TOTAL_PAGES) continue;
-    await ensurePageExists(userId, pageNumber);
-    const [updated] = await db
-      .update(pageProgressTable)
-      .set({
-        quality: parsed.data.quality,
-        mistakes: parsed.data.mistakes ?? null,
-        lastRecited: recitedAt,
-        dueDate,
-        inScope: true,
-      })
-      .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)))
-      .returning();
+  const validPageNumbers = parsed.data.pageNumbers.filter(p => p >= 1 && p <= TOTAL_PAGES);
 
-    await db.insert(recitationLogTable).values({
+  if (validPageNumbers.length === 0) {
+    res.json(RecordBatchRecitationResponse.parse([]));
+    return;
+  }
+
+  // Bulk-ensure all pages exist in one round-trip (INSERT … ON CONFLICT DO NOTHING)
+  await db.insert(pageProgressTable)
+    .values(validPageNumbers.map(pageNumber => ({ userId, pageNumber })))
+    .onConflictDoNothing();
+
+  // Bulk-update all page_progress rows in one query
+  const updatedRows = await db
+    .update(pageProgressTable)
+    .set({
+      quality: parsed.data.quality,
+      mistakes: parsed.data.mistakes ?? null,
+      lastRecited: recitedAt,
+      dueDate,
+      inScope: true,
+    })
+    .where(and(eq(pageProgressTable.userId, userId), inArray(pageProgressTable.pageNumber, validPageNumbers)))
+    .returning();
+
+  // Bulk-insert all recitation_log rows in one query
+  await db.insert(recitationLogTable).values(
+    validPageNumbers.map(pageNumber => ({
       userId,
       pageNumber,
       quality: parsed.data.quality,
       mistakes: parsed.data.mistakes ?? null,
       recitedAt,
       dueDate,
-    });
+    }))
+  );
 
-    results.push(enrichPageProgress(updated));
-  }
-
-  const validPageNumbers = parsed.data.pageNumbers.filter(p => p >= 1 && p <= TOTAL_PAGES);
+  const results = updatedRows.map(enrichPageProgress);
   if (validPageNumbers.length > 0) {
     const activeSessions = await db
       .select({ id: homeworkSessionsTable.id })
@@ -977,19 +986,24 @@ router.post("/progress/scope", async (req, res): Promise<void> => {
     return;
   }
 
-  const results = [];
-  for (const pageNumber of parsed.data.pageNumbers) {
-    if (pageNumber < 1 || pageNumber > TOTAL_PAGES) continue;
-    await ensurePageExists(userId, pageNumber);
-    const [updated] = await db
-      .update(pageProgressTable)
-      .set({ inScope: true })
-      .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)))
-      .returning();
-    results.push(enrichPageProgress(updated));
+  const validPageNumbers = parsed.data.pageNumbers.filter(p => p >= 1 && p <= TOTAL_PAGES);
+
+  if (validPageNumbers.length === 0) {
+    res.json(AddToScopeResponse.parse([]));
+    return;
   }
 
-  res.json(AddToScopeResponse.parse(results));
+  await db.insert(pageProgressTable)
+    .values(validPageNumbers.map(pageNumber => ({ userId, pageNumber })))
+    .onConflictDoNothing();
+
+  const updatedRows = await db
+    .update(pageProgressTable)
+    .set({ inScope: true })
+    .where(and(eq(pageProgressTable.userId, userId), inArray(pageProgressTable.pageNumber, validPageNumbers)))
+    .returning();
+
+  res.json(AddToScopeResponse.parse(updatedRows.map(enrichPageProgress)));
 });
 
 router.delete("/progress/scope", async (req, res): Promise<void> => {

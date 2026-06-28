@@ -159,10 +159,11 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="max-w-3xl max-h-[90dvh] overflow-hidden flex flex-col p-0 gap-0"
         data-testid="onboarding-scope-dialog"
       >
-        <DialogHeader>
+        {/* Header — always visible */}
+        <DialogHeader className="px-4 pt-4 pb-2 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-primary" />
             {t("onboarding.title")}
@@ -170,7 +171,8 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
           <DialogDescription>{t("onboarding.subtitle")}</DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-lg border bg-muted/30 p-3 text-sm flex gap-2">
+        {/* Info box — hidden on small screens to save space */}
+        <div className="mx-4 mb-2 shrink-0 hidden sm:flex rounded-lg border bg-muted/30 p-3 text-sm gap-2">
           <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
           <div className="space-y-1">
             <p className="font-medium">{t("onboarding.scopeMeaningTitle")}</p>
@@ -178,8 +180,9 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
           </div>
         </div>
 
-        <Tabs defaultValue="surah" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid grid-cols-3 w-full">
+        {/* Tabs — fills remaining space, scrolls internally */}
+        <Tabs defaultValue="surah" className="flex-1 min-h-0 flex flex-col px-4">
+          <TabsList className="grid grid-cols-3 w-full shrink-0">
             <TabsTrigger value="surah" data-testid="onboarding-tab-surah">
               {t("onboarding.tabs.surah")}
             </TabsTrigger>
@@ -191,104 +194,108 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="surah" className="flex-1 min-h-0 mt-3">
+          <TabsContent value="surah" className="flex-1 min-h-0 mt-3 flex flex-col">
             <Input
               placeholder={t("onboarding.searchSurah")}
               value={surahSearch}
               onChange={(e) => setSurahSearch(e.target.value)}
-              className="mb-2"
+              className="mb-2 shrink-0"
               data-testid="onboarding-surah-search"
             />
-            <ScrollArea className="h-72 rounded-md border">
-              <ul className="divide-y">
-                {filteredSurahs.map((s) => {
-                  const checked = selectedSurahs.has(s.number);
-                  return (
-                    <li key={s.number}>
-                      <label
-                        className="flex items-center gap-3 px-3 py-2 hover:bg-muted/40 cursor-pointer"
-                        data-testid={`onboarding-surah-${s.number}`}
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={() =>
-                            toggle(selectedSurahs, s.number, setSelectedSurahs)
-                          }
-                        />
-                        <span className="w-7 text-xs text-muted-foreground text-end">
-                          {s.number}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">{s.name}</span>
-                            <span className="font-serif text-sm text-muted-foreground">
-                              {s.arabic}
-                            </span>
+            <div className="flex-1 min-h-0">
+              <ScrollArea className="h-full rounded-md border">
+                <ul className="divide-y">
+                  {filteredSurahs.map((s) => {
+                    const checked = selectedSurahs.has(s.number);
+                    return (
+                      <li key={s.number}>
+                        <label
+                          className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/40 cursor-pointer"
+                          data-testid={`onboarding-surah-${s.number}`}
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() =>
+                              toggle(selectedSurahs, s.number, setSelectedSurahs)
+                            }
+                          />
+                          <span className="w-7 text-xs text-muted-foreground text-end shrink-0">
+                            {s.number}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm">{s.name}</span>
+                              <span className="font-serif text-sm text-muted-foreground">
+                                {s.arabic}
+                              </span>
+                            </div>
+                            <FirstAyahPreview
+                              pageNumber={s.startPage}
+                              className="block text-xs"
+                              wordCount={6}
+                            />
                           </div>
-                          <FirstAyahPreview
-                            pageNumber={s.startPage}
-                            className="block text-xs"
-                            wordCount={6}
-                          />
-                        </div>
-                        <span className="text-[11px] text-muted-foreground shrink-0 ms-2">
-                          {t("onboarding.pagesRange", {
-                            start: s.startPage,
-                            end: s.endPage,
-                          })}
-                        </span>
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
-            </ScrollArea>
+                          <span className="text-[11px] text-muted-foreground shrink-0 ms-2">
+                            {t("onboarding.pagesRange", {
+                              start: s.startPage,
+                              end: s.endPage,
+                            })}
+                          </span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </ScrollArea>
+            </div>
           </TabsContent>
 
-          <TabsContent value="juz" className="flex-1 min-h-0 mt-3">
-            <ScrollArea className="h-72 rounded-md border">
-              <ul className="divide-y">
-                {JUZ_RANGES.map((j) => {
-                  const checked = selectedJuz.has(j.juz);
-                  return (
-                    <li key={j.juz}>
-                      <label
-                        className="flex items-center gap-3 px-3 py-2 hover:bg-muted/40 cursor-pointer"
-                        data-testid={`onboarding-juz-${j.juz}`}
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={() =>
-                            toggle(selectedJuz, j.juz, setSelectedJuz)
-                          }
-                        />
-                        <span className="w-16 text-sm font-medium">
-                          {t("common.juz")} {j.juz}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <FirstAyahPreview
-                            pageNumber={j.startPage}
-                            className="block text-xs"
-                            wordCount={6}
+          <TabsContent value="juz" className="flex-1 min-h-0 mt-3 flex flex-col">
+            <div className="flex-1 min-h-0">
+              <ScrollArea className="h-full rounded-md border">
+                <ul className="divide-y">
+                  {JUZ_RANGES.map((j) => {
+                    const checked = selectedJuz.has(j.juz);
+                    return (
+                      <li key={j.juz}>
+                        <label
+                          className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/40 cursor-pointer"
+                          data-testid={`onboarding-juz-${j.juz}`}
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() =>
+                              toggle(selectedJuz, j.juz, setSelectedJuz)
+                            }
                           />
-                        </div>
-                        <span className="text-[11px] text-muted-foreground shrink-0 ms-2">
-                          {t("onboarding.pagesRange", {
-                            start: j.startPage,
-                            end: j.endPage,
-                          })}
-                        </span>
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
-            </ScrollArea>
+                          <span className="w-16 text-sm font-medium shrink-0">
+                            {t("common.juz")} {j.juz}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <FirstAyahPreview
+                              pageNumber={j.startPage}
+                              className="block text-xs"
+                              wordCount={6}
+                            />
+                          </div>
+                          <span className="text-[11px] text-muted-foreground shrink-0 ms-2">
+                            {t("onboarding.pagesRange", {
+                              start: j.startPage,
+                              end: j.endPage,
+                            })}
+                          </span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </ScrollArea>
+            </div>
           </TabsContent>
 
-          <TabsContent value="pages" className="flex-1 min-h-0 mt-3 space-y-3">
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="flex-1 min-w-[100px]">
+          <TabsContent value="pages" className="flex-1 min-h-0 mt-3 flex flex-col gap-3 overflow-y-auto">
+            <div className="flex flex-wrap items-end gap-2 shrink-0">
+              <div className="flex-1 min-w-[90px]">
                 <label className="text-xs text-muted-foreground">
                   {t("onboarding.fromPage")}
                 </label>
@@ -301,7 +308,7 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
                   data-testid="onboarding-page-start"
                 />
               </div>
-              <div className="flex-1 min-w-[100px]">
+              <div className="flex-1 min-w-[90px]">
                 <label className="text-xs text-muted-foreground">
                   {t("onboarding.toPage")}
                 </label>
@@ -317,16 +324,17 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
               <Button
                 type="button"
                 onClick={handleAddPageRange}
+                className="self-end"
                 data-testid="onboarding-add-range"
               >
                 {t("onboarding.addRange")}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground shrink-0">
               {t("onboarding.pagesHint")}
             </p>
             {extraPages.size > 0 && (
-              <div className="rounded-md border p-2 text-xs">
+              <div className="rounded-md border p-2 text-xs shrink-0">
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-medium">
                     {t("onboarding.addedPages", { count: extraPages.size })}
@@ -352,7 +360,8 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
           </TabsContent>
         </Tabs>
 
-        <div className="space-y-3 border-t pt-3">
+        {/* Quality picker + count — always visible, never scrolls away */}
+        <div className="shrink-0 space-y-3 border-t px-4 pt-3 pb-2 mt-2">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <p className="text-sm font-medium">
@@ -360,10 +369,10 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
               </p>
               <Info className="w-3.5 h-3.5 text-muted-foreground" />
             </div>
-            <p className="text-xs text-muted-foreground mb-2">
+            <p className="text-xs text-muted-foreground mb-2 hidden sm:block">
               {t("onboarding.statusHint")}
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
               {QUALITY_VALUES.map((q) => {
                 const active = quality === q;
                 return (
@@ -371,17 +380,17 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
                     key={q}
                     type="button"
                     onClick={() => setQuality(q)}
-                    className={`text-start rounded-md border-2 p-2 transition-all ${
+                    className={`text-start rounded-md border-2 px-2 py-2 transition-all ${
                       active
                         ? qualityStyle[q]
                         : "border-border hover:border-primary/40"
                     }`}
                     data-testid={`onboarding-quality-${q}`}
                   >
-                    <div className="text-sm font-semibold">
+                    <div className="text-xs font-semibold leading-tight">
                       {t(`quality.${q}`)}
                     </div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">
+                    <div className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block leading-tight">
                       {t(`onboarding.qualityDesc.${q}`)}
                     </div>
                   </button>
@@ -407,7 +416,8 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        {/* Footer — always visible */}
+        <DialogFooter className="shrink-0 px-4 pb-4 gap-2 flex-row">
           <Button
             type="button"
             variant="outline"
@@ -418,6 +428,7 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
           </Button>
           <Button
             type="button"
+            className="flex-1 sm:flex-none"
             onClick={handleSubmit}
             disabled={totalSelected === 0 || recordBatch.isPending}
             data-testid="onboarding-submit"
