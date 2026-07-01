@@ -48,4 +48,6 @@ export interface Settings {
    * @maximum 50
    */
   homeworkWeeklyReadGoal: number;
+  /** When true (default), surah groups in the "Pages Requiring Attention" dashboard section start collapsed. When false, they start expanded (legacy behavior). */
+  duePagesSectionCollapsed: boolean;
 }

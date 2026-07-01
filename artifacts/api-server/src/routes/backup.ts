@@ -105,6 +105,9 @@ const SettingsImport = z.object({
   // Optional for backward compatibility — older backups omit this field
   // and restore with the schema default (3).
   homeworkWeeklyReadGoal: z.number().int().min(1).max(50).optional(),
+  // Optional for backward compatibility — older backups omit this field
+  // and restore with the schema default (true).
+  duePagesSectionCollapsed: z.boolean().optional(),
 });
 
 const PageProgressImport = z.object({
@@ -239,6 +242,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       mistakesHardMax: settings.mistakesHardMax,
       autoExpireAyahMarks: settings.autoExpireAyahMarks,
       homeworkWeeklyReadGoal: settings.homeworkWeeklyReadGoal,
+      duePagesSectionCollapsed: settings.duePagesSectionCollapsed,
     },
     pageProgress: pageProgress.map((r) => ({
       pageNumber: r.pageNumber,

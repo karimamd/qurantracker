@@ -25,6 +25,7 @@ import {
   useGetTelawaToday,
   useUpdatePageProgress,
   useUndoRecitation,
+  useGetSettings,
   getListPageProgressQueryKey,
   getGetProgressOverviewQueryKey,
   getGetRecentActivityQueryKey,
@@ -257,6 +258,7 @@ function DuePagesSection() {
   const { t, i18n } = useTranslation();
   const { data: overdue, isLoading: loadingOverdue } = useListPageProgress({ status: "overdue", inScope: true });
   const { data: dueSoon, isLoading: loadingDueSoon } = useListPageProgress({ status: "due_soon", inScope: true });
+  const { data: settings } = useGetSettings();
   const updatePage = useUpdatePageProgress();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -287,13 +289,18 @@ function DuePagesSection() {
       .map(g => ({ ...g, pages: [...g.pages].sort((a, b) => a.pageNumber - b.pageNumber) }));
   }, [allPages]);
 
-  // Start all groups expanded on first load.
+  // Initialize group expand/collapse state on first load, respecting the
+  // user's duePagesSectionCollapsed preference. Wait until both settings and
+  // groups are available so we don't initialise before the setting is fetched.
   useEffect(() => {
-    if (!initializedRef.current && surahGroups.length > 0) {
+    if (!initializedRef.current && surahGroups.length > 0 && settings !== undefined) {
       initializedRef.current = true;
-      setExpandedSurahs(new Set(surahGroups.map(g => g.surah.number)));
+      // When collapsed preference is true (default), start with nothing expanded.
+      // When false (old behaviour), expand all groups immediately.
+      const startCollapsed = settings.duePagesSectionCollapsed;
+      setExpandedSurahs(startCollapsed ? new Set() : new Set(surahGroups.map(g => g.surah.number)));
     }
-  }, [surahGroups]);
+  }, [surahGroups, settings]);
 
   const toggleSurah = (surahNumber: number) => {
     setExpandedSurahs(prev => {

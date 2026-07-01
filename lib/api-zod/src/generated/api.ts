@@ -103,6 +103,11 @@ export const GetSettingsResponse = zod.object({
     .describe(
       "Global weekly per-page read target for Homework pages. A page's weekly progress counts both quality recitations and explicit Telawa reads in the trailing 7 days. Default 3.",
     ),
+  duePagesSectionCollapsed: zod
+    .boolean()
+    .describe(
+      'When true (default), surah groups in the \"Pages Requiring Attention\" dashboard section start collapsed. When false, they start expanded (legacy behavior).',
+    ),
 });
 
 /**
@@ -184,6 +189,7 @@ export const UpdateSettingsBody = zod.object({
     .min(1)
     .max(updateSettingsBodyHomeworkWeeklyReadGoalMax)
     .optional(),
+  duePagesSectionCollapsed: zod.boolean().optional(),
 });
 
 export const updateSettingsResponseBottomNavKeysMax = 5;
@@ -270,6 +276,11 @@ export const UpdateSettingsResponse = zod.object({
     .max(updateSettingsResponseHomeworkWeeklyReadGoalMax)
     .describe(
       "Global weekly per-page read target for Homework pages. A page's weekly progress counts both quality recitations and explicit Telawa reads in the trailing 7 days. Default 3.",
+    ),
+  duePagesSectionCollapsed: zod
+    .boolean()
+    .describe(
+      'When true (default), surah groups in the \"Pages Requiring Attention\" dashboard section start collapsed. When false, they start expanded (legacy behavior).',
     ),
 });
 

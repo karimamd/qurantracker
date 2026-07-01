@@ -61,6 +61,9 @@ export default function SettingsPage() {
   // Auto-expire per-ayah marks after 14 days. Toggled instantly like
   // autoAssign — no Save button needed.
   const [autoExpireAyahMarks, setAutoExpireAyahMarks] = useState(false);
+  // Whether the "Pages Requiring Attention" surah groups on the Dashboard
+  // start collapsed by default. Toggled instantly — no Save button needed.
+  const [duePagesSectionCollapsed, setDuePagesSectionCollapsed] = useState(true);
 
   useEffect(() => {
     if (settings) {
@@ -77,6 +80,7 @@ export default function SettingsPage() {
       setMistakesGoodMax(String(settings.mistakesGoodMax));
       setMistakesHardMax(String(settings.mistakesHardMax));
       setAutoExpireAyahMarks(settings.autoExpireAyahMarks);
+      setDuePagesSectionCollapsed(settings.duePagesSectionCollapsed);
       const lang = settings.language === "ar" ? "ar" : "en";
       setLanguageState(lang);
     }
@@ -112,6 +116,18 @@ export default function SettingsPage() {
       {
         onError: () => {
           setAutoExpireAyahMarks(!next);
+        },
+      }
+    );
+  };
+
+  const handleToggleDuePagesSectionCollapsed = (next: boolean) => {
+    setDuePagesSectionCollapsed(next);
+    updateSettings.mutate(
+      { data: { duePagesSectionCollapsed: next } },
+      {
+        onError: () => {
+          setDuePagesSectionCollapsed(!next);
         },
       }
     );
@@ -381,6 +397,24 @@ export default function SettingsPage() {
               onCheckedChange={handleToggleAutoExpireAyahMarks}
               data-testid="switch-auto-expire-ayah-marks"
               aria-label={t("settings.autoExpire.label")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("settings.duePagesSectionCollapsed.title")}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t("settings.duePagesSectionCollapsed.description")}
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-3 p-3 rounded-lg border-s-4 border-l-sky-500 bg-muted/30" data-testid="setting-due-pages-collapsed-toggle">
+            <div className="text-sm font-medium">{t("settings.duePagesSectionCollapsed.label")}</div>
+            <Switch
+              checked={duePagesSectionCollapsed}
+              onCheckedChange={handleToggleDuePagesSectionCollapsed}
+              data-testid="switch-due-pages-section-collapsed"
+              aria-label={t("settings.duePagesSectionCollapsed.label")}
             />
           </div>
 

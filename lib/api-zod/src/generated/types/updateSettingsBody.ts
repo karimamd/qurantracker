@@ -48,4 +48,5 @@ export interface UpdateSettingsBody {
    * @maximum 50
    */
   homeworkWeeklyReadGoal?: number;
+  duePagesSectionCollapsed?: boolean;
 }

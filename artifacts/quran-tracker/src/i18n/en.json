@@ -342,6 +342,11 @@
       "description": "When enabled, per-ayah marks (cleared, mistakes, and link issues) that are older than 14 days are automatically hidden from the Reader and Ayah detail screens. The marks are kept in the database for history — only the live display is affected. Page recitation status is never changed.",
       "label": "Hide marks older than 2 weeks"
     },
+    "duePagesSectionCollapsed": {
+      "title": "Pages requiring attention — default view",
+      "description": "When enabled, the surah groups on the Dashboard start collapsed. Tap a surah header to expand and review its pages. Disable to start with all groups expanded (original behavior).",
+      "label": "Start collapsed by default"
+    },
     "homeworkReadGoal": {
       "label": "Homework weekly read goal",
       "description": "How many times to read or recite each active homework page per week. Either reading or reciting counts.",

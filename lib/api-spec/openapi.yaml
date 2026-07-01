@@ -901,6 +901,9 @@ components:
           minimum: 1
           maximum: 50
           description: Global weekly per-page read target for Homework pages. A page's weekly progress counts both quality recitations and explicit Telawa reads in the trailing 7 days. Default 3.
+        duePagesSectionCollapsed:
+          type: boolean
+          description: When true (default), surah groups in the "Pages Requiring Attention" dashboard section start collapsed. When false, they start expanded (legacy behavior).
       required:
         - id
         - excellentDays
@@ -917,6 +920,7 @@ components:
         - mistakesHardMax
         - autoExpireAyahMarks
         - homeworkWeeklyReadGoal
+        - duePagesSectionCollapsed
 
     UpdateSettingsBody:
       type: object
@@ -966,6 +970,8 @@ components:
           type: integer
           minimum: 1
           maximum: 50
+        duePagesSectionCollapsed:
+          type: boolean
 
     ProgressOverview:
       type: object

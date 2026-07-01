@@ -75,6 +75,12 @@ export const settingsTable = pgTable("settings", {
   // 7-day window. Used by the Homework Reading goal card and the per-page
   // progress bars on the homework detail screen.
   homeworkWeeklyReadGoal: integer("homework_weekly_read_goal").notNull().default(3),
+  // Controls the default expand/collapse state for the "Pages Requiring
+  // Attention" surah groups on the Dashboard. When true (default), all surah
+  // groups start collapsed and the user expands the one they want to work on.
+  // When false, all groups start expanded (previous behavior). The user can
+  // always toggle individual groups; this only sets the initial state on load.
+  duePagesSectionCollapsed: boolean("due_pages_section_collapsed").notNull().default(true),
 }, (table) => ({
   userIdUnique: uniqueIndex("settings_user_id_unique").on(table.userId),
 }));
