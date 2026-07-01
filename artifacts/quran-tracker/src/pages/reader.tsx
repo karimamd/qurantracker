@@ -573,70 +573,107 @@ export default function Reader() {
   };
 
   const handleAyahLink = (ayahNumber: number) => {
-    // Tapping the link button always (re-)records the link mark, refreshing
-    // its recitedAt to today — consistent with the clear and mistake buttons.
-    // We intentionally do NOT toggle it off here: a tap on an ayah whose link
-    // mark is stale (from an earlier day) re-affirms it for today, which is
-    // what the auto-assign feature needs to count the page as marked today.
-    // Removal of a link mark is done via "Clear all marks".
-    // Link is independent of cleared/memorization — do NOT touch either of
-    // those sets here. The server no longer auto-resolves them.
-    setLinkAyahs(prev => {
-      const n = new Set(prev);
-      n.add(ayahNumber);
-      return n;
-    });
-    persistAdd(ayahNumber, "link");
+    // Toggle: tapping a link mark that is already set removes it; tapping
+    // an unmarked ayah adds the link mark. Link is independent of
+    // cleared/memorization — do NOT touch either of those sets here.
+    const hasLink = linkAyahs.has(ayahNumber);
+    if (hasLink) {
+      setLinkAyahs(prev => {
+        const n = new Set(prev);
+        n.delete(ayahNumber);
+        return n;
+      });
+      persistRemove(ayahNumber, "link", () => {
+        setLinkAyahs(prev => {
+          const n = new Set(prev);
+          n.add(ayahNumber);
+          return n;
+        });
+      });
+    } else {
+      setLinkAyahs(prev => {
+        const n = new Set(prev);
+        n.add(ayahNumber);
+        return n;
+      });
+      persistAdd(ayahNumber, "link");
+    }
   };
 
   const handleAyahMark = (ayahNumber: number, mark: "clear" | "mistake", isLatest: boolean) => {
     if (mark === "clear") {
-      // The tick is a positive overwrite for this ayah: it persists a
-      // "cleared" mark and the server atomically resolves any active
-      // memorization mistake for the same ayah inside the same
-      // transaction. We always POST — even when the ayah already shows as
-      // cleared — so the mark's recitedAt is refreshed to today. This is
-      // what lets the auto-assign feature recognise a page the user is
-      // re-reciting today even though some ayahs were first cleared on an
-      // earlier day; skipping the round-trip used to leave those marks
-      // stuck on their original date and the page never counted as
-      // "marked today", so its status never updated.
-      // Optimistically reflect the new state immediately for snappy UI;
-      // the seed effect will reconcile to the server's authoritative set.
-      setClearedAyahs(prev => {
-        const next = new Set(prev);
-        next.add(ayahNumber);
-        return next;
-      });
-      // "cleared" only supersedes "memorization" — leave linkAyahs alone.
-      setMistakeAyahs(prev => {
-        if (!prev.has(ayahNumber)) return prev;
-        const next = new Set(prev);
-        next.delete(ayahNumber);
-        return next;
-      });
-      persistAdd(ayahNumber, "cleared");
+      const hasCleared = clearedAyahs.has(ayahNumber);
+      if (hasCleared) {
+        // Toggle off: remove the cleared mark.
+        setClearedAyahs(prev => {
+          const next = new Set(prev);
+          next.delete(ayahNumber);
+          return next;
+        });
+        persistRemove(ayahNumber, "cleared", () => {
+          setClearedAyahs(prev => {
+            const next = new Set(prev);
+            next.add(ayahNumber);
+            return next;
+          });
+        });
+      } else {
+        // Add: persist a "cleared" mark. The server atomically resolves any
+        // active memorization mistake for the same ayah in the same
+        // transaction, so mirror that locally too.
+        setClearedAyahs(prev => {
+          const next = new Set(prev);
+          next.add(ayahNumber);
+          return next;
+        });
+        setMistakeAyahs(prev => {
+          if (!prev.has(ayahNumber)) return prev;
+          const next = new Set(prev);
+          next.delete(ayahNumber);
+          return next;
+        });
+        persistAdd(ayahNumber, "cleared");
+        // Only advance reveal when adding a mark (not when removing).
+        if (hideMode && isLatest && revealedCount < totalAyahs) {
+          setRevealedCount(c => c + 1);
+        }
+      }
     } else {
-      // Always POST the memorization mark, even if it already shows as
-      // marked, so its recitedAt advances to today (see the "clear"
-      // branch above for why this matters to auto-assign).
-      setMistakeAyahs(prev => {
-        const next = new Set(prev);
-        next.add(ayahNumber);
-        return next;
-      });
-      persistAdd(ayahNumber, "memorization");
-      // Adding a memorization mistake supersedes any prior "cleared" tick
-      // on this ayah — mirror the server's auto-resolve locally.
-      setClearedAyahs(prev => {
-        if (!prev.has(ayahNumber)) return prev;
-        const next = new Set(prev);
-        next.delete(ayahNumber);
-        return next;
-      });
-    }
-    if (hideMode && isLatest && revealedCount < totalAyahs) {
-      setRevealedCount(c => c + 1);
+      const hasMistake = mistakeAyahs.has(ayahNumber);
+      if (hasMistake) {
+        // Toggle off: remove the memorization mistake mark.
+        setMistakeAyahs(prev => {
+          const next = new Set(prev);
+          next.delete(ayahNumber);
+          return next;
+        });
+        persistRemove(ayahNumber, "memorization", () => {
+          setMistakeAyahs(prev => {
+            const next = new Set(prev);
+            next.add(ayahNumber);
+            return next;
+          });
+        });
+      } else {
+        // Add: adding a memorization mistake supersedes any prior "cleared"
+        // tick — mirror the server's auto-resolve locally.
+        setMistakeAyahs(prev => {
+          const next = new Set(prev);
+          next.add(ayahNumber);
+          return next;
+        });
+        setClearedAyahs(prev => {
+          if (!prev.has(ayahNumber)) return prev;
+          const next = new Set(prev);
+          next.delete(ayahNumber);
+          return next;
+        });
+        persistAdd(ayahNumber, "memorization");
+        // Only advance reveal when adding a mark (not when removing).
+        if (hideMode && isLatest && revealedCount < totalAyahs) {
+          setRevealedCount(c => c + 1);
+        }
+      }
     }
   };
 
