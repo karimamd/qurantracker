@@ -202,8 +202,7 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
               className="mb-2 shrink-0"
               data-testid="onboarding-surah-search"
             />
-            <div className="flex-1 min-h-0">
-              <ScrollArea className="h-full rounded-md border">
+            <ScrollArea className="flex-1 min-h-0 rounded-md border">
                 <ul className="divide-y">
                   {filteredSurahs.map((s) => {
                     const checked = selectedSurahs.has(s.number);
@@ -247,12 +246,10 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
                   })}
                 </ul>
               </ScrollArea>
-            </div>
           </TabsContent>
 
           <TabsContent value="juz" className="flex-1 min-h-0 mt-3 flex flex-col">
-            <div className="flex-1 min-h-0">
-              <ScrollArea className="h-full rounded-md border">
+            <ScrollArea className="flex-1 min-h-0 rounded-md border">
                 <ul className="divide-y">
                   {JUZ_RANGES.map((j) => {
                     const checked = selectedJuz.has(j.juz);
@@ -290,7 +287,6 @@ export function OnboardingScopeSetup({ open, onOpenChange }: Props) {
                   })}
                 </ul>
               </ScrollArea>
-            </div>
           </TabsContent>
 
           <TabsContent value="pages" className="flex-1 min-h-0 mt-3 flex flex-col gap-3 overflow-y-auto">
