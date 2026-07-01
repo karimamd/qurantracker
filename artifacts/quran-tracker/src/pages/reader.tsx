@@ -1291,6 +1291,26 @@ export default function Reader() {
                             </span>
                           )}
                           {trailingSpace}
+                          {/* "Show next ayah" button sits inline right after the frontier ayah
+                              so the user never needs to scroll to find it, regardless of how
+                              many hidden placeholder spans follow on the same page. */}
+                          {isLatest && revealedCount < totalAyahs && (
+                            <span className="inline-flex items-center ms-2 align-middle" dir="ltr">
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={showNextAyah}
+                                data-testid="btn-show-next-ayah"
+                                className="shadow-sm my-1"
+                              >
+                                <Eye className="w-3.5 h-3.5 me-1.5" />
+                                {t("reader.showNextAyah")}
+                                <span className="ms-1.5 text-xs font-normal opacity-80">
+                                  {t("reader.showNextProgress", { n: revealedCount + 1, total: totalAyahs })}
+                                </span>
+                              </Button>
+                            </span>
+                          )}
                         </span>
                       );
                     })}
@@ -1299,22 +1319,6 @@ export default function Reader() {
               ))}
               {groupedAyahs.length === 0 && (
                 <p className="text-center text-sm text-muted-foreground" dir="ltr">{t("reader.noAyahs")}</p>
-              )}
-
-              {hideMode && revealedCount < totalAyahs && (
-                <div className="pt-4 flex justify-center" dir="ltr">
-                  <Button
-                    type="button"
-                    size="lg"
-                    onClick={showNextAyah}
-                    data-testid="btn-show-next-ayah"
-                    className="shadow-md"
-                  >
-                    <Eye className="w-4 h-4 me-2" />
-                    {t("reader.showNextAyah")}
-                    <span className="ms-2 text-xs font-normal opacity-80">{t("reader.showNextProgress", { n: revealedCount + 1, total: totalAyahs })}</span>
-                  </Button>
-                </div>
               )}
               {hideMode && revealedCount >= totalAyahs && totalAyahs > 0 && (
                 <div className="pt-4 text-center text-sm text-muted-foreground" data-testid="reader-all-revealed">
