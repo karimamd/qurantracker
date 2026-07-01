@@ -1114,6 +1114,26 @@ export default function Reader() {
             </div>
           ) : (
             <div dir="rtl" lang="ar" className="space-y-6" data-testid="reader-page-text">
+              {/* When every ayah is hidden (revealedCount === 0) there is no frontier
+                  ayah yet, so the inline button inside the map never renders.
+                  Show a standalone button at the top of the page content instead. */}
+              {hideMode && revealedCount === 0 && (
+                <div className="flex justify-center py-2" dir="ltr">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={showNextAyah}
+                    data-testid="btn-show-next-ayah"
+                    className="shadow-sm"
+                  >
+                    <Eye className="w-3.5 h-3.5 me-1.5" />
+                    {t("reader.showNextAyah")}
+                    <span className="ms-1.5 text-xs font-normal opacity-80">
+                      {t("reader.showNextProgress", { n: 1, total: totalAyahs })}
+                    </span>
+                  </Button>
+                </div>
+              )}
               {groupedAyahs.map((group, idx) => (
                 <div key={`${group.surahNumber}-${idx}`} className="space-y-3">
                   {group.isFirstAyah && (
