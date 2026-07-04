@@ -32,6 +32,15 @@ import {
   useListHomework,
   useGetHomework,
   getGetHomeworkQueryKey,
+  getListPageProgressQueryKey,
+  getGetProgressOverviewQueryKey,
+  getListJuzProgressQueryKey,
+  getListSurahProgressQueryKey,
+  getListRob3ProgressQueryKey,
+  getGetRecentActivityQueryKey,
+  getGetJuzDetailQueryKey,
+  getGetSurahDetailQueryKey,
+  getListHomeworkQueryKey,
 } from "@workspace/api-client-react";
 import type { ActiveAyahMistake } from "@workspace/api-client-react";
 import { isOfflineQueued } from "@workspace/api-client-react";
@@ -218,8 +227,30 @@ export default function AyahDetail() {
   const isMemo = activeMarkSet.has("memorization");
   const isLink = activeMarkSet.has("link");
 
+  // A per-ayah mark hits the same /active-mistakes endpoints the Reader
+  // uses, and the server can auto-assign a page recitation as a side effect
+  // (settings.autoAssignPageFromAyahs) when a mark completes the page. So we
+  // must invalidate the SAME broad set the Reader does — not just the global
+  // mistakes feed — or the page status, progress views, and the homework
+  // "ayah by ayah" list stay stale after marking from this screen.
   const invalidateMistakes = () => {
     queryClient.invalidateQueries({ queryKey: getGetMistakesQueryKey() });
+    if (!ayah) return;
+    queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListJuzProgressQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListSurahProgressQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListRob3ProgressQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetJuzDetailQueryKey(ayah.juzNumber) });
+    queryClient.invalidateQueries({ queryKey: getGetSurahDetailQueryKey(ayah.surahNumber) });
+    queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
+    // Covers every open homework detail AND its "ayah by ayah" list
+    // (getGetHomework / getGetHomeworkAyahs both key off "/api/homework/…").
+    queryClient.invalidateQueries({ predicate: q => String(q.queryKey[0]).startsWith("/api/homework/") });
+    // Force a definitive refetch so an auto-assigned recitation surfaces
+    // immediately rather than on the next focus/refetch.
+    queryClient.refetchQueries({ queryKey: getListPageProgressQueryKey() });
   };
 
   const setMark = (mark: Mark) => {
