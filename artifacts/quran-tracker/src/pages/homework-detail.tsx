@@ -164,8 +164,9 @@ function AyahByAyahSection({ homeworkId }: { homeworkId: number }) {
   }, []);
 
   // Group ayahs by page, preserving the server's ordering.
+  type AyahEntry = NonNullable<typeof data>["ayahs"][number];
   const pages = useMemo(() => {
-    const groups = new Map<number, typeof data.ayahs>();
+    const groups = new Map<number, AyahEntry[]>();
     for (const a of data?.ayahs ?? []) {
       let arr = groups.get(a.pageNumber);
       if (!arr) { arr = []; groups.set(a.pageNumber, arr); }
@@ -413,6 +414,9 @@ export default function HomeworkDetail() {
           setEditOpen(false);
           // Refetch detail + list so the new pages and progress show up.
           queryClient.invalidateQueries({ queryKey: getGetHomeworkQueryKey(homeworkId) });
+          // Page membership may have changed, so the ayah-by-ayah list must
+          // refetch too or it keeps showing ayahs for the old page set.
+          queryClient.invalidateQueries({ queryKey: getGetHomeworkAyahsQueryKey(homeworkId) });
           queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
         },
@@ -704,6 +708,8 @@ export default function HomeworkDetail() {
 
       {renderItems(memorizeItems, t("homework.pagesToMemorize"))}
       {renderItems(reviseItems, t("homework.pagesToRevise"))}
+
+      {detail.items.length > 0 && <AyahByAyahSection homeworkId={homeworkId} />}
 
       {detail.items.length === 0 && (
         <Card className="border shadow-sm">
