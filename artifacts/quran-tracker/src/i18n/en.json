@@ -596,7 +596,28 @@
     "pagesProgress": "{{done}} / {{total}} pages done",
     "pagesProgressTitle": "Pages with a recorded recitation quality in this homework, out of the total pages in it.",
     "weeklyRead": "{{done}} / {{goal}} reads",
-    "weeklyReadTitle": "Reads (or recitations) of this page this week, toward your weekly goal of {{goal}}."
+    "weeklyReadTitle": "Reads (or recitations) of this page this week, toward your weekly goal of {{goal}}.",
+    "ayahByAyah": {
+      "title": "Ayah by ayah",
+      "subtitle": "Every ayah on this homework's pages",
+      "pageLabel": "Page {{page}}",
+      "pageProgress": "{{done}} / {{total}} clear",
+      "ayahLabel": "Ayah {{n}}",
+      "lastVisited": "Last visited",
+      "notStarted": "Not started",
+      "statusCleared": "Clear",
+      "statusMemorization": "Mistake",
+      "statusLink": "Link",
+      "lastStatusAt": "Last: {{date}}",
+      "weekAttempts_one": "{{count}} attempt this week",
+      "weekAttempts_other": "{{count}} attempts this week",
+      "weekAttemptsTitle": "Times this ayah was marked in the last 7 days",
+      "openAyah": "Ayah",
+      "practice": "Practice",
+      "loading": "Loading ayahs…",
+      "loadError": "Couldn't load ayah text. Open a page in the Reader first, then try again.",
+      "empty": "No ayahs on this homework's pages yet."
+    }
   },
   "juzList": {
     "title": "Juz Overview",

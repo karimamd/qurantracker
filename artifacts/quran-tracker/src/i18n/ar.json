@@ -624,7 +624,32 @@
     "pagesProgress": "{{done}} / {{total}} صفحة مُنجزة",
     "pagesProgressTitle": "الصفحات التي سُجّلت لها جودة تلاوة في هذا الواجب، من إجمالي صفحاته.",
     "weeklyRead": "{{done}} / {{goal}} قراءات",
-    "weeklyReadTitle": "قراءات (أو تلاوات) هذه الصفحة هذا الأسبوع، نحو هدفك الأسبوعي البالغ {{goal}}."
+    "weeklyReadTitle": "قراءات (أو تلاوات) هذه الصفحة هذا الأسبوع، نحو هدفك الأسبوعي البالغ {{goal}}.",
+    "ayahByAyah": {
+      "title": "آية بآية",
+      "subtitle": "كل آية في صفحات هذا الواجب",
+      "pageLabel": "صفحة {{page}}",
+      "pageProgress": "{{done}} / {{total}} صحيحة",
+      "ayahLabel": "آية {{n}}",
+      "lastVisited": "آخر زيارة",
+      "notStarted": "لم تبدأ",
+      "statusCleared": "صحيح",
+      "statusMemorization": "خطأ",
+      "statusLink": "ربط",
+      "lastStatusAt": "آخر مرة: {{date}}",
+      "weekAttempts_zero": "{{count}} محاولة هذا الأسبوع",
+      "weekAttempts_one": "محاولة واحدة هذا الأسبوع",
+      "weekAttempts_two": "محاولتان هذا الأسبوع",
+      "weekAttempts_few": "{{count}} محاولات هذا الأسبوع",
+      "weekAttempts_many": "{{count}} محاولة هذا الأسبوع",
+      "weekAttempts_other": "{{count}} محاولة هذا الأسبوع",
+      "weekAttemptsTitle": "عدد مرات تعليم هذه الآية خلال آخر ٧ أيام",
+      "openAyah": "الآية",
+      "practice": "تدرّب",
+      "loading": "جارٍ تحميل الآيات…",
+      "loadError": "تعذّر تحميل نص الآيات. افتح صفحة في القارئ أولاً ثم أعد المحاولة.",
+      "empty": "لا توجد آيات في صفحات هذا الواجب بعد."
+    }
   },
   "juzList": {
     "title": "نظرة عامّة على الأجزاء",

@@ -28,6 +28,7 @@ import type {
   GetProgressChartParams,
   GetRecentActivityParams,
   HealthStatus,
+  HomeworkAyahList,
   HomeworkItem,
   HomeworkSession,
   HomeworkSessionDetail,
@@ -1726,6 +1727,95 @@ export const useDeleteHomework = <
 > => {
   return useMutation(getDeleteHomeworkMutationOptions(options));
 };
+
+/**
+ * Returns all ayahs belonging to the pages in this homework session (full scope), each annotated with its current active statuses (cleared / memorization / link), the timestamp of the most recent active status, and how many times it was attempted in the trailing 7 days. `lastVisitedGlobalAyahNumber` is the ayah with the most recent active mark. Ayah text / surah name are resolved client-side from the bundled quran dump.
+
+ * @summary List every ayah on a homework's pages with its per-ayah status
+ */
+export const getGetHomeworkAyahsUrl = (id: number) => {
+  return `/api/homework/${id}/ayahs`;
+};
+
+export const getHomeworkAyahs = async (
+  id: number,
+  options?: RequestInit,
+): Promise<HomeworkAyahList> => {
+  return customFetch<HomeworkAyahList>(getGetHomeworkAyahsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetHomeworkAyahsQueryKey = (id: number) => {
+  return [`/api/homework/${id}/ayahs`] as const;
+};
+
+export const getGetHomeworkAyahsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getHomeworkAyahs>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getHomeworkAyahs>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetHomeworkAyahsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getHomeworkAyahs>>
+  > = ({ signal }) => getHomeworkAyahs(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getHomeworkAyahs>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetHomeworkAyahsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getHomeworkAyahs>>
+>;
+export type GetHomeworkAyahsQueryError = ErrorType<void>;
+
+/**
+ * @summary List every ayah on a homework's pages with its per-ayah status
+ */
+
+export function useGetHomeworkAyahs<
+  TData = Awaited<ReturnType<typeof getHomeworkAyahs>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getHomeworkAyahs>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetHomeworkAyahsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Update a homework item (mark page as done)

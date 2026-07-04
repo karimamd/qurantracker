@@ -18,13 +18,15 @@
  * DELETE /progress/activity/:id handler.
  */
 import { Router, type IRouter } from "express";
-import { db, homeworkSessionsTable, homeworkItemsTable, pageProgressTable, recitationLogTable } from "@workspace/db";
+import { db, homeworkSessionsTable, homeworkItemsTable, pageProgressTable, recitationLogTable, ayahMistakesTable, ayahAttemptsTable } from "@workspace/db";
 import { eq, and, sql, count, gte, inArray } from "drizzle-orm";
 import {
   ListHomeworkResponse,
   CreateHomeworkBody,
   GetHomeworkParams,
   GetHomeworkResponse,
+  GetHomeworkAyahsParams,
+  GetHomeworkAyahsResponse,
   UpdateHomeworkParams,
   UpdateHomeworkBody,
   UpdateHomeworkResponse,
@@ -35,6 +37,9 @@ import {
 } from "@workspace/api-zod";
 import { ensurePageExists, getSettings, calculateDueDate, getDefaultPageName, getWeeklyReadCounts } from "../lib/progress-helpers";
 import { requireAuth } from "../middlewares/requireAuth";
+import pageAyahsData from "../lib/page-ayahs.json" with { type: "json" };
+
+const PAGE_AYAHS = pageAyahsData as Record<string, number[]>;
 
 const router: IRouter = Router();
 
@@ -230,6 +235,130 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
   };
 
   res.json(GetHomeworkResponse.parse(detail));
+});
+
+/**
+ * GET /homework/:id/ayahs — the ayah-by-ayah view for a homework session.
+ *
+ * Enumerates every ayah on the homework's pages (via the static page→ayah
+ * map) and annotates each with:
+ *   - its current ACTIVE statuses (cleared / memorization / link) from
+ *     ayah_mistakes where resolvedAt IS NULL,
+ *   - `lastStatusAt` = the newest recitedAt among those active marks,
+ *   - `weekAttemptCount` = number of ayah_attempts rows in the last 7 days.
+ * `lastVisitedGlobalAyahNumber` = the ayah with the single most recent
+ * active mark across the whole homework (the "last visited" highlight).
+ *
+ * Ayah text / surah name are intentionally NOT sent — the client resolves
+ * them from its bundled quran dump (AyahIndex).
+ */
+router.get("/homework/:id/ayahs", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const params = GetHomeworkAyahsParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [session] = await db.select().from(homeworkSessionsTable)
+    .where(and(eq(homeworkSessionsTable.userId, userId), eq(homeworkSessionsTable.id, params.data.id)));
+  if (!session) {
+    res.status(404).json({ error: "Homework session not found" });
+    return;
+  }
+
+  const items = await db
+    .select({ pageNumber: homeworkItemsTable.pageNumber })
+    .from(homeworkItemsTable)
+    .where(and(eq(homeworkItemsTable.userId, userId), eq(homeworkItemsTable.homeworkId, session.id)));
+
+  // Unique, sorted list of pages in this homework.
+  const pageNumbers = Array.from(new Set(items.map(i => i.pageNumber))).sort((a, b) => a - b);
+
+  // Build the ordered ayah list from the static page→ayah map.
+  const ayahEntries: { globalAyahNumber: number; pageNumber: number }[] = [];
+  for (const page of pageNumbers) {
+    const ayahs = PAGE_AYAHS[String(page)] ?? [];
+    for (const globalAyahNumber of ayahs) {
+      ayahEntries.push({ globalAyahNumber, pageNumber: page });
+    }
+  }
+
+  if (ayahEntries.length === 0) {
+    res.json(GetHomeworkAyahsResponse.parse({ lastVisitedGlobalAyahNumber: null, ayahs: [] }));
+    return;
+  }
+
+  const globalNumbers = ayahEntries.map(e => e.globalAyahNumber);
+
+  // Active per-ayah marks for these ayahs (resolvedAt IS NULL).
+  const activeMarks = await db
+    .select({
+      globalAyahNumber: ayahMistakesTable.globalAyahNumber,
+      mistakeType: ayahMistakesTable.mistakeType,
+      recitedAt: ayahMistakesTable.recitedAt,
+    })
+    .from(ayahMistakesTable)
+    .where(and(
+      eq(ayahMistakesTable.userId, userId),
+      inArray(ayahMistakesTable.globalAyahNumber, globalNumbers),
+      sql`${ayahMistakesTable.resolvedAt} is null`,
+    ));
+
+  // Attempts in the trailing 7 days, grouped by ayah.
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 6);
+  weekStart.setHours(0, 0, 0, 0);
+
+  const attemptRows = await db
+    .select({
+      globalAyahNumber: ayahAttemptsTable.globalAyahNumber,
+      c: count(),
+    })
+    .from(ayahAttemptsTable)
+    .where(and(
+      eq(ayahAttemptsTable.userId, userId),
+      inArray(ayahAttemptsTable.globalAyahNumber, globalNumbers),
+      gte(ayahAttemptsTable.attemptedAt, weekStart),
+    ))
+    .groupBy(ayahAttemptsTable.globalAyahNumber);
+
+  const attemptMap = new Map<number, number>();
+  for (const r of attemptRows) attemptMap.set(r.globalAyahNumber, Number(r.c));
+
+  // Fold active marks into per-ayah statuses + newest recitedAt.
+  const statusMap = new Map<number, Set<string>>();
+  const lastAtMap = new Map<number, Date>();
+  let lastVisitedGlobalAyahNumber: number | null = null;
+  let lastVisitedAt = 0;
+  for (const m of activeMarks) {
+    let set = statusMap.get(m.globalAyahNumber);
+    if (!set) { set = new Set(); statusMap.set(m.globalAyahNumber, set); }
+    set.add(m.mistakeType);
+    const t = m.recitedAt ? m.recitedAt.getTime() : 0;
+    const prev = lastAtMap.get(m.globalAyahNumber);
+    if (m.recitedAt && (!prev || t > prev.getTime())) lastAtMap.set(m.globalAyahNumber, m.recitedAt);
+    if (t > lastVisitedAt) { lastVisitedAt = t; lastVisitedGlobalAyahNumber = m.globalAyahNumber; }
+  }
+
+  const STATUS_ORDER = ["cleared", "memorization", "link"];
+  const payload = {
+    lastVisitedGlobalAyahNumber,
+    ayahs: ayahEntries.map(e => {
+      const set = statusMap.get(e.globalAyahNumber);
+      const statuses = set ? STATUS_ORDER.filter(s => set.has(s)) : [];
+      const lastAt = lastAtMap.get(e.globalAyahNumber);
+      return {
+        globalAyahNumber: e.globalAyahNumber,
+        pageNumber: e.pageNumber,
+        statuses,
+        lastStatusAt: lastAt ? lastAt.toISOString() : null,
+        weekAttemptCount: attemptMap.get(e.globalAyahNumber) ?? 0,
+      };
+    }),
+  };
+
+  res.json(GetHomeworkAyahsResponse.parse(payload));
 });
 
 router.patch("/homework/:id", async (req, res): Promise<void> => {

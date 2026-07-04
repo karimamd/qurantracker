@@ -400,6 +400,35 @@ paths:
         "204":
           description: Deleted
 
+  /homework/{id}/ayahs:
+    get:
+      operationId: getHomeworkAyahs
+      tags: [homework]
+      summary: List every ayah on a homework's pages with its per-ayah status
+      description: >
+        Returns all ayahs belonging to the pages in this homework session
+        (full scope), each annotated with its current active statuses
+        (cleared / memorization / link), the timestamp of the most recent
+        active status, and how many times it was attempted in the trailing
+        7 days. `lastVisitedGlobalAyahNumber` is the ayah with the most
+        recent active mark. Ayah text / surah name are resolved client-side
+        from the bundled quran dump.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Homework ayah list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeworkAyahList"
+        "404":
+          description: Not found
+
   /homework/{homeworkId}/items/{itemId}:
     patch:
       operationId: updateHomeworkItem
@@ -1659,6 +1688,47 @@ components:
         quality:
           type: string
           enum: [excellent, good, hard, relearn]
+
+    HomeworkAyahEntry:
+      type: object
+      properties:
+        globalAyahNumber:
+          type: integer
+        pageNumber:
+          type: integer
+        statuses:
+          type: array
+          description: Active marks on this ayah. Empty when the ayah has no active status.
+          items:
+            type: string
+            enum: [cleared, memorization, link]
+        lastStatusAt:
+          type: ["string", "null"]
+          format: date-time
+          description: Timestamp of the most recent active status on this ayah, or null when none.
+        weekAttemptCount:
+          type: integer
+          description: Number of times a status was set on this ayah in the trailing 7 days.
+      required:
+        - globalAyahNumber
+        - pageNumber
+        - statuses
+        - lastStatusAt
+        - weekAttemptCount
+
+    HomeworkAyahList:
+      type: object
+      properties:
+        lastVisitedGlobalAyahNumber:
+          type: ["integer", "null"]
+          description: Global ayah number of the most recently marked ayah in this homework, or null.
+        ayahs:
+          type: array
+          items:
+            $ref: "#/components/schemas/HomeworkAyahEntry"
+      required:
+        - lastVisitedGlobalAyahNumber
+        - ayahs
 
     ActivityEntry:
       type: object

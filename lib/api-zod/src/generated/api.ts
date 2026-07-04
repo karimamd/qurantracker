@@ -1053,6 +1053,46 @@ export const DeleteHomeworkParams = zod.object({
 });
 
 /**
+ * Returns all ayahs belonging to the pages in this homework session (full scope), each annotated with its current active statuses (cleared / memorization / link), the timestamp of the most recent active status, and how many times it was attempted in the trailing 7 days. `lastVisitedGlobalAyahNumber` is the ayah with the most recent active mark. Ayah text / surah name are resolved client-side from the bundled quran dump.
+
+ * @summary List every ayah on a homework's pages with its per-ayah status
+ */
+export const GetHomeworkAyahsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetHomeworkAyahsResponse = zod.object({
+  lastVisitedGlobalAyahNumber: zod
+    .number()
+    .nullable()
+    .describe(
+      "Global ayah number of the most recently marked ayah in this homework, or null.",
+    ),
+  ayahs: zod.array(
+    zod.object({
+      globalAyahNumber: zod.number(),
+      pageNumber: zod.number(),
+      statuses: zod
+        .array(zod.enum(["cleared", "memorization", "link"]))
+        .describe(
+          "Active marks on this ayah. Empty when the ayah has no active status.",
+        ),
+      lastStatusAt: zod.coerce
+        .date()
+        .nullable()
+        .describe(
+          "Timestamp of the most recent active status on this ayah, or null when none.",
+        ),
+      weekAttemptCount: zod
+        .number()
+        .describe(
+          "Number of times a status was set on this ayah in the trailing 7 days.",
+        ),
+    }),
+  ),
+});
+
+/**
  * @summary Update a homework item (mark page as done)
  */
 export const UpdateHomeworkItemParams = zod.object({

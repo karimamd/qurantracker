@@ -3,8 +3,10 @@ import {
   useUpdateHomework,
   useUpdateHomeworkItem,
   useListActivePageMistakes,
+  useGetHomeworkAyahs,
   useGetSettings,
   getGetHomeworkQueryKey,
+  getGetHomeworkAyahsQueryKey,
   getListHomeworkQueryKey,
   getGetProgressOverviewQueryKey,
   getListPageProgressQueryKey,
@@ -22,14 +24,15 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useQueryClient, useQueries } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Check, X, Pencil } from "lucide-react";
+import { ArrowLeft, Check, X, Pencil, ChevronDown, Link2, BookOpen, Play } from "lucide-react";
 import { PageRow } from "@/components/page-row";
 import { type Quality, QUALITIES } from "@/lib/quality";
 import { fetchPageAyahs, pageAyahsQueryKey, type ApiAyah } from "@/hooks/use-page-ayahs";
 import { HomeworkRangePickers } from "@/components/homework-range-pickers";
 import { parsePageRange, appendPageRange, compressPages } from "@/lib/homework-pages";
+import { getAyahIndex, type AyahIndexEntry } from "@/lib/ayah-index";
 import { useTranslation } from "react-i18next";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /**
  * Per-page ayah coverage summary derived from two server-cached sources:
@@ -108,6 +111,236 @@ function usePagesCoverage(pageNumbers: number[]): Map<number, PageCoverage> {
     });
     return map;
   }, [uniquePages, ayahsResults, mistakesResults]);
+}
+
+/** Badge styling per active status, mirroring the Mistakes page palette. */
+const AYAH_STATUS_STYLE: Record<"cleared" | "memorization" | "link", { chip: string; icon: typeof Check }> = {
+  cleared: { chip: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: Check },
+  memorization: { chip: "bg-rose-100 text-rose-700 border-rose-200", icon: X },
+  link: { chip: "bg-amber-100 text-amber-800 border-amber-200", icon: Link2 },
+};
+
+/** First few Arabic words of an ayah for a compact preview. */
+function firstWords(text: string, count = 7): string {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const slice = words.slice(0, count).join(" ");
+  return words.length > count ? `${slice}…` : slice;
+}
+
+/**
+ * "Ayah by ayah" — lists every ayah on the homework's pages (grouped by
+ * page, collapsible) with its current status, last status date, weekly
+ * attempt count, a "last visited" highlight, and deep links into the
+ * single-ayah view and the Reader's practice mode.
+ *
+ * Ayah metadata (surah name, number-in-surah, Arabic text) is resolved
+ * client-side from the bundled AyahIndex; the server only sends status /
+ * counts keyed by global ayah number.
+ */
+function AyahByAyahSection({ homeworkId }: { homeworkId: number }) {
+  const { t } = useTranslation();
+  const { data, isLoading } = useGetHomeworkAyahs(homeworkId, {
+    query: { enabled: !!homeworkId, queryKey: getGetHomeworkAyahsQueryKey(homeworkId) },
+  });
+
+  const [index, setIndex] = useState<Map<number, AyahIndexEntry> | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [expandedPages, setExpandedPages] = useState<Set<number>>(new Set());
+  const [autoExpanded, setAutoExpanded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAyahIndex()
+      .then((entries) => {
+        if (cancelled) return;
+        const map = new Map<number, AyahIndexEntry>();
+        for (const e of entries) map.set(e.globalAyahNumber, e);
+        setIndex(map);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Group ayahs by page, preserving the server's ordering.
+  const pages = useMemo(() => {
+    const groups = new Map<number, typeof data.ayahs>();
+    for (const a of data?.ayahs ?? []) {
+      let arr = groups.get(a.pageNumber);
+      if (!arr) { arr = []; groups.set(a.pageNumber, arr); }
+      arr.push(a);
+    }
+    return Array.from(groups.entries()).sort((x, y) => x[0] - y[0]);
+  }, [data]);
+
+  // Auto-expand the page containing the last-visited ayah (once).
+  const lastVisited = data?.lastVisitedGlobalAyahNumber ?? null;
+  useEffect(() => {
+    if (autoExpanded || lastVisited == null || !data) return;
+    const entry = data.ayahs.find(a => a.globalAyahNumber === lastVisited);
+    if (entry) {
+      setExpandedPages(prev => new Set(prev).add(entry.pageNumber));
+      setAutoExpanded(true);
+    }
+  }, [autoExpanded, lastVisited, data]);
+
+  const togglePage = (page: number) => {
+    setExpandedPages(prev => {
+      const next = new Set(prev);
+      if (next.has(page)) next.delete(page); else next.add(page);
+      return next;
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">{t("homework.ayahByAyah.title")}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!data || data.ayahs.length === 0) {
+    return (
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">{t("homework.ayahByAyah.title")}</CardTitle>
+        </CardHeader>
+        <CardContent className="py-6 text-center">
+          <p className="text-sm text-muted-foreground">{t("homework.ayahByAyah.empty")}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const isDone = (statuses: string[]) =>
+    statuses.includes("cleared") && !statuses.includes("memorization") && !statuses.includes("link");
+
+  return (
+    <Card className="border shadow-sm" data-testid="hw-ayah-by-ayah">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{t("homework.ayahByAyah.title")}</CardTitle>
+        <p className="text-sm text-muted-foreground">{t("homework.ayahByAyah.subtitle")}</p>
+      </CardHeader>
+      <CardContent className="p-0">
+        {loadError && (
+          <p className="px-4 py-3 text-sm text-amber-600">{t("homework.ayahByAyah.loadError")}</p>
+        )}
+        <div className="divide-y">
+          {pages.map(([page, ayahs]) => {
+            const open = expandedPages.has(page);
+            const doneCount = ayahs.filter(a => isDone(a.statuses)).length;
+            return (
+              <div key={page}>
+                <button
+                  type="button"
+                  onClick={() => togglePage(page)}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-start hover:bg-muted/50 transition-colors"
+                  aria-expanded={open}
+                  data-testid={`hw-ayah-page-toggle-${page}`}
+                >
+                  <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "" : "-rotate-90 rtl:rotate-90"}`} />
+                  <span className="font-medium text-sm">{t("homework.ayahByAyah.pageLabel", { page })}</span>
+                  <Badge variant="outline" className="text-xs py-0 ms-auto inline-flex items-center gap-1">
+                    <Check className="w-3 h-3 text-emerald-600" />
+                    {t("homework.ayahByAyah.pageProgress", { done: doneCount, total: ayahs.length })}
+                  </Badge>
+                </button>
+                {open && (
+                  <div className="divide-y bg-muted/20">
+                    {ayahs.map(a => {
+                      const entry = index?.get(a.globalAyahNumber);
+                      const isLast = a.globalAyahNumber === lastVisited;
+                      return (
+                        <div
+                          key={a.globalAyahNumber}
+                          className={`px-4 py-3 ps-8 ${isLast ? "bg-primary/5 border-s-2 border-s-primary" : ""}`}
+                          data-testid={`hw-ayah-row-${a.globalAyahNumber}`}
+                        >
+                          <div className="flex items-start gap-2 flex-wrap">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-medium">
+                                  {entry
+                                    ? `${entry.surahName} · ${t("homework.ayahByAyah.ayahLabel", { n: entry.numberInSurah })}`
+                                    : t("homework.ayahByAyah.ayahLabel", { n: a.globalAyahNumber })}
+                                </span>
+                                {isLast && (
+                                  <Badge variant="outline" className="text-[10px] py-0 border-primary/40 text-primary">
+                                    {t("homework.ayahByAyah.lastVisited")}
+                                  </Badge>
+                                )}
+                              </div>
+                              {entry && (
+                                <p className="mt-1 text-base leading-relaxed text-foreground/90 font-arabic" dir="rtl">
+                                  {firstWords(entry.text)}
+                                </p>
+                              )}
+                              <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                                {a.statuses.length === 0 ? (
+                                  <span className="text-xs text-muted-foreground">{t("homework.ayahByAyah.notStarted")}</span>
+                                ) : (
+                                  a.statuses.map(s => {
+                                    const style = AYAH_STATUS_STYLE[s as keyof typeof AYAH_STATUS_STYLE];
+                                    if (!style) return null;
+                                    const Icon = style.icon;
+                                    return (
+                                      <span
+                                        key={s}
+                                        className={`text-xs inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${style.chip}`}
+                                      >
+                                        <Icon className="w-3 h-3" />
+                                        {t(`homework.ayahByAyah.status${s.charAt(0).toUpperCase()}${s.slice(1)}` as const)}
+                                      </span>
+                                    );
+                                  })
+                                )}
+                                {a.lastStatusAt && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {t("homework.ayahByAyah.lastStatusAt", { date: new Date(a.lastStatusAt).toLocaleDateString() })}
+                                  </span>
+                                )}
+                                <span
+                                  className="text-xs text-muted-foreground"
+                                  title={t("homework.ayahByAyah.weekAttemptsTitle")}
+                                >
+                                  · {t("homework.ayahByAyah.weekAttempts", { count: a.weekAttemptCount })}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Link href={`/ayahs/${a.globalAyahNumber}`}>
+                                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" data-testid={`hw-ayah-open-${a.globalAyahNumber}`}>
+                                  <BookOpen className="w-3 h-3 me-1" />
+                                  {t("homework.ayahByAyah.openAyah")}
+                                </Button>
+                              </Link>
+                              <Link href={`/reader/${a.pageNumber}?practice=${a.globalAyahNumber}`}>
+                                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" data-testid={`hw-ayah-practice-${a.globalAyahNumber}`}>
+                                  <Play className="w-3 h-3 me-1" />
+                                  {t("homework.ayahByAyah.practice")}
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function HomeworkDetail() {

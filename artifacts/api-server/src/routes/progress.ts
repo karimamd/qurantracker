@@ -37,7 +37,7 @@
  * Logging: use `req.log` (pino-http child) — never `console.log`.
  */
 import { Router, type IRouter } from "express";
-import { db, pageProgressTable, recitationLogTable, homeworkItemsTable, homeworkSessionsTable, ayahMistakesTable } from "@workspace/db";
+import { db, pageProgressTable, recitationLogTable, homeworkItemsTable, homeworkSessionsTable, ayahMistakesTable, ayahAttemptsTable } from "@workspace/db";
 import { eq, and, inArray, desc, sql, gte } from "drizzle-orm";
 import {
   GetProgressOverviewResponse,
@@ -684,6 +684,20 @@ router.post("/progress/pages/:pageNumber/active-mistakes", async (req, res): Pro
         .set({ recitedAt: new Date() })
         .where(eq(ayahMistakesTable.id, existing[0].id));
     }
+
+    // Log this as an attempt regardless of whether the active mark was
+    // freshly inserted or re-affirmed. ayah_attempts is append-only and
+    // powers the "times attempted this week" counter (the homework
+    // ayah-by-ayah view). Toggling a mark OFF is a DELETE and is not an
+    // attempt, so it is intentionally not logged here.
+    await tx.insert(ayahAttemptsTable).values({
+      userId,
+      pageNumber,
+      surahNumber: body.data.surahNumber,
+      ayahNumberInSurah: body.data.ayahNumberInSurah,
+      globalAyahNumber: body.data.globalAyahNumber,
+      mistakeType: body.data.mistakeType,
+    });
   });
 
   // Now that the user's mark is committed, give the auto-assign feature

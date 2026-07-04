@@ -584,6 +584,38 @@ export interface UpdateHomeworkItemBody {
   quality?: UpdateHomeworkItemBodyQuality;
 }
 
+export type HomeworkAyahEntryStatusesItem =
+  (typeof HomeworkAyahEntryStatusesItem)[keyof typeof HomeworkAyahEntryStatusesItem];
+
+export const HomeworkAyahEntryStatusesItem = {
+  cleared: "cleared",
+  memorization: "memorization",
+  link: "link",
+} as const;
+
+export interface HomeworkAyahEntry {
+  globalAyahNumber: number;
+  pageNumber: number;
+  /** Active marks on this ayah. Empty when the ayah has no active status. */
+  statuses: HomeworkAyahEntryStatusesItem[];
+  /**
+   * Timestamp of the most recent active status on this ayah, or null when none.
+   * @nullable
+   */
+  lastStatusAt: string | null;
+  /** Number of times a status was set on this ayah in the trailing 7 days. */
+  weekAttemptCount: number;
+}
+
+export interface HomeworkAyahList {
+  /**
+   * Global ayah number of the most recently marked ayah in this homework, or null.
+   * @nullable
+   */
+  lastVisitedGlobalAyahNumber: number | null;
+  ayahs: HomeworkAyahEntry[];
+}
+
 export type ActivityEntryQuality =
   (typeof ActivityEntryQuality)[keyof typeof ActivityEntryQuality];
 
