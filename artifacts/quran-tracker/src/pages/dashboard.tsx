@@ -501,7 +501,7 @@ function DuePagesSection() {
 
 function DailyChartSection() {
   const { t } = useTranslation();
-  const { data: chartData, isLoading } = useGetDailyChart({ days: 30 });
+  const { data: chartData, isLoading } = useGetDailyChart({ days: 14 });
 
   if (isLoading) {
     return <Skeleton className="h-52 rounded-xl" />;
@@ -607,7 +607,7 @@ function makeSparseLabel(totalPoints: number, fill: string) {
 
 function ProgressChartSection() {
   const { t } = useTranslation();
-  const { data: chartData, isLoading } = useGetProgressChart({ days: 30 });
+  const { data: chartData, isLoading } = useGetProgressChart({ days: 14 });
 
   if (isLoading) {
     return (
@@ -619,20 +619,28 @@ function ProgressChartSection() {
     );
   }
 
+  let cumMemo = 0, cumLink = 0, cumCleared = 0;
   const formatted = chartData?.map(d => {
     const total = d.overdueCount + d.onTrackCount;
+    cumMemo += d.dailyMemoMistakes;
+    cumLink += d.dailyLinkMistakes;
+    cumCleared += d.dailyClearedAyahs;
     return {
       ...d,
       label: format(parseISO(d.date), "MMM d"),
       shortLabel: format(parseISO(d.date), "d"),
       overduePercent: total > 0 ? Math.round((d.overdueCount / total) * 100) : 0,
       onTrackPercent: total > 0 ? Math.round((d.onTrackCount / total) * 100) : 0,
+      cumMemoMistakes: cumMemo,
+      cumLinkMistakes: cumLink,
+      cumClearedAyahs: cumCleared,
     };
   }) ?? [];
 
+  const today = formatted.length > 0 ? formatted[formatted.length - 1] : null;
   const hasStatus = formatted.some(d => d.overdueCount > 0 || d.onTrackCount > 0);
   const hasActivity = formatted.some(d => d.dailyRecitedCount > 0 || d.dailyTelawaCount > 0);
-  const hasMistakesData = formatted.some(d => d.dailyMemoMistakes > 0 || d.dailyLinkMistakes > 0 || d.dailyClearedAyahs > 0);
+  const hasMistakesData = formatted.some(d => d.cumMemoMistakes > 0 || d.cumLinkMistakes > 0 || d.cumClearedAyahs > 0);
 
   const sharedXAxis = (
     <XAxis
@@ -640,7 +648,7 @@ function ProgressChartSection() {
       tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
       axisLine={false}
       tickLine={false}
-      interval={4}
+      interval={1}
     />
   );
 
@@ -656,8 +664,22 @@ function ProgressChartSection() {
         <CardHeader className="pb-1 pt-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-semibold">{t("dashboard.statusChart")}</CardTitle>
-            <span className="text-xs text-muted-foreground">{t("dashboard.last30Days")}</span>
+            <span className="text-xs text-muted-foreground">{t("dashboard.last14Days")}</span>
           </div>
+          {today && (
+            <div className="flex items-center gap-3 flex-wrap mt-0.5">
+              <span className="flex items-center gap-1 text-[11px]">
+                <span className="w-2 h-2 rounded-full shrink-0 bg-rose-500" />
+                <span className="text-muted-foreground">{t("dashboard.overduePages")}:</span>
+                <span className="font-semibold ms-1">{today.overdueCount}</span>
+              </span>
+              <span className="flex items-center gap-1 text-[11px]">
+                <span className="w-2 h-2 rounded-full shrink-0 bg-emerald-500" />
+                <span className="text-muted-foreground">{t("dashboard.onTrackPages")}:</span>
+                <span className="font-semibold ms-1">{today.onTrackCount}</span>
+              </span>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="pt-1 pb-3 px-2">
           {!hasStatus ? (
@@ -774,8 +796,22 @@ function ProgressChartSection() {
         <CardHeader className="pb-1 pt-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-semibold">{t("dashboard.dailyActivityChart")}</CardTitle>
-            <span className="text-xs text-muted-foreground">{t("dashboard.last30Days")}</span>
+            <span className="text-xs text-muted-foreground">{t("dashboard.last14Days")}</span>
           </div>
+          {today && (
+            <div className="flex items-center gap-3 flex-wrap mt-0.5">
+              <span className="flex items-center gap-1 text-[11px]">
+                <span className="w-2 h-2 rounded-full shrink-0 bg-primary" />
+                <span className="text-muted-foreground">{t("dashboard.pagesRecitedToday")}:</span>
+                <span className="font-semibold ms-1">{today.dailyRecitedCount}</span>
+              </span>
+              <span className="flex items-center gap-1 text-[11px]">
+                <span className="w-2 h-2 rounded-full shrink-0 bg-violet-500" />
+                <span className="text-muted-foreground">{t("dashboard.telawaPages")}:</span>
+                <span className="font-semibold ms-1">{today.dailyTelawaCount}</span>
+              </span>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="pt-1 pb-3 px-2">
           {!hasActivity ? (
@@ -784,7 +820,7 @@ function ProgressChartSection() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={170}>
-              <LineChart data={formatted} margin={{ top: 6, right: 12, left: -8, bottom: 0 }}>
+              <LineChart data={formatted} margin={{ top: 6, right: 40, left: -8, bottom: 0 }}>
                 {sharedGrid}
                 {sharedXAxis}
                 <YAxis
@@ -847,13 +883,32 @@ function ProgressChartSection() {
         </CardContent>
       </Card>
 
-      {/* Chart 3: Daily Ayah Mistakes — memorization + link + cleared */}
+      {/* Chart 3: Cumulative Ayah Mistakes — memorization + link + cleared */}
       <Card className="border shadow-sm">
         <CardHeader className="pb-1 pt-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-semibold">{t("dashboard.mistakesChart")}</CardTitle>
-            <span className="text-xs text-muted-foreground">{t("dashboard.last30Days")}</span>
+            <span className="text-xs text-muted-foreground">{t("dashboard.last14Days")}</span>
           </div>
+          {today && (
+            <div className="flex items-center gap-3 flex-wrap mt-0.5">
+              <span className="flex items-center gap-1 text-[11px]">
+                <span className="w-2 h-2 rounded-full shrink-0 bg-rose-500" />
+                <span className="text-muted-foreground">{t("dashboard.memoMistakes")}:</span>
+                <span className="font-semibold ms-1">{today.cumMemoMistakes}</span>
+              </span>
+              <span className="flex items-center gap-1 text-[11px]">
+                <span className="w-2 h-2 rounded-full shrink-0 bg-violet-500" />
+                <span className="text-muted-foreground">{t("dashboard.linkMistakes")}:</span>
+                <span className="font-semibold ms-1">{today.cumLinkMistakes}</span>
+              </span>
+              <span className="flex items-center gap-1 text-[11px]">
+                <span className="w-2 h-2 rounded-full shrink-0 bg-emerald-500" />
+                <span className="text-muted-foreground">{t("dashboard.clearedAyahs")}:</span>
+                <span className="font-semibold ms-1">{today.cumClearedAyahs}</span>
+              </span>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="pt-1 pb-3 px-2">
           {!hasMistakesData ? (
@@ -862,7 +917,7 @@ function ProgressChartSection() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={170}>
-              <LineChart data={formatted} margin={{ top: 6, right: 12, left: -8, bottom: 0 }}>
+              <LineChart data={formatted} margin={{ top: 6, right: 40, left: -8, bottom: 0 }}>
                 {sharedGrid}
                 {sharedXAxis}
                 <YAxis
@@ -882,17 +937,17 @@ function ProgressChartSection() {
                         <div className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
                           <span className="text-muted-foreground">{t("dashboard.memoMistakes")}:</span>
-                          <span className="font-semibold ms-auto ps-2">{d.dailyMemoMistakes}</span>
+                          <span className="font-semibold ms-auto ps-2">{d.cumMemoMistakes}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-violet-500 shrink-0" />
                           <span className="text-muted-foreground">{t("dashboard.linkMistakes")}:</span>
-                          <span className="font-semibold ms-auto ps-2">{d.dailyLinkMistakes}</span>
+                          <span className="font-semibold ms-auto ps-2">{d.cumLinkMistakes}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
                           <span className="text-muted-foreground">{t("dashboard.clearedAyahs")}:</span>
-                          <span className="font-semibold ms-auto ps-2">{d.dailyClearedAyahs}</span>
+                          <span className="font-semibold ms-auto ps-2">{d.cumClearedAyahs}</span>
                         </div>
                       </div>
                     );
@@ -908,7 +963,7 @@ function ProgressChartSection() {
                 />
                 <Line
                   type="monotone"
-                  dataKey="dailyMemoMistakes"
+                  dataKey="cumMemoMistakes"
                   name={t("dashboard.memoMistakes")}
                   stroke="#f43f5e"
                   strokeWidth={2.5}
@@ -917,7 +972,7 @@ function ProgressChartSection() {
                 />
                 <Line
                   type="monotone"
-                  dataKey="dailyLinkMistakes"
+                  dataKey="cumLinkMistakes"
                   name={t("dashboard.linkMistakes")}
                   stroke="#8b5cf6"
                   strokeWidth={2.5}
@@ -926,7 +981,7 @@ function ProgressChartSection() {
                 />
                 <Line
                   type="monotone"
-                  dataKey="dailyClearedAyahs"
+                  dataKey="cumClearedAyahs"
                   name={t("dashboard.clearedAyahs")}
                   stroke="#10b981"
                   strokeWidth={2.5}
