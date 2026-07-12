@@ -531,6 +531,19 @@ export default function AyahDetail() {
               </Button>
             </div>
 
+            <div className="flex justify-center">
+              <Button
+                size="lg"
+                variant={isLink ? "default" : "outline"}
+                onClick={() => setMark("link")}
+                className={isLink ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
+                data-testid="ayah-detail-mark-link"
+              >
+                <Link2 className="w-4 h-4 me-1.5" />
+                {t("ayahDetail.markLink")}
+              </Button>
+            </div>
+
             <div
               className="rounded-xl bg-card border px-6 py-10 text-right"
               dir="rtl"
@@ -655,16 +668,6 @@ export default function AyahDetail() {
             </Collapsible>
 
             <div className="flex items-center justify-center gap-2 flex-wrap" data-testid="ayah-detail-actions">
-              <Button
-                size="lg"
-                variant={isLink ? "default" : "outline"}
-                onClick={() => setMark("link")}
-                className={isLink ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
-                data-testid="ayah-detail-mark-link"
-              >
-                <Link2 className="w-4 h-4 me-1.5" />
-                {t("ayahDetail.markLink")}
-              </Button>
               <Button
                 size="lg"
                 variant={isClear ? "default" : "outline"}
