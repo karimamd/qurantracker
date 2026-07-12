@@ -1487,12 +1487,24 @@ components:
         dailyTelawaCount:
           type: integer
           description: Number of distinct Telawa pages read on this day
+        dailyMemoMistakes:
+          type: integer
+          description: Number of distinct ayahs that had a memorization mistake marked on this day
+        dailyLinkMistakes:
+          type: integer
+          description: Number of distinct ayahs that had a link mistake marked on this day
+        dailyClearedAyahs:
+          type: integer
+          description: Number of distinct ayahs that were marked as cleared (correct) on this day
       required:
         - date
         - overdueCount
         - onTrackCount
         - dailyRecitedCount
         - dailyTelawaCount
+        - dailyMemoMistakes
+        - dailyLinkMistakes
+        - dailyClearedAyahs
 
     SurahDetail:
       type: object

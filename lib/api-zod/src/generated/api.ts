@@ -1172,6 +1172,21 @@ export const GetProgressChartResponseItem = zod.object({
   dailyTelawaCount: zod
     .number()
     .describe("Number of distinct Telawa pages read on this day"),
+  dailyMemoMistakes: zod
+    .number()
+    .describe(
+      "Number of distinct ayahs that had a memorization mistake marked on this day",
+    ),
+  dailyLinkMistakes: zod
+    .number()
+    .describe(
+      "Number of distinct ayahs that had a link mistake marked on this day",
+    ),
+  dailyClearedAyahs: zod
+    .number()
+    .describe(
+      "Number of distinct ayahs that were marked as cleared (correct) on this day",
+    ),
 });
 export const GetProgressChartResponse = zod.array(GetProgressChartResponseItem);
 

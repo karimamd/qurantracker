@@ -1111,9 +1111,29 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
     .where(eq(telawaLogTable.userId, userId))
     .orderBy(telawaLogTable.readAt);
 
-  const result: { date: string; overdueCount: number; onTrackCount: number; dailyRecitedCount: number; dailyTelawaCount: number }[] = [];
+  const allAttempts = await db
+    .select({
+      globalAyahNumber: ayahAttemptsTable.globalAyahNumber,
+      mistakeType: ayahAttemptsTable.mistakeType,
+      attemptedAt: ayahAttemptsTable.attemptedAt,
+    })
+    .from(ayahAttemptsTable)
+    .where(eq(ayahAttemptsTable.userId, userId))
+    .orderBy(ayahAttemptsTable.attemptedAt);
+
+  const result: {
+    date: string;
+    overdueCount: number;
+    onTrackCount: number;
+    dailyRecitedCount: number;
+    dailyTelawaCount: number;
+    dailyMemoMistakes: number;
+    dailyLinkMistakes: number;
+    dailyClearedAyahs: number;
+  }[] = [];
   let logIdx = 0;
   let telawaIdx = 0;
+  let attemptsIdx = 0;
   const latestPerPage = new Map<number, { quality: string; recitedAt: Date }>();
 
   for (let i = numDays - 1; i >= 0; i--) {
@@ -1145,6 +1165,19 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
     const dailyRecitedCount = recitedToday.size;
     const dailyTelawaCount = telawaToday.size;
 
+    const memoToday = new Set<number>();
+    const linkToday = new Set<number>();
+    const clearedToday = new Set<number>();
+    while (attemptsIdx < allAttempts.length && allAttempts[attemptsIdx].attemptedAt <= endOfDay) {
+      const a = allAttempts[attemptsIdx];
+      if (a.attemptedAt >= startOfDay) {
+        if (a.mistakeType === "memorization") memoToday.add(a.globalAyahNumber);
+        else if (a.mistakeType === "link") linkToday.add(a.globalAyahNumber);
+        else if (a.mistakeType === "cleared") clearedToday.add(a.globalAyahNumber);
+      }
+      attemptsIdx++;
+    }
+
     let overdueCount = 0;
     let onTrackCount = 0;
     for (const [pageNumber, info] of latestPerPage) {
@@ -1166,6 +1199,9 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
       onTrackCount,
       dailyRecitedCount,
       dailyTelawaCount,
+      dailyMemoMistakes: memoToday.size,
+      dailyLinkMistakes: linkToday.size,
+      dailyClearedAyahs: clearedToday.size,
     });
   }
 

@@ -456,6 +456,12 @@ export interface ProgressChartEntry {
   dailyRecitedCount: number;
   /** Number of distinct Telawa pages read on this day */
   dailyTelawaCount: number;
+  /** Number of distinct ayahs that had a memorization mistake marked on this day */
+  dailyMemoMistakes: number;
+  /** Number of distinct ayahs that had a link mistake marked on this day */
+  dailyLinkMistakes: number;
+  /** Number of distinct ayahs that were marked as cleared (correct) on this day */
+  dailyClearedAyahs: number;
 }
 
 export interface SurahDetail {

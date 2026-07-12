@@ -614,6 +614,7 @@ function ProgressChartSection() {
       <div className="space-y-4">
         <Skeleton className="h-64 rounded-xl" />
         <Skeleton className="h-52 rounded-xl" />
+        <Skeleton className="h-52 rounded-xl" />
       </div>
     );
   }
@@ -631,6 +632,7 @@ function ProgressChartSection() {
 
   const hasStatus = formatted.some(d => d.overdueCount > 0 || d.onTrackCount > 0);
   const hasActivity = formatted.some(d => d.dailyRecitedCount > 0 || d.dailyTelawaCount > 0);
+  const hasMistakesData = formatted.some(d => d.dailyMemoMistakes > 0 || d.dailyLinkMistakes > 0 || d.dailyClearedAyahs > 0);
 
   const sharedXAxis = (
     <XAxis
@@ -837,6 +839,98 @@ function ProgressChartSection() {
                   stroke="#8b5cf6"
                   strokeWidth={2.5}
                   dot={{ r: 2.5, fill: "#8b5cf6", strokeWidth: 0 }}
+                  activeDot={{ r: 4.5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Chart 3: Daily Ayah Mistakes — memorization + link + cleared */}
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-1 pt-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold">{t("dashboard.mistakesChart")}</CardTitle>
+            <span className="text-xs text-muted-foreground">{t("dashboard.last30Days")}</span>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-1 pb-3 px-2">
+          {!hasMistakesData ? (
+            <div className="h-36 flex items-center justify-center">
+              <p className="text-sm text-muted-foreground">{t("dashboard.noProgressYet")}</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={170}>
+              <LineChart data={formatted} margin={{ top: 6, right: 12, left: -8, bottom: 0 }}>
+                {sharedGrid}
+                {sharedXAxis}
+                <YAxis
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                  width={28}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0].payload as (typeof formatted)[0];
+                    return (
+                      <div className="bg-background border rounded-lg shadow-md px-3 py-2 text-xs space-y-1">
+                        <div className="font-semibold text-sm mb-1">{d.label}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
+                          <span className="text-muted-foreground">{t("dashboard.memoMistakes")}:</span>
+                          <span className="font-semibold ms-auto ps-2">{d.dailyMemoMistakes}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-violet-500 shrink-0" />
+                          <span className="text-muted-foreground">{t("dashboard.linkMistakes")}:</span>
+                          <span className="font-semibold ms-auto ps-2">{d.dailyLinkMistakes}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                          <span className="text-muted-foreground">{t("dashboard.clearedAyahs")}:</span>
+                          <span className="font-semibold ms-auto ps-2">{d.dailyClearedAyahs}</span>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: 11, paddingTop: 6 }}
+                  iconType="circle"
+                  iconSize={9}
+                  formatter={(value) => (
+                    <span style={{ color: "hsl(var(--foreground))", fontSize: 11 }}>{value}</span>
+                  )}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="dailyMemoMistakes"
+                  name={t("dashboard.memoMistakes")}
+                  stroke="#f43f5e"
+                  strokeWidth={2.5}
+                  dot={{ r: 2.5, fill: "#f43f5e", strokeWidth: 0 }}
+                  activeDot={{ r: 4.5 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="dailyLinkMistakes"
+                  name={t("dashboard.linkMistakes")}
+                  stroke="#8b5cf6"
+                  strokeWidth={2.5}
+                  dot={{ r: 2.5, fill: "#8b5cf6", strokeWidth: 0 }}
+                  activeDot={{ r: 4.5 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="dailyClearedAyahs"
+                  name={t("dashboard.clearedAyahs")}
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  dot={{ r: 2.5, fill: "#10b981", strokeWidth: 0 }}
                   activeDot={{ r: 4.5 }}
                 />
               </LineChart>
