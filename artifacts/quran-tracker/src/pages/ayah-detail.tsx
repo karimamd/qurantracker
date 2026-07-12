@@ -657,6 +657,16 @@ export default function AyahDetail() {
             <div className="flex items-center justify-center gap-2 flex-wrap" data-testid="ayah-detail-actions">
               <Button
                 size="lg"
+                variant={isLink ? "default" : "outline"}
+                onClick={() => setMark("link")}
+                className={isLink ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
+                data-testid="ayah-detail-mark-link"
+              >
+                <Link2 className="w-4 h-4 me-1.5" />
+                {t("ayahDetail.markLink")}
+              </Button>
+              <Button
+                size="lg"
                 variant={isClear ? "default" : "outline"}
                 onClick={() => setMark("cleared")}
                 className={isClear ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
@@ -674,16 +684,6 @@ export default function AyahDetail() {
               >
                 <X className="w-4 h-4 me-1.5" />
                 {t("ayahDetail.markMistake")}
-              </Button>
-              <Button
-                size="lg"
-                variant={isLink ? "default" : "outline"}
-                onClick={() => setMark("link")}
-                className={isLink ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
-                data-testid="ayah-detail-mark-link"
-              >
-                <Link2 className="w-4 h-4 me-1.5" />
-                {t("ayahDetail.markLink")}
               </Button>
             </div>
 
