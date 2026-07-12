@@ -2,4 +2,5 @@
 - [mockup-sandbox typecheck/workflow fails](mockup-sandbox-broken.md) — pre-existing missing-vite failure unrelated to feature work; do not chase it.
 - [React Query optimistic-update race in Reader](rq-optimistic-race.md) — pendingMarkCount ref guards seed effect from overwriting optimistic state during rapid mark mutations.
 - [Auto-assign coverage needs same-day recitedAt](auto-assign-coverage-recitedat.md) — stale per-ayah marks silently block page auto-assign; re-affirming a mark must refresh recitedAt (client always POSTs, server updates recitedAt on existing row).
+- [Arabic per-word gloss dataset](arabic-wbw-dataset.md) — no complete Arabic-to-Arabic WBW dataset exists; Ayah view falls back to English gloss in all langs. Search already done, don't redo.
 - [/active-mistakes broad invalidation](active-mistakes-invalidation.md) — any screen posting per-ayah marks must mirror the Reader's broad invalidation (server auto-assigns page recitation as a side effect).
