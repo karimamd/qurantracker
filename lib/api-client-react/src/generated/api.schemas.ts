@@ -452,8 +452,10 @@ export interface ProgressChartEntry {
   overdueCount: number;
   /** Number of in-scope pages that have been recited and are not yet overdue at the end of this day */
   onTrackCount: number;
-  /** Number of distinct pages recited on this day */
+  /** Number of distinct memorization pages recited on this day */
   dailyRecitedCount: number;
+  /** Number of distinct Telawa pages read on this day */
+  dailyTelawaCount: number;
 }
 
 export interface SurahDetail {

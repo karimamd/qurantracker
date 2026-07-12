@@ -1483,12 +1483,16 @@ components:
           description: Number of in-scope pages that have been recited and are not yet overdue at the end of this day
         dailyRecitedCount:
           type: integer
-          description: Number of distinct pages recited on this day
+          description: Number of distinct memorization pages recited on this day
+        dailyTelawaCount:
+          type: integer
+          description: Number of distinct Telawa pages read on this day
       required:
         - date
         - overdueCount
         - onTrackCount
         - dailyRecitedCount
+        - dailyTelawaCount
 
     SurahDetail:
       type: object

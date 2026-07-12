@@ -37,7 +37,7 @@
  * Logging: use `req.log` (pino-http child) — never `console.log`.
  */
 import { Router, type IRouter } from "express";
-import { db, pageProgressTable, recitationLogTable, homeworkItemsTable, homeworkSessionsTable, ayahMistakesTable, ayahAttemptsTable } from "@workspace/db";
+import { db, pageProgressTable, recitationLogTable, homeworkItemsTable, homeworkSessionsTable, ayahMistakesTable, ayahAttemptsTable, telawaLogTable } from "@workspace/db";
 import { eq, and, inArray, desc, sql, gte } from "drizzle-orm";
 import {
   GetProgressOverviewResponse,
@@ -1105,8 +1105,15 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
     .where(eq(recitationLogTable.userId, userId))
     .orderBy(recitationLogTable.recitedAt);
 
-  const result: { date: string; overdueCount: number; onTrackCount: number; dailyRecitedCount: number }[] = [];
+  const allTelawaLogs = await db
+    .select({ pageNumber: telawaLogTable.pageNumber, readAt: telawaLogTable.readAt })
+    .from(telawaLogTable)
+    .where(eq(telawaLogTable.userId, userId))
+    .orderBy(telawaLogTable.readAt);
+
+  const result: { date: string; overdueCount: number; onTrackCount: number; dailyRecitedCount: number; dailyTelawaCount: number }[] = [];
   let logIdx = 0;
+  let telawaIdx = 0;
   const latestPerPage = new Map<number, { quality: string; recitedAt: Date }>();
 
   for (let i = numDays - 1; i >= 0; i--) {
@@ -1127,7 +1134,16 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
       logIdx++;
     }
 
+    const telawaToday = new Set<number>();
+    while (telawaIdx < allTelawaLogs.length && allTelawaLogs[telawaIdx].readAt <= endOfDay) {
+      if (allTelawaLogs[telawaIdx].readAt >= startOfDay) {
+        telawaToday.add(allTelawaLogs[telawaIdx].pageNumber);
+      }
+      telawaIdx++;
+    }
+
     const dailyRecitedCount = recitedToday.size;
+    const dailyTelawaCount = telawaToday.size;
 
     let overdueCount = 0;
     let onTrackCount = 0;
@@ -1149,6 +1165,7 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
       overdueCount,
       onTrackCount,
       dailyRecitedCount,
+      dailyTelawaCount,
     });
   }
 

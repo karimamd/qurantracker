@@ -1168,7 +1168,10 @@ export const GetProgressChartResponseItem = zod.object({
     ),
   dailyRecitedCount: zod
     .number()
-    .describe("Number of distinct pages recited on this day"),
+    .describe("Number of distinct memorization pages recited on this day"),
+  dailyTelawaCount: zod
+    .number()
+    .describe("Number of distinct Telawa pages read on this day"),
 });
 export const GetProgressChartResponse = zod.array(GetProgressChartResponseItem);
 
