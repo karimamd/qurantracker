@@ -1161,6 +1161,11 @@ export const GetProgressChartResponseItem = zod.object({
     .describe(
       "Number of in-scope pages that were overdue at the end of this day",
     ),
+  onTrackCount: zod
+    .number()
+    .describe(
+      "Number of in-scope pages that have been recited and are not yet overdue at the end of this day",
+    ),
   dailyRecitedCount: zod
     .number()
     .describe("Number of distinct pages recited on this day"),

@@ -613,13 +613,42 @@ function ProgressChartSection() {
     return <Skeleton className="h-64 rounded-xl" />;
   }
 
-  const formatted = chartData?.map(d => ({
-    ...d,
-    label: format(parseISO(d.date), "MMM d"),
-    shortLabel: format(parseISO(d.date), "d"),
-  })) ?? [];
+  const formatted = chartData?.map(d => {
+    const total = d.overdueCount + d.onTrackCount;
+    return {
+      ...d,
+      label: format(parseISO(d.date), "MMM d"),
+      shortLabel: format(parseISO(d.date), "d"),
+      overduePercent: total > 0 ? Math.round((d.overdueCount / total) * 100) : 0,
+      onTrackPercent: total > 0 ? Math.round((d.onTrackCount / total) * 100) : 0,
+    };
+  }) ?? [];
 
-  const hasAny = formatted.some(d => d.overdueCount > 0 || d.dailyRecitedCount > 0);
+  const hasAny = formatted.some(
+    d => d.overdueCount > 0 || d.onTrackCount > 0 || d.dailyRecitedCount > 0,
+  );
+
+  const xAxis = (
+    <XAxis
+      dataKey="shortLabel"
+      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+      axisLine={false}
+      tickLine={false}
+      interval={4}
+    />
+  );
+
+  const recitedYAxis = (
+    <YAxis
+      yAxisId="right"
+      orientation="right"
+      tick={{ fontSize: 10, fill: "hsl(var(--primary))" }}
+      axisLine={false}
+      tickLine={false}
+      allowDecimals={false}
+      width={28}
+    />
+  );
 
   return (
     <Card className="border shadow-sm" data-testid="progress-chart-section">
@@ -629,99 +658,184 @@ function ProgressChartSection() {
           <span className="text-xs text-muted-foreground">{t("dashboard.last30Days")}</span>
         </div>
       </CardHeader>
-      <CardContent className="pt-2 pb-4 px-2">
+      <CardContent className="pt-0 pb-4 px-2">
         {!hasAny ? (
           <div className="h-44 flex items-center justify-center">
             <p className="text-sm text-muted-foreground">{t("dashboard.noProgressYet")}</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={formatted} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-              <XAxis
-                dataKey="shortLabel"
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={false}
-                tickLine={false}
-                interval={4}
-              />
-              <YAxis
-                yAxisId="left"
-                tick={{ fontSize: 10, fill: "#f43f5e" }}
-                axisLine={false}
-                tickLine={false}
-                allowDecimals={false}
-                width={32}
-              />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                tick={{ fontSize: 10, fill: "hsl(var(--primary))" }}
-                axisLine={false}
-                tickLine={false}
-                allowDecimals={false}
-                width={32}
-              />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0].payload as (typeof formatted)[0];
-                  return (
-                    <div className="bg-background border rounded-lg shadow-md px-3 py-2 text-xs space-y-0.5">
-                      <div className="font-medium text-sm mb-1">{d.label}</div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-rose-500" />
-                        <span className="text-muted-foreground">{t("status.overdue")}:</span>
-                        <span className="font-medium">{d.overdueCount}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-primary" />
-                        <span className="text-muted-foreground">{t("dashboard.pagesRecitedToday")}:</span>
-                        <span className="font-medium">{d.dailyRecitedCount}</span>
-                      </div>
-                    </div>
-                  );
-                }}
-              />
-              <Legend
-                wrapperStyle={{ fontSize: 11, paddingTop: 4 }}
-                iconType="circle"
-                iconSize={8}
-              />
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="overdueCount"
-                name={t("dashboard.overduePages")}
-                stroke="#f43f5e"
-                strokeWidth={2}
-                dot={{ r: 2.5, fill: "#f43f5e", strokeWidth: 0 }}
-                activeDot={{ r: 4 }}
-              >
-                <LabelList
-                  dataKey="overdueCount"
-                  position="top"
-                  content={makeSparseLabel(formatted.length, "#be123c")}
-                />
-              </Line>
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="dailyRecitedCount"
-                name={t("dashboard.pagesRecitedToday")}
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                dot={{ r: 2.5, fill: "hsl(var(--primary))", strokeWidth: 0 }}
-                activeDot={{ r: 4 }}
-              >
-                <LabelList
-                  dataKey="dailyRecitedCount"
-                  position="bottom"
-                  content={makeSparseLabel(formatted.length, "hsl(var(--primary))")}
-                />
-              </Line>
-            </LineChart>
-          </ResponsiveContainer>
+          <Tabs defaultValue="counts">
+            <TabsList className="mb-2 h-7 text-xs">
+              <TabsTrigger value="counts" className="text-xs px-3 h-6">{t("dashboard.countsTab")}</TabsTrigger>
+              <TabsTrigger value="percentages" className="text-xs px-3 h-6">{t("dashboard.percentagesTab")}</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="counts" className="mt-0">
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={formatted} margin={{ top: 8, right: 28, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  {xAxis}
+                  <YAxis
+                    yAxisId="left"
+                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                    width={32}
+                  />
+                  {recitedYAxis}
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0].payload as (typeof formatted)[0];
+                      return (
+                        <div className="bg-background border rounded-lg shadow-md px-3 py-2 text-xs space-y-0.5">
+                          <div className="font-medium text-sm mb-1">{d.label}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-rose-500" />
+                            <span className="text-muted-foreground">{t("dashboard.overduePages")}:</span>
+                            <span className="font-medium">{d.overdueCount}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span className="text-muted-foreground">{t("dashboard.onTrackPages")}:</span>
+                            <span className="font-medium">{d.onTrackCount}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-primary" />
+                            <span className="text-muted-foreground">{t("dashboard.pagesRecitedToday")}:</span>
+                            <span className="font-medium">{d.dailyRecitedCount}</span>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} iconType="circle" iconSize={8} />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="overdueCount"
+                    name={t("dashboard.overduePages")}
+                    stroke="#f43f5e"
+                    strokeWidth={2}
+                    dot={{ r: 2.5, fill: "#f43f5e", strokeWidth: 0 }}
+                    activeDot={{ r: 4 }}
+                  >
+                    <LabelList
+                      dataKey="overdueCount"
+                      position="top"
+                      content={makeSparseLabel(formatted.length, "#be123c")}
+                    />
+                  </Line>
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="onTrackCount"
+                    name={t("dashboard.onTrackPages")}
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    dot={{ r: 2.5, fill: "#10b981", strokeWidth: 0 }}
+                    activeDot={{ r: 4 }}
+                  >
+                    <LabelList
+                      dataKey="onTrackCount"
+                      position="bottom"
+                      content={makeSparseLabel(formatted.length, "#059669")}
+                    />
+                  </Line>
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="dailyRecitedCount"
+                    name={t("dashboard.pagesRecitedToday")}
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    strokeDasharray="4 2"
+                    dot={{ r: 2.5, fill: "hsl(var(--primary))", strokeWidth: 0 }}
+                    activeDot={{ r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </TabsContent>
+
+            <TabsContent value="percentages" className="mt-0">
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={formatted} margin={{ top: 8, right: 28, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  {xAxis}
+                  <YAxis
+                    yAxisId="left"
+                    domain={[0, 100]}
+                    tickFormatter={(v: number) => `${v}%`}
+                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                    width={36}
+                  />
+                  {recitedYAxis}
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0].payload as (typeof formatted)[0];
+                      return (
+                        <div className="bg-background border rounded-lg shadow-md px-3 py-2 text-xs space-y-0.5">
+                          <div className="font-medium text-sm mb-1">{d.label}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-rose-500" />
+                            <span className="text-muted-foreground">{t("dashboard.overduePercent")}:</span>
+                            <span className="font-medium">{d.overduePercent}%</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span className="text-muted-foreground">{t("dashboard.onTrackPercent")}:</span>
+                            <span className="font-medium">{d.onTrackPercent}%</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-primary" />
+                            <span className="text-muted-foreground">{t("dashboard.pagesRecitedToday")}:</span>
+                            <span className="font-medium">{d.dailyRecitedCount}</span>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} iconType="circle" iconSize={8} />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="overduePercent"
+                    name={t("dashboard.overduePercent")}
+                    stroke="#f43f5e"
+                    strokeWidth={2}
+                    dot={{ r: 2.5, fill: "#f43f5e", strokeWidth: 0 }}
+                    activeDot={{ r: 4 }}
+                  />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="onTrackPercent"
+                    name={t("dashboard.onTrackPercent")}
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    dot={{ r: 2.5, fill: "#10b981", strokeWidth: 0 }}
+                    activeDot={{ r: 4 }}
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="dailyRecitedCount"
+                    name={t("dashboard.pagesRecitedToday")}
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    strokeDasharray="4 2"
+                    dot={{ r: 2.5, fill: "hsl(var(--primary))", strokeWidth: 0 }}
+                    activeDot={{ r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </TabsContent>
+          </Tabs>
         )}
       </CardContent>
     </Card>

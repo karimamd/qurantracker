@@ -1105,7 +1105,7 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
     .where(eq(recitationLogTable.userId, userId))
     .orderBy(recitationLogTable.recitedAt);
 
-  const result: { date: string; overdueCount: number; dailyRecitedCount: number }[] = [];
+  const result: { date: string; overdueCount: number; onTrackCount: number; dailyRecitedCount: number }[] = [];
   let logIdx = 0;
   const latestPerPage = new Map<number, { quality: string; recitedAt: Date }>();
 
@@ -1130,10 +1130,15 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
     const dailyRecitedCount = recitedToday.size;
 
     let overdueCount = 0;
+    let onTrackCount = 0;
     for (const [pageNumber, info] of latestPerPage) {
       if (!inScopeSet.has(pageNumber)) continue;
       const dueDate = calculateDueDate(info.recitedAt, info.quality, settings);
-      if (dueDate <= endOfDay) overdueCount++;
+      if (dueDate <= endOfDay) {
+        overdueCount++;
+      } else {
+        onTrackCount++;
+      }
     }
 
     const yyyy = day.getFullYear();
@@ -1142,6 +1147,7 @@ router.get("/progress/progress-chart", async (req, res): Promise<void> => {
     result.push({
       date: `${yyyy}-${mm}-${dd}`,
       overdueCount,
+      onTrackCount,
       dailyRecitedCount,
     });
   }
