@@ -42,6 +42,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { QualityBadge } from "@/components/quality-badge";
 import { Progress } from "@/components/ui/progress";
 import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight, ChevronDown, Undo2, Repeat } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -351,6 +352,75 @@ function DuePagesSection() {
 
   const isAr = i18n.language === "ar";
 
+  const renderPageRow = (page: typeof allPages[number]) => {
+    const isOverdue = page.urgency === "overdue";
+    const daysLabel = page.daysUntilDue !== null
+      ? isOverdue
+        ? t("dashboard.daysOverdue", { count: Math.abs(page.daysUntilDue) })
+        : t("dashboard.dueInDays", { count: page.daysUntilDue })
+      : null;
+    const q = page.quality as Quality | null;
+
+    return (
+      <div
+        key={page.pageNumber}
+        className={`px-4 py-3 ${isOverdue ? "bg-rose-50/50" : "bg-amber-50/30"}`}
+        data-testid={`due-page-${page.pageNumber}`}
+      >
+        <div className="flex items-center gap-3 min-w-0 mb-2">
+          <div className={`w-1.5 h-7 rounded-full shrink-0 ${isOverdue ? "bg-rose-500" : "bg-amber-400"}`} />
+          <div className="min-w-0 flex-1">
+            <PageLabel
+              pageNumber={page.pageNumber}
+              customName={page.customName}
+              prefixClassName="font-medium text-sm"
+              nameClassName="text-sm"
+            />
+            <div className="text-xs text-muted-foreground truncate">{page.surahs.split(",")[0]}</div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <QualityBadge quality={page.quality} effectiveQuality={page.effectiveQuality} qualityDowngrades={page.qualityDowngrades} />
+            {daysLabel && (
+              <span className={`text-xs font-medium ${isOverdue ? "text-rose-600" : "text-amber-600"}`}>
+                {daysLabel}
+              </span>
+            )}
+            <Link href={`/reader/${page.pageNumber}`}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                title={t("dashboard.openInReader")}
+                data-testid={`due-page-open-reader-${page.pageNumber}`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 ps-4">
+          {QUALITY_VALUES.map((value) => {
+            const isActive = q === value;
+            const style = qualityStyle[value];
+            return (
+              <button
+                key={value}
+                onClick={() => handleQuality(page.pageNumber, value)}
+                disabled={updatePage.isPending}
+                className={`text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
+                  isActive ? style.active : `border-border bg-background text-muted-foreground ${style.hover}`
+                }`}
+                data-testid={`due-page-quality-${page.pageNumber}-${value}`}
+              >
+                {t(`quality.${value}`)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Card className="border shadow-sm" data-testid="due-pages-section">
       <CardHeader className="pb-2">
@@ -360,123 +430,71 @@ function DuePagesSection() {
           <span className="ms-auto text-xs font-normal text-muted-foreground">{t("dashboard.pagesCount", { count: allPages.length })}</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
-        <div className="divide-y max-h-[32rem] overflow-y-auto">
-          {surahGroups.map(({ surah, pages }) => {
-            const isExpanded = expandedSurahs.has(surah.number);
-            const overdueCount = pages.filter(p => p.urgency === "overdue").length;
-            const dueSoonCount = pages.filter(p => p.urgency === "due_soon").length;
-
-            return (
-              <div key={surah.number}>
-                {/* Surah group header (collapsible) */}
-                <button
-                  type="button"
-                  onClick={() => toggleSurah(surah.number)}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 bg-muted/40 hover:bg-muted/70 transition-colors text-start"
-                >
-                  {isExpanded
-                    ? <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-                    : <ChevronRight className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-                  }
-                  <span className="flex-1 min-w-0 flex items-baseline gap-1.5 truncate">
-                    <span className="font-medium text-sm" dir="rtl">{surah.arabic}</span>
-                    {!isAr && (
-                      <span className="text-xs text-muted-foreground truncate">{surah.number}. {surah.name}</span>
-                    )}
-                  </span>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {overdueCount > 0 && (
-                      <span className="text-xs font-medium text-rose-600 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.5 leading-none">
-                        {overdueCount}
-                      </span>
-                    )}
-                    {dueSoonCount > 0 && (
-                      <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">
-                        {dueSoonCount}
-                      </span>
-                    )}
-                  </div>
-                </button>
-
-                {/* Expanded page rows */}
-                {isExpanded && (
-                  <div className="divide-y">
-                    {pages.map(page => {
-                      const isOverdue = page.urgency === "overdue";
-                      const daysLabel = page.daysUntilDue !== null
-                        ? isOverdue
-                          ? t("dashboard.daysOverdue", { count: Math.abs(page.daysUntilDue) })
-                          : t("dashboard.dueInDays", { count: page.daysUntilDue })
-                        : null;
-                      const q = page.quality as Quality | null;
-
-                      return (
-                        <div
-                          key={page.pageNumber}
-                          className={`px-4 py-3 ${isOverdue ? "bg-rose-50/50" : "bg-amber-50/30"}`}
-                          data-testid={`due-page-${page.pageNumber}`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0 mb-2">
-                            <div className={`w-1.5 h-7 rounded-full shrink-0 ${isOverdue ? "bg-rose-500" : "bg-amber-400"}`} />
-                            <div className="min-w-0 flex-1">
-                              <PageLabel
-                                pageNumber={page.pageNumber}
-                                customName={page.customName}
-                                prefixClassName="font-medium text-sm"
-                                nameClassName="text-sm"
-                              />
-                              <div className="text-xs text-muted-foreground truncate">{page.surahs.split(",")[0]}</div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <QualityBadge quality={page.quality} effectiveQuality={page.effectiveQuality} qualityDowngrades={page.qualityDowngrades} />
-                              {daysLabel && (
-                                <span className={`text-xs font-medium ${isOverdue ? "text-rose-600" : "text-amber-600"}`}>
-                                  {daysLabel}
-                                </span>
-                              )}
-                              <Link href={`/reader/${page.pageNumber}`}>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                  title={t("dashboard.openInReader")}
-                                  data-testid={`due-page-open-reader-${page.pageNumber}`}
-                                >
-                                  <BookOpen className="w-3.5 h-3.5" />
-                                </Button>
-                              </Link>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 ps-4">
-                            {QUALITY_VALUES.map((value) => {
-                              const isActive = q === value;
-                              const style = qualityStyle[value];
-                              return (
-                                <button
-                                  key={value}
-                                  onClick={() => handleQuality(page.pageNumber, value)}
-                                  disabled={updatePage.isPending}
-                                  className={`text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
-                                    isActive ? style.active : `border-border bg-background text-muted-foreground ${style.hover}`
-                                  }`}
-                                  data-testid={`due-page-quality-${page.pageNumber}-${value}`}
-                                >
-                                  {t(`quality.${value}`)}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      <Tabs defaultValue="surah">
+        <div className="px-4 pb-2">
+          <TabsList className="h-8">
+            <TabsTrigger value="surah" className="text-xs px-3 h-6">{t("dashboard.viewBySurah")}</TabsTrigger>
+            <TabsTrigger value="all" className="text-xs px-3 h-6">{t("dashboard.viewAllPages")}</TabsTrigger>
+          </TabsList>
         </div>
-      </CardContent>
+        <CardContent className="p-0">
+          {/* Primary view: pages grouped by surah (collapsible) */}
+          <TabsContent value="surah" className="mt-0">
+            <div className="divide-y max-h-[32rem] overflow-y-auto">
+              {surahGroups.map(({ surah, pages }) => {
+                const isExpanded = expandedSurahs.has(surah.number);
+                const overdueCount = pages.filter(p => p.urgency === "overdue").length;
+                const dueSoonCount = pages.filter(p => p.urgency === "due_soon").length;
+
+                return (
+                  <div key={surah.number}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSurah(surah.number)}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 bg-muted/40 hover:bg-muted/70 transition-colors text-start"
+                    >
+                      {isExpanded
+                        ? <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                        : <ChevronRight className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                      }
+                      <span className="flex-1 min-w-0 flex items-baseline gap-1.5 truncate">
+                        <span className="font-medium text-sm" dir="rtl">{surah.arabic}</span>
+                        {!isAr && (
+                          <span className="text-xs text-muted-foreground truncate">{surah.number}. {surah.name}</span>
+                        )}
+                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {overdueCount > 0 && (
+                          <span className="text-xs font-medium text-rose-600 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.5 leading-none">
+                            {overdueCount}
+                          </span>
+                        )}
+                        {dueSoonCount > 0 && (
+                          <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">
+                            {dueSoonCount}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                    {isExpanded && (
+                      <div className="divide-y">
+                        {pages.map(page => renderPageRow(page))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </TabsContent>
+
+          {/* Secondary view: flat list, most overdue first */}
+          <TabsContent value="all" className="mt-0">
+            <div className="divide-y max-h-[32rem] overflow-y-auto">
+              {allPages.map(page => renderPageRow(page))}
+            </div>
+          </TabsContent>
+        </CardContent>
+      </Tabs>
     </Card>
   );
 }
