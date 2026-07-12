@@ -61,7 +61,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { QualityBadge, StatusBadge } from "@/components/quality-badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat, Sparkles, Minus, Plus, Eraser, BookOpen, ClipboardList, ArrowUpRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat, Sparkles, Minus, Plus, Eraser, BookOpen, ClipboardList, ArrowUpRight } from "lucide-react";
 import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
 import { getDefaultPageName } from "@/lib/page-names";
@@ -127,6 +127,11 @@ export default function Reader() {
   // In "Show all" view, clicking an ayah selects it and reveals its mark
   // buttons (clear / mistake / link). Click again to deselect.
   const [selectedAyahShowAll, setSelectedAyahShowAll] = useState<number | null>(null);
+  // Collapsible preview of the previous page's last ayah, shown above the
+  // page text so the user can check whether the FIRST ayah of this page has
+  // a linking mistake — otherwise, in hide mode, there's no on-screen
+  // reference for what comes immediately before it.
+  const [showPrevPageAyah, setShowPrevPageAyah] = useState(false);
 
   const { data: allPages, isLoading: pagesLoading } = useListPageProgress({});
   const updatePage = useUpdatePageProgress();
@@ -199,6 +204,16 @@ export default function Reader() {
   } = usePageAyahs(pageNumber);
   const prefetchPageAyahs = usePrefetchPageAyahs();
 
+  // Previous page's ayahs — used only to surface its LAST ayah as a linking
+  // reference above the current page. Disabled on page 1 (no previous page).
+  const { data: prevPageAyahs } = usePageAyahs(pageNumber - 1, {
+    enabled: pageNumber > 1,
+  });
+  const prevPageLastAyah = useMemo(() => {
+    if (!prevPageAyahs || prevPageAyahs.length === 0) return null;
+    return prevPageAyahs[prevPageAyahs.length - 1];
+  }, [prevPageAyahs]);
+
   // URL -> state sync (only when user navigates browser back/forward)
   useEffect(() => {
     if (!params.page) return;
@@ -214,6 +229,7 @@ export default function Reader() {
   useEffect(() => {
     setRevealedCount(0);
     setSelectedAyahShowAll(null);
+    setShowPrevPageAyah(false);
   }, [pageNumber]);
 
   // Clear show-all selection when entering hide mode (where buttons are
@@ -1151,6 +1167,43 @@ export default function Reader() {
             </div>
           ) : (
             <div dir="rtl" lang="ar" className="space-y-6" data-testid="reader-page-text">
+              {/* Previous page's last ayah — a collapsible linking reference so
+                  the user can judge whether THIS page's first ayah has a linking
+                  mistake even when all ayahs are hidden. */}
+              {prevPageLastAyah && (
+                <div dir="ltr" data-testid="reader-prev-ayah-section">
+                  <button
+                    type="button"
+                    onClick={() => setShowPrevPageAyah(v => !v)}
+                    className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-stone-400/50 rounded-md py-1.5 px-3 transition-colors bg-[#ead9b5]/40 dark:bg-stone-800/30"
+                    aria-expanded={showPrevPageAyah}
+                    data-testid="btn-toggle-prev-ayah"
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                    {showPrevPageAyah ? t("reader.prevPageAyahHide") : t("reader.prevPageAyahShow")}
+                    {showPrevPageAyah ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </button>
+                  {showPrevPageAyah && (
+                    <div
+                      className="mt-2 rounded-md border border-stone-400/40 bg-[#ead9b5]/50 dark:bg-stone-800/40 px-4 py-3"
+                      data-testid="reader-prev-ayah-content"
+                    >
+                      <div className="text-[11px] text-muted-foreground mb-1.5" dir="ltr">
+                        {t("reader.prevPageAyahLabel", { page: pageNumber - 1 })}
+                      </div>
+                      <p className="font-serif leading-loose text-justify" dir="rtl" lang="ar" style={ayahTextStyle}>
+                        {prevPageLastAyah.text}
+                        <span className="inline-flex items-center justify-center mx-1 w-7 h-7 text-xs rounded-full border border-stone-400/60 text-stone-600 dark:text-stone-300 align-middle font-sans">
+                          {arabicNumeral(prevPageLastAyah.numberInSurah)}
+                        </span>
+                      </p>
+                      <div className="text-[11px] text-muted-foreground mt-1.5" dir="ltr">
+                        {t("reader.surahLine", { name: prevPageLastAyah.surah.englishName, n: prevPageLastAyah.surah.number })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {/* When every ayah is hidden (revealedCount === 0) there is no frontier
                   ayah yet, so the inline button inside the map never renders.
                   Show a standalone button at the top of the page content instead. */}

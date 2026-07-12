@@ -838,7 +838,10 @@
     "ariaMarkMistake": "Mark ayah {{n}} as mistake",
     "mistakesTooltip": "Saved automatically — tap the tick on an ayah to reverse it",
     "linkTooltip": "Saved automatically — tap the link button again to reverse it",
-    "markFailed": "Couldn't save mark — please try again"
+    "markFailed": "Couldn't save mark — please try again",
+    "prevPageAyahShow": "Show previous page's last ayah",
+    "prevPageAyahHide": "Hide previous page's last ayah",
+    "prevPageAyahLabel": "Last ayah of page {{page}}"
   },
   "mistakes": {
     "title": "Mistakes",
