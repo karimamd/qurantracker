@@ -619,12 +619,11 @@ function ProgressChartSection() {
     );
   }
 
-  let cumMemo = 0, cumLink = 0, cumCleared = 0;
+  let cumMemo = 0, cumLink = 0;
   const formatted = chartData?.map(d => {
     const total = d.overdueCount + d.onTrackCount;
     cumMemo += d.dailyMemoMistakes;
     cumLink += d.dailyLinkMistakes;
-    cumCleared += d.dailyClearedAyahs;
     return {
       ...d,
       label: format(parseISO(d.date), "MMM d"),
@@ -633,14 +632,13 @@ function ProgressChartSection() {
       onTrackPercent: total > 0 ? Math.round((d.onTrackCount / total) * 100) : 0,
       cumMemoMistakes: cumMemo,
       cumLinkMistakes: cumLink,
-      cumClearedAyahs: cumCleared,
     };
   }) ?? [];
 
   const today = formatted.length > 0 ? formatted[formatted.length - 1] : null;
   const hasStatus = formatted.some(d => d.overdueCount > 0 || d.onTrackCount > 0);
   const hasActivity = formatted.some(d => d.dailyRecitedCount > 0 || d.dailyTelawaCount > 0);
-  const hasMistakesData = formatted.some(d => d.cumMemoMistakes > 0 || d.cumLinkMistakes > 0 || d.cumClearedAyahs > 0);
+  const hasMistakesData = formatted.some(d => d.cumMemoMistakes > 0 || d.cumLinkMistakes > 0);
 
   const sharedXAxis = (
     <XAxis
@@ -845,7 +843,7 @@ function ProgressChartSection() {
         </CardContent>
       </Card>
 
-      {/* Chart 3: Cumulative Ayah Mistakes — memorization + link + cleared */}
+      {/* Chart 3: Cumulative Ayah Mistakes — memorization + link */}
       <Card className="border shadow-sm">
         <CardHeader className="pb-1 pt-4">
           <div className="flex items-center justify-between">
@@ -863,11 +861,6 @@ function ProgressChartSection() {
                 <span className="w-2 h-2 rounded-full shrink-0 bg-violet-500" />
                 <span className="text-muted-foreground">{t("dashboard.linkMistakes")}:</span>
                 <span className="font-semibold ms-1">{today.cumLinkMistakes}</span>
-              </span>
-              <span className="flex items-center gap-1 text-[11px]">
-                <span className="w-2 h-2 rounded-full shrink-0 bg-emerald-500" />
-                <span className="text-muted-foreground">{t("dashboard.clearedAyahs")}:</span>
-                <span className="font-semibold ms-1">{today.cumClearedAyahs}</span>
               </span>
             </div>
           )}
@@ -906,11 +899,6 @@ function ProgressChartSection() {
                           <span className="text-muted-foreground">{t("dashboard.linkMistakes")}:</span>
                           <span className="font-semibold ms-auto ps-2">{d.cumLinkMistakes}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                          <span className="text-muted-foreground">{t("dashboard.clearedAyahs")}:</span>
-                          <span className="font-semibold ms-auto ps-2">{d.cumClearedAyahs}</span>
-                        </div>
                       </div>
                     );
                   }}
@@ -939,15 +927,6 @@ function ProgressChartSection() {
                   stroke="#8b5cf6"
                   strokeWidth={2.5}
                   dot={{ r: 2.5, fill: "#8b5cf6", strokeWidth: 0 }}
-                  activeDot={{ r: 4.5 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="cumClearedAyahs"
-                  name={t("dashboard.clearedAyahs")}
-                  stroke="#10b981"
-                  strokeWidth={2.5}
-                  dot={{ r: 2.5, fill: "#10b981", strokeWidth: 0 }}
                   activeDot={{ r: 4.5 }}
                 />
               </LineChart>
