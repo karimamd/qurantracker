@@ -687,30 +687,18 @@ function ProgressChartSection() {
               <p className="text-sm text-muted-foreground">{t("dashboard.noProgressYet")}</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={210}>
+            <ResponsiveContainer width="100%" height={170}>
               <LineChart data={formatted} margin={{ top: 6, right: 40, left: -8, bottom: 0 }}>
                 {sharedGrid}
                 {sharedXAxis}
-                {/* Left axis: page counts */}
                 <YAxis
-                  yAxisId="count"
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                  allowDecimals={false}
-                  width={34}
-                />
-                {/* Right axis: percentages 0-100% */}
-                <YAxis
-                  yAxisId="pct"
-                  orientation="right"
                   domain={[0, 100]}
                   tickFormatter={(v: number) => `${v}%`}
                   tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false}
                   tickLine={false}
                   allowDecimals={false}
-                  width={38}
+                  width={28}
                 />
                 <Tooltip
                   content={({ active, payload }) => {
@@ -722,12 +710,12 @@ function ProgressChartSection() {
                         <div className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
                           <span className="text-muted-foreground">{t("dashboard.overduePages")}:</span>
-                          <span className="font-semibold ms-auto ps-2">{d.overdueCount} <span className="text-muted-foreground font-normal">({d.overduePercent}%)</span></span>
+                          <span className="font-semibold ms-auto ps-2">{d.overduePercent}%</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
                           <span className="text-muted-foreground">{t("dashboard.onTrackPages")}:</span>
-                          <span className="font-semibold ms-auto ps-2">{d.onTrackCount} <span className="text-muted-foreground font-normal">({d.onTrackPercent}%)</span></span>
+                          <span className="font-semibold ms-auto ps-2">{d.onTrackPercent}%</span>
                         </div>
                       </div>
                     );
@@ -737,53 +725,27 @@ function ProgressChartSection() {
                   wrapperStyle={{ fontSize: 11, paddingTop: 6 }}
                   iconType="circle"
                   iconSize={9}
-                  formatter={(value, entry) => (
+                  formatter={(value) => (
                     <span style={{ color: "hsl(var(--foreground))", fontSize: 11 }}>{value}</span>
                   )}
                 />
-                {/* Solid lines = counts (left axis) */}
                 <Line
-                  yAxisId="count"
-                  type="monotone"
-                  dataKey="overdueCount"
-                  name={`${t("dashboard.overduePages")} ${t("dashboard.countsSuffix")}`}
-                  stroke="#f43f5e"
-                  strokeWidth={2.5}
-                  dot={{ r: 2, fill: "#f43f5e", strokeWidth: 0 }}
-                  activeDot={{ r: 4.5 }}
-                />
-                <Line
-                  yAxisId="count"
-                  type="monotone"
-                  dataKey="onTrackCount"
-                  name={`${t("dashboard.onTrackPages")} ${t("dashboard.countsSuffix")}`}
-                  stroke="#10b981"
-                  strokeWidth={2.5}
-                  dot={{ r: 2, fill: "#10b981", strokeWidth: 0 }}
-                  activeDot={{ r: 4.5 }}
-                />
-                {/* Dashed lines = percentages (right axis) */}
-                <Line
-                  yAxisId="pct"
                   type="monotone"
                   dataKey="overduePercent"
-                  name={`${t("dashboard.overduePages")} ${t("dashboard.percentSuffix")}`}
-                  stroke="#fda4af"
-                  strokeWidth={1.5}
-                  strokeDasharray="5 3"
-                  dot={false}
-                  activeDot={{ r: 3.5 }}
+                  name={t("dashboard.overduePages")}
+                  stroke="#f43f5e"
+                  strokeWidth={2.5}
+                  dot={{ r: 2.5, fill: "#f43f5e", strokeWidth: 0 }}
+                  activeDot={{ r: 4.5 }}
                 />
                 <Line
-                  yAxisId="pct"
                   type="monotone"
                   dataKey="onTrackPercent"
-                  name={`${t("dashboard.onTrackPages")} ${t("dashboard.percentSuffix")}`}
-                  stroke="#6ee7b7"
-                  strokeWidth={1.5}
-                  strokeDasharray="5 3"
-                  dot={false}
-                  activeDot={{ r: 3.5 }}
+                  name={t("dashboard.onTrackPages")}
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  dot={{ r: 2.5, fill: "#10b981", strokeWidth: 0 }}
+                  activeDot={{ r: 4.5 }}
                 />
               </LineChart>
             </ResponsiveContainer>
