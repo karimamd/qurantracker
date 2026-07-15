@@ -456,7 +456,8 @@
     "wbwTitle": "Word by word",
     "wbwSubtitle": "Per-word Arabic with English gloss",
     "wbwLoading": "Loading word-by-word…",
-    "wbwUnavailable": "Word-by-word unavailable for this ayah right now."
+    "wbwUnavailable": "Word-by-word unavailable for this ayah right now.",
+    "savedAt": "Saved at {{time}}"
   },
   "telawa": {
     "title": "Telawa",

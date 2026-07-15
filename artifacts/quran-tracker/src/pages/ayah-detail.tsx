@@ -229,6 +229,7 @@ export default function AyahDetail() {
   // but never while a mark mutation is still in-flight (pendingMarkCount
   // guard, same pattern as the Reader) or a slow response would wipe a
   // newer optimistic state and make the button appear to "not respond".
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [localMarks, setLocalMarks] = useState<Set<Mark>>(new Set());
   const pendingMarkCount = useRef(0);
   // Ref mirror of localMarks so rapid taps read the CURRENT state instead of
@@ -248,6 +249,7 @@ export default function AyahDetail() {
     if (ayahChanged) {
       seededAyahRef.current = ayahNumber;
       pendingMarkCount.current = 0;
+      setLastSaved(null);
     } else if (pendingMarkCount.current > 0) {
       return;
     }
@@ -334,6 +336,7 @@ export default function AyahDetail() {
           onSuccess: (data) => {
             pendingMarkCount.current = Math.max(0, pendingMarkCount.current - 1);
             queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
+            setLastSaved(new Date());
             invalidateMistakes();
           },
           onError: (err) => {
@@ -361,6 +364,7 @@ export default function AyahDetail() {
         onSuccess: (data) => {
           pendingMarkCount.current = Math.max(0, pendingMarkCount.current - 1);
           queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
+          setLastSaved(new Date());
           invalidateMistakes();
         },
         onError: (err) => {
@@ -791,6 +795,17 @@ export default function AyahDetail() {
                 <ChevronRight className="w-4 h-4 ms-1 rtl:rotate-180" />
               </Button>
             </div>
+
+            {lastSaved && (
+              <p
+                className="text-center text-[11px] text-muted-foreground"
+                data-testid="ayah-detail-saved-at"
+              >
+                {t("ayahDetail.savedAt", {
+                  time: lastSaved.toLocaleTimeString(i18n.language, { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+                })}
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
