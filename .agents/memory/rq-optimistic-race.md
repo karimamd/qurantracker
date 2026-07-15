@@ -31,6 +31,13 @@ const pendingMarkCount = useRef(0);
 
 **Why not `isPending` on the mutation hook?** `useMutation`'s `isPending` reflects only the most-recent call on that hook instance. With rapid calls, it drops to `false` when the first call resolves, even if subsequent calls are still in-flight. A ref counter is reliable across all concurrent calls.
 
+## Companion rules (learned when porting the pattern to the Ayah detail screen)
+
+1. **Operation-scoped rollback, never full-snapshot rollback.** On mutation error, undo only that tap's delta against the *latest* local state. Restoring a full pre-tap snapshot lets an older failing request revert newer successful taps (lost update).
+2. **Read toggle decisions from a ref mirror, not the render closure.** Keep a `localMarksRef` updated in lockstep with the state; rapid taps within one render otherwise all see the same stale set and make wrong add/remove decisions.
+3. **Force re-seed on identity change.** When the screen navigates to a different ayah/page, reset `pendingMarkCount` to 0 and seed unconditionally — otherwise pending mutations from the previous item block seeding and its marks bleed onto the new one.
+
 ## Where this applies in the codebase
 
-`artifacts/quran-tracker/src/pages/reader.tsx` — `persistAdd`, `persistRemove`, and the seed `useEffect` (watches `activeMistakes`).
+- `artifacts/quran-tracker/src/pages/reader.tsx` — `persistAdd`, `persistRemove`, and the seed `useEffect` (watches `activeMistakes`).
+- `artifacts/quran-tracker/src/pages/ayah-detail.tsx` — `setMark`, `localMarksRef`, seed effect keyed by `globalAyahNumber`.

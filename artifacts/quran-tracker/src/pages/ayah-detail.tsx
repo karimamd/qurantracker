@@ -223,9 +223,40 @@ export default function AyahDetail() {
     return new Set(marks);
   }, [ayah, pageMistakesQuery.data]);
 
-  const isClear = activeMarkSet.has("cleared");
-  const isMemo = activeMarkSet.has("memorization");
-  const isLink = activeMarkSet.has("link");
+  // Optimistic local overlay of the marks. Button colors read from THIS set
+  // so a tap responds instantly instead of waiting for the server round-trip.
+  // Re-seeded from the server's authoritative list whenever it changes —
+  // but never while a mark mutation is still in-flight (pendingMarkCount
+  // guard, same pattern as the Reader) or a slow response would wipe a
+  // newer optimistic state and make the button appear to "not respond".
+  const [localMarks, setLocalMarks] = useState<Set<Mark>>(new Set());
+  const pendingMarkCount = useRef(0);
+  // Ref mirror of localMarks so rapid taps read the CURRENT state instead of
+  // a stale render closure, and rollbacks can be applied against the latest.
+  const localMarksRef = useRef<Set<Mark>>(new Set());
+  const applyLocalMarks = (next: Set<Mark>) => {
+    localMarksRef.current = next;
+    setLocalMarks(next);
+  };
+  // Track which ayah the local state belongs to: navigating to another ayah
+  // must always re-seed (and drop the pending guard) so marks from the
+  // previous ayah never bleed onto the new one while a mutation is in-flight.
+  const seededAyahRef = useRef<number | null>(null);
+  const ayahNumber = ayah?.globalAyahNumber ?? null;
+  useEffect(() => {
+    const ayahChanged = ayahNumber !== seededAyahRef.current;
+    if (ayahChanged) {
+      seededAyahRef.current = ayahNumber;
+      pendingMarkCount.current = 0;
+    } else if (pendingMarkCount.current > 0) {
+      return;
+    }
+    applyLocalMarks(activeMarkSet);
+  }, [activeMarkSet, ayahNumber]);
+
+  const isClear = localMarks.has("cleared");
+  const isMemo = localMarks.has("memorization");
+  const isLink = localMarks.has("link");
 
   // A per-ayah mark hits the same /active-mistakes endpoints the Reader
   // uses, and the server can auto-assign a page recitation as a side effect
@@ -256,23 +287,59 @@ export default function AyahDetail() {
   const setMark = (mark: Mark) => {
     if (!ayah) return;
     const targetPage = ayah.pageNumber;
+    // Cancel any in-flight GET for this page's active-mistakes list so a
+    // slow stale response can't overwrite the optimistic state below.
     queryClient.cancelQueries({ queryKey: getListActivePageMistakesQueryKey(targetPage) });
 
-    const isActive = activeMarkSet.has(mark);
+    // Read the latest state from the ref (not the render closure) so very
+    // fast repeated taps each make the correct toggle decision.
+    const current = localMarksRef.current;
+    const isActive = current.has(mark);
 
     // Toggle: tapping an active mark removes it; tapping an inactive mark adds it.
     // "cleared" and "memorization" are mutually exclusive (the server resolves
     // whichever one is opposite). "link" is fully independent of both.
+    // Apply the same rules optimistically so the button responds instantly.
+    const counterpart: Mark | null =
+      mark === "cleared" ? "memorization" : mark === "memorization" ? "cleared" : null;
+    const removedCounterpart = !isActive && counterpart !== null && current.has(counterpart);
+
+    const next = new Set(current);
+    if (isActive) {
+      next.delete(mark);
+    } else {
+      next.add(mark);
+      if (counterpart) next.delete(counterpart);
+    }
+    applyLocalMarks(next);
+
+    // Operation-scoped rollback: undo ONLY this tap's delta against the
+    // latest state, so a failing older request never reverts newer taps.
+    const rollback = () => {
+      const cur = new Set(localMarksRef.current);
+      if (isActive) {
+        cur.add(mark);
+      } else {
+        cur.delete(mark);
+        if (removedCounterpart && counterpart) cur.add(counterpart);
+      }
+      applyLocalMarks(cur);
+    };
+
+    pendingMarkCount.current++;
     if (isActive) {
       removeMistake.mutate(
         { pageNumber: targetPage, data: { globalAyahNumber: ayah.globalAyahNumber, mistakeType: mark } },
         {
           onSuccess: (data) => {
+            pendingMarkCount.current = Math.max(0, pendingMarkCount.current - 1);
             queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
             invalidateMistakes();
           },
           onError: (err) => {
+            pendingMarkCount.current = Math.max(0, pendingMarkCount.current - 1);
             if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
+            rollback();
             toast({ title: t("reader.markFailed"), variant: "destructive" });
           },
         },
@@ -292,11 +359,14 @@ export default function AyahDetail() {
       },
       {
         onSuccess: (data) => {
+          pendingMarkCount.current = Math.max(0, pendingMarkCount.current - 1);
           queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
           invalidateMistakes();
         },
         onError: (err) => {
+          pendingMarkCount.current = Math.max(0, pendingMarkCount.current - 1);
           if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
+          rollback();
           toast({ title: t("reader.markFailed"), variant: "destructive" });
         },
       },
