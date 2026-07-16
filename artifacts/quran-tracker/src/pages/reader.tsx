@@ -107,6 +107,12 @@ export default function Reader() {
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [search]);
   const practiceAppliedRef = useRef<string | null>(null);
+  // ?hide=1 — added by Dashboard / Homework links when hideReaderOnJump is on.
+  const hideOnJumpParam = useMemo(() => {
+    const sp = new URLSearchParams(search);
+    return sp.get("hide") === "1";
+  }, [search]);
+  const hideOnJumpAppliedRef = useRef(false);
   const LAST_PAGE_KEY = "qt_reader_last_page";
   const initialPage = clampPage(
     params.page
@@ -268,6 +274,16 @@ export default function Reader() {
     setLinkAyahs(l);
     setClearedAyahs(c);
   }, [activeMistakes]);
+
+  // Apply ?hide=1 — auto-enter hide-mode, revealing only the first ayah.
+  // No-op if ?practice=<n> is also present (that effect owns hide-mode then).
+  useEffect(() => {
+    if (!hideOnJumpParam || practiceTargetGlobal != null) return;
+    if (hideOnJumpAppliedRef.current) return;
+    hideOnJumpAppliedRef.current = true;
+    setHideMode(true);
+    setRevealedCount(1);
+  }, [hideOnJumpParam, practiceTargetGlobal]);
 
   // Apply ?practice=<globalAyahNumber> — auto-enter hide-mode at the target ayah and scroll to it.
   useEffect(() => {

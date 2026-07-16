@@ -49,4 +49,5 @@ export interface UpdateSettingsBody {
    */
   homeworkWeeklyReadGoal?: number;
   duePagesSectionCollapsed?: boolean;
+  hideReaderOnJump?: boolean;
 }

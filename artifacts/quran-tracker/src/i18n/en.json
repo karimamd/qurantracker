@@ -364,6 +364,11 @@
       "description": "When enabled, the surah groups on the Dashboard start collapsed. Tap a surah header to expand and review its pages. Disable to start with all groups expanded (original behavior).",
       "label": "Start collapsed by default"
     },
+    "hideReaderOnJump": {
+      "title": "Auto-hide in Reader",
+      "description": "When opening the Reader from Homework or Pages Requiring Attention, ayahs are hidden by default — reveal them one at a time as you recite.",
+      "label": "Hide ayahs when jumping to Reader"
+    },
     "homeworkReadGoal": {
       "label": "Homework weekly read goal",
       "description": "How many times to read or recite each active homework page per week. Either reading or reciting counts.",

@@ -81,6 +81,11 @@ export const settingsTable = pgTable("settings", {
   // When false, all groups start expanded (previous behavior). The user can
   // always toggle individual groups; this only sets the initial state on load.
   duePagesSectionCollapsed: boolean("due_pages_section_collapsed").notNull().default(true),
+  // When true (default), opening the Reader from the Dashboard "Pages
+  // Requiring Attention" section or from the Homework screen automatically
+  // enters hide/practice mode so the user must reveal each ayah one at a
+  // time rather than seeing the full page immediately.
+  hideReaderOnJump: boolean("hide_reader_on_jump").notNull().default(true),
 }, (table) => ({
   userIdUnique: uniqueIndex("settings_user_id_unique").on(table.userId),
 }));

@@ -64,6 +64,9 @@ export default function SettingsPage() {
   // Whether the "Pages Requiring Attention" surah groups on the Dashboard
   // start collapsed by default. Toggled instantly — no Save button needed.
   const [duePagesSectionCollapsed, setDuePagesSectionCollapsed] = useState(true);
+  // When true, the Reader auto-enters hide mode when opened from Dashboard
+  // due-pages or Homework. Toggled instantly — no Save button needed.
+  const [hideReaderOnJump, setHideReaderOnJump] = useState(true);
 
   useEffect(() => {
     if (settings) {
@@ -81,6 +84,7 @@ export default function SettingsPage() {
       setMistakesHardMax(String(settings.mistakesHardMax));
       setAutoExpireAyahMarks(settings.autoExpireAyahMarks);
       setDuePagesSectionCollapsed(settings.duePagesSectionCollapsed);
+      setHideReaderOnJump(settings.hideReaderOnJump);
       const lang = settings.language === "ar" ? "ar" : "en";
       setLanguageState(lang);
     }
@@ -128,6 +132,18 @@ export default function SettingsPage() {
       {
         onError: () => {
           setDuePagesSectionCollapsed(!next);
+        },
+      }
+    );
+  };
+
+  const handleToggleHideReaderOnJump = (next: boolean) => {
+    setHideReaderOnJump(next);
+    updateSettings.mutate(
+      { data: { hideReaderOnJump: next } },
+      {
+        onError: () => {
+          setHideReaderOnJump(!next);
         },
       }
     );
@@ -415,6 +431,24 @@ export default function SettingsPage() {
               onCheckedChange={handleToggleDuePagesSectionCollapsed}
               data-testid="switch-due-pages-section-collapsed"
               aria-label={t("settings.duePagesSectionCollapsed.label")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("settings.hideReaderOnJump.title")}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t("settings.hideReaderOnJump.description")}
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-3 p-3 rounded-lg border-s-4 border-l-violet-500 bg-muted/30" data-testid="setting-hide-reader-on-jump-toggle">
+            <div className="text-sm font-medium">{t("settings.hideReaderOnJump.label")}</div>
+            <Switch
+              checked={hideReaderOnJump}
+              onCheckedChange={handleToggleHideReaderOnJump}
+              data-testid="switch-hide-reader-on-jump"
+              aria-label={t("settings.hideReaderOnJump.label")}
             />
           </div>
 

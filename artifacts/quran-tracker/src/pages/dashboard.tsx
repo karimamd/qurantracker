@@ -385,7 +385,7 @@ function DuePagesSection() {
                 {daysLabel}
               </span>
             )}
-            <Link href={`/reader/${page.pageNumber}`}>
+            <Link href={`/reader/${page.pageNumber}${settings?.hideReaderOnJump !== false ? "?hide=1" : ""}`}>
               <Button
                 variant="ghost"
                 size="icon"

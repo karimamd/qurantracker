@@ -78,6 +78,8 @@ export interface Settings {
   homeworkWeeklyReadGoal: number;
   /** When true (default), surah groups in the "Pages Requiring Attention" dashboard section start collapsed. When false, they start expanded (legacy behavior). */
   duePagesSectionCollapsed: boolean;
+  /** When true (default), opening the Reader from the Dashboard due-pages section or from the Homework screen automatically enters hide/practice mode. */
+  hideReaderOnJump: boolean;
 }
 
 export type UpdateSettingsBodyLanguage =
@@ -148,6 +150,7 @@ export interface UpdateSettingsBody {
    */
   homeworkWeeklyReadGoal?: number;
   duePagesSectionCollapsed?: boolean;
+  hideReaderOnJump?: boolean;
 }
 
 export interface ProgressOverview {

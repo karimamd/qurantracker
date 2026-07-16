@@ -108,6 +108,11 @@ export const GetSettingsResponse = zod.object({
     .describe(
       'When true (default), surah groups in the \"Pages Requiring Attention\" dashboard section start collapsed. When false, they start expanded (legacy behavior).',
     ),
+  hideReaderOnJump: zod
+    .boolean()
+    .describe(
+      "When true (default), opening the Reader from the Dashboard due-pages section or from the Homework screen automatically enters hide\/practice mode.",
+    ),
 });
 
 /**
@@ -190,6 +195,7 @@ export const UpdateSettingsBody = zod.object({
     .max(updateSettingsBodyHomeworkWeeklyReadGoalMax)
     .optional(),
   duePagesSectionCollapsed: zod.boolean().optional(),
+  hideReaderOnJump: zod.boolean().optional(),
 });
 
 export const updateSettingsResponseBottomNavKeysMax = 5;
@@ -281,6 +287,11 @@ export const UpdateSettingsResponse = zod.object({
     .boolean()
     .describe(
       'When true (default), surah groups in the \"Pages Requiring Attention\" dashboard section start collapsed. When false, they start expanded (legacy behavior).',
+    ),
+  hideReaderOnJump: zod
+    .boolean()
+    .describe(
+      "When true (default), opening the Reader from the Dashboard due-pages section or from the Homework screen automatically enters hide\/practice mode.",
     ),
 });
 
