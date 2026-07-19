@@ -114,7 +114,10 @@ export async function maybeAutoAssignPageRecitation(
     // currently-active mark placed TODAY (bounded [dayStart, dayEnd) to
     // exclude future-dated rows from bad clocks or imports).
     const todayCoverageMarks = await db
-      .select({ globalAyahNumber: ayahMistakesTable.globalAyahNumber })
+      .select({
+        globalAyahNumber: ayahMistakesTable.globalAyahNumber,
+        recitedAt: ayahMistakesTable.recitedAt,
+      })
       .from(ayahMistakesTable)
       .where(
         and(
@@ -127,9 +130,19 @@ export async function maybeAutoAssignPageRecitation(
         ),
       );
 
-    const covered = new Set<number>(todayCoverageMarks.map((m) => m.globalAyahNumber));
+    // Per-ayah newest mark time today. Used both for coverage and to
+    // detect a genuinely fresh full pass over the page (see below).
+    const newestMarkByAyah = new Map<number, number>();
+    for (const m of todayCoverageMarks) {
+      const t = new Date(m.recitedAt).getTime();
+      const prev = newestMarkByAyah.get(m.globalAyahNumber);
+      if (prev === undefined || t > prev) newestMarkByAyah.set(m.globalAyahNumber, t);
+    }
+    let oldestNewestMark = Infinity;
     for (const g of ayahsOnPage) {
-      if (!covered.has(g)) return;
+      const t = newestMarkByAyah.get(g);
+      if (t === undefined) return; // not covered
+      if (t < oldestNewestMark) oldestNewestMark = t;
     }
 
     // Mistakes count: ALL currently-active memorization|link rows for
@@ -153,8 +166,18 @@ export async function maybeAutoAssignPageRecitation(
     // around without changing the page's overall verdict. Look at the
     // most recent recitation_log row TODAY for this page (bounded to
     // exclude future-dated rows).
+    //
+    // Exception — a fresh FULL pass counts even with the same quality:
+    // if EVERY ayah's newest mark is more recent than that recitation
+    // (oldestNewestMark > its recitedAt), the user has re-gone over the
+    // whole page since it was recorded, so record a new recitation.
+    // Toggling one or two marks leaves other ayahs' marks older than the
+    // recitation, so the duplicate guard still holds for that case.
     const [latestToday] = await db
-      .select({ quality: recitationLogTable.quality })
+      .select({
+        quality: recitationLogTable.quality,
+        recitedAt: recitationLogTable.recitedAt,
+      })
       .from(recitationLogTable)
       .where(
         and(
@@ -166,7 +189,9 @@ export async function maybeAutoAssignPageRecitation(
       )
       .orderBy(desc(recitationLogTable.recitedAt))
       .limit(1);
-    if (latestToday && latestToday.quality === quality) return;
+    const isFreshFullPass = (last: { recitedAt: Date | string }) =>
+      oldestNewestMark > new Date(last.recitedAt).getTime();
+    if (latestToday && latestToday.quality === quality && !isFreshFullPass(latestToday)) return;
 
     await ensurePageExists(userId, pageNumber);
 
@@ -184,7 +209,10 @@ export async function maybeAutoAssignPageRecitation(
       // Re-check inside the lock — somebody else may have just inserted
       // the same auto-assignment.
       const [latestUnderLock] = await tx
-        .select({ quality: recitationLogTable.quality })
+        .select({
+          quality: recitationLogTable.quality,
+          recitedAt: recitationLogTable.recitedAt,
+        })
         .from(recitationLogTable)
         .where(
           and(
@@ -196,7 +224,8 @@ export async function maybeAutoAssignPageRecitation(
         )
         .orderBy(desc(recitationLogTable.recitedAt))
         .limit(1);
-      if (latestUnderLock && latestUnderLock.quality === quality) return;
+      if (latestUnderLock && latestUnderLock.quality === quality && !isFreshFullPass(latestUnderLock))
+        return;
 
       await tx
         .update(pageProgressTable)

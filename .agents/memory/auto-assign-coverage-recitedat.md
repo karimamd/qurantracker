@@ -25,6 +25,15 @@ coverage on a revisited page would be to delete + re-add every mark.
 **Consequence:** there is no single-button "undo" for a mark. Removal is via
 "Clear all marks" (clear/mistake also swap to each other). Accept this tradeoff.
 
+**Fresh-full-pass rule:** the same-quality duplicate guard must NOT block a
+genuine re-recite. A new recitation_log row is inserted (even with today's same
+quality) when EVERY ayah's newest mark today is more recent than the latest
+recitation row today (`min over ayahs of newest-mark time > last recitedAt`).
+Toggling one or two marks leaves other ayahs' marks older, so it still no-ops.
+**Why:** users re-recite a page later the same day and expect the weekly count
+and last-recited timestamp to advance; the old "same quality today → skip"
+silently swallowed the second pass.
+
 **Diagnosis tip:** when "page status won't update" is reported, inspect
 `ayah_mistakes.recited_at` for that page in the PRODUCTION DB (published app uses a
 separate DB from dev). All marks dated to a prior day is the signature of this bug,

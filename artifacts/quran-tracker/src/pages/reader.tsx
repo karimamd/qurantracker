@@ -749,7 +749,7 @@ export default function Reader() {
 
   const currentQuality = (currentPage?.quality ?? null) as Quality | null;
   const lastRecitedLabel = currentPage?.lastRecited
-    ? format(new Date(currentPage.lastRecited), "MMM d, yyyy")
+    ? format(new Date(currentPage.lastRecited), "MMM d, yyyy · h:mm a")
     : null;
 
   // ─── Reader font size ──────────────────────────────────────────────
