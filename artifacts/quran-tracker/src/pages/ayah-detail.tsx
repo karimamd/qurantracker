@@ -26,6 +26,7 @@ import {
   useListActivePageMistakes,
   useAddActivePageMistake,
   useRemoveActivePageMistake,
+  useClearAllActivePageMistakes,
   getListActivePageMistakesQueryKey,
   getGetMistakesQueryKey,
   useGetTelawaToday,
@@ -62,6 +63,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Eraser,
   Languages,
   Link2,
   Minus,
@@ -211,6 +213,7 @@ export default function AyahDetail() {
   });
   const addMistake = useAddActivePageMistake();
   const removeMistake = useRemoveActivePageMistake();
+  const clearAllMistakes = useClearAllActivePageMistakes();
 
   // An ayah can now have up to two active marks simultaneously: one of
   // {cleared, memorization} (mutually exclusive) plus an independent "link"
@@ -284,6 +287,31 @@ export default function AyahDetail() {
     // Force a definitive refetch so an auto-assigned recitation surfaces
     // immediately rather than on the next focus/refetch.
     queryClient.refetchQueries({ queryKey: getListPageProgressQueryKey() });
+  };
+
+  const handleClearAll = () => {
+    if (!ayah) return;
+    const targetPage = ayah.pageNumber;
+    // Snapshot current local state for rollback on error.
+    const prevMarks = localMarksRef.current;
+    // Optimistically clear marks for this ayah immediately.
+    applyLocalMarks(new Set());
+    queryClient.cancelQueries({ queryKey: getListActivePageMistakesQueryKey(targetPage) });
+    clearAllMistakes.mutate(
+      { pageNumber: targetPage },
+      {
+        onSuccess: (data) => {
+          queryClient.setQueryData(getListActivePageMistakesQueryKey(targetPage), data);
+          invalidateMistakes();
+          toast({ title: t("reader.clearAllMarksDone", { page: targetPage }) });
+        },
+        onError: (err) => {
+          applyLocalMarks(prevMarks);
+          if (isOfflineQueued(err)) { toast({ title: t("offline.savedLocally") }); return; }
+          toast({ title: t("reader.clearAllMarksFailed"), variant: "destructive" });
+        },
+      },
+    );
   };
 
   const setMark = (mark: Mark) => {
@@ -767,29 +795,48 @@ export default function AyahDetail() {
               </Button>
             </div>
 
-            <div className="flex items-center justify-between gap-2 flex-wrap pt-2 border-t">
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearAll}
+                disabled={clearAllMistakes.isPending}
+                title={t("reader.clearAllMarksTitle")}
+                data-testid="ayah-detail-clear-all"
+                className="text-muted-foreground hover:text-destructive hover:border-destructive/40"
+              >
+                <Eraser className="w-3.5 h-3.5 me-1.5" />
+                {t("reader.clearAllMarks")}
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-2 border-t">
               <Button
                 variant="ghost"
+                size="sm"
                 onClick={goPrev}
                 disabled={target <= 1}
                 data-testid="ayah-detail-prev"
+                className="shrink-0"
               >
                 <ChevronLeft className="w-4 h-4 me-1 rtl:rotate-180" />
                 {t("ayahDetail.previous")}
               </Button>
               <Link
                 href={`/reader/${ayah.pageNumber}?practice=${ayah.globalAyahNumber}`}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border bg-background text-sm font-medium hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                className="min-w-0 inline-flex items-center gap-1.5 px-2 py-1.5 rounded-md border bg-background text-xs font-medium hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors truncate"
                 data-testid="ayah-detail-open-reader"
               >
-                <BookMarked className="w-4 h-4" />
-                {t("ayahDetail.openInReader", { page: ayah.pageNumber })}
+                <BookMarked className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t("ayahDetail.openInReader", { page: ayah.pageNumber })}</span>
               </Link>
               <Button
                 variant="ghost"
+                size="sm"
                 onClick={goNext}
                 disabled={target >= TOTAL_AYAHS}
                 data-testid="ayah-detail-next"
+                className="shrink-0"
               >
                 {t("ayahDetail.next")}
                 <ChevronRight className="w-4 h-4 ms-1 rtl:rotate-180" />
