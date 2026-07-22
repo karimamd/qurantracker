@@ -632,7 +632,21 @@ export default function AyahDetail() {
               </Button>
             </div>
 
-            {/* 1. Ayah text */}
+            {/* 1. Link button — above the Ayah text */}
+            <div className="flex justify-center">
+              <Button
+                size="lg"
+                variant={isLink ? "default" : "outline"}
+                onClick={() => setMark("link")}
+                className={isLink ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
+                data-testid="ayah-detail-mark-link"
+              >
+                <Link2 className="w-4 h-4 me-1.5" />
+                {t("ayahDetail.markLink")}
+              </Button>
+            </div>
+
+            {/* 2. Ayah text */}
             <div
               className="rounded-xl bg-card border px-6 py-10 text-right"
               dir="rtl"
@@ -643,7 +657,7 @@ export default function AyahDetail() {
               </p>
             </div>
 
-            {/* 2. Mark buttons — tick, mistake, and link */}
+            {/* 3. Mark buttons — tick and mistake only */}
             <div className="flex items-center justify-center gap-2 flex-wrap" data-testid="ayah-detail-actions">
               <Button
                 size="lg"
@@ -664,16 +678,6 @@ export default function AyahDetail() {
               >
                 <X className="w-4 h-4 me-1.5" />
                 {t("ayahDetail.markMistake")}
-              </Button>
-              <Button
-                size="lg"
-                variant={isLink ? "default" : "outline"}
-                onClick={() => setMark("link")}
-                className={isLink ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
-                data-testid="ayah-detail-mark-link"
-              >
-                <Link2 className="w-4 h-4 me-1.5" />
-                {t("ayahDetail.markLink")}
               </Button>
             </div>
 
