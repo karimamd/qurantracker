@@ -598,11 +598,10 @@ export default function AyahDetail() {
               </div>
             </div>
 
-            {/* Top prev/next bar — mirrors the bottom nav so the user
-                can advance ayahs without scrolling all the way down,
-                especially after expanding Tafsir or Word-by-Word. The
-                scroll anchor lives here so clicks always bring the
-                fresh ayah's top edge into view. */}
+            {/* Scroll anchor — keeps the ayah's top edge in view after
+                prev/next navigation. The top counter row also acts as a
+                quick-nav duplicate so the user doesn't have to scroll
+                to the bottom after expanding Tafsir / WBW. */}
             <div
               ref={ayahScrollRef}
               className="flex items-center justify-between gap-2 scroll-mt-4"
@@ -633,7 +632,39 @@ export default function AyahDetail() {
               </Button>
             </div>
 
-            <div className="flex justify-center">
+            {/* 1. Ayah text */}
+            <div
+              className="rounded-xl bg-card border px-6 py-10 text-right"
+              dir="rtl"
+              data-testid="ayah-detail-text"
+            >
+              <p style={ayahTextStyle} className="text-foreground">
+                {ayah.text}
+              </p>
+            </div>
+
+            {/* 2. Mark buttons — tick, mistake, and link */}
+            <div className="flex items-center justify-center gap-2 flex-wrap" data-testid="ayah-detail-actions">
+              <Button
+                size="lg"
+                variant={isClear ? "default" : "outline"}
+                onClick={() => setMark("cleared")}
+                className={isClear ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
+                data-testid="ayah-detail-mark-clear"
+              >
+                <Check className="w-4 h-4 me-1.5" />
+                {t("ayahDetail.markClear")}
+              </Button>
+              <Button
+                size="lg"
+                variant={isMemo ? "default" : "outline"}
+                onClick={() => setMark("memorization")}
+                className={isMemo ? "bg-rose-600 hover:bg-rose-700 text-white" : ""}
+                data-testid="ayah-detail-mark-mistake"
+              >
+                <X className="w-4 h-4 me-1.5" />
+                {t("ayahDetail.markMistake")}
+              </Button>
               <Button
                 size="lg"
                 variant={isLink ? "default" : "outline"}
@@ -646,17 +677,41 @@ export default function AyahDetail() {
               </Button>
             </div>
 
-            <div
-              className="rounded-xl bg-card border px-6 py-10 text-right"
-              dir="rtl"
-              data-testid="ayah-detail-text"
-            >
-              <p style={ayahTextStyle} className="text-foreground">
-                {ayah.text}
-              </p>
+            {/* 3. Navigation — prev, next, open in reader */}
+            <div className="flex items-center justify-between gap-2 pt-2 border-t">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goPrev}
+                disabled={target <= 1}
+                data-testid="ayah-detail-prev"
+                className="shrink-0"
+              >
+                <ChevronLeft className="w-4 h-4 me-1 rtl:rotate-180" />
+                {t("ayahDetail.previous")}
+              </Button>
+              <Link
+                href={`/reader/${ayah.pageNumber}?practice=${ayah.globalAyahNumber}`}
+                className="min-w-0 inline-flex items-center gap-1.5 px-2 py-1.5 rounded-md border bg-background text-xs font-medium hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors truncate"
+                data-testid="ayah-detail-open-reader"
+              >
+                <BookMarked className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t("ayahDetail.openInReader", { page: ayah.pageNumber })}</span>
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goNext}
+                disabled={target >= TOTAL_AYAHS}
+                data-testid="ayah-detail-next"
+                className="shrink-0"
+              >
+                {t("ayahDetail.next")}
+                <ChevronRight className="w-4 h-4 ms-1 rtl:rotate-180" />
+              </Button>
             </div>
 
-            {/* Tafsir Muyassar — collapsed by default. */}
+            {/* 4. Tafsir Muyassar — collapsed by default. */}
             <Collapsible data-testid="ayah-detail-tafsir">
               <CollapsibleTrigger
                 className="flex w-full items-center justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm font-medium hover:bg-muted/70 transition-colors group"
@@ -696,7 +751,7 @@ export default function AyahDetail() {
               </CollapsibleContent>
             </Collapsible>
 
-            {/* Word-by-word — collapsed by default. */}
+            {/* 4. Word-by-word — collapsed by default. */}
             <Collapsible data-testid="ayah-detail-wbw">
               <CollapsibleTrigger
                 className="flex w-full items-center justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm font-medium hover:bg-muted/70 transition-colors group"
@@ -772,30 +827,8 @@ export default function AyahDetail() {
               </CollapsibleContent>
             </Collapsible>
 
-            <div className="flex items-center justify-center gap-2 flex-wrap" data-testid="ayah-detail-actions">
-              <Button
-                size="lg"
-                variant={isClear ? "default" : "outline"}
-                onClick={() => setMark("cleared")}
-                className={isClear ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
-                data-testid="ayah-detail-mark-clear"
-              >
-                <Check className="w-4 h-4 me-1.5" />
-                {t("ayahDetail.markClear")}
-              </Button>
-              <Button
-                size="lg"
-                variant={isMemo ? "default" : "outline"}
-                onClick={() => setMark("memorization")}
-                className={isMemo ? "bg-rose-600 hover:bg-rose-700 text-white" : ""}
-                data-testid="ayah-detail-mark-mistake"
-              >
-                <X className="w-4 h-4 me-1.5" />
-                {t("ayahDetail.markMistake")}
-              </Button>
-            </div>
-
-            <div className="flex justify-center">
+            {/* 5. Clear all marks for this page */}
+            <div className="flex justify-center pt-1">
               <Button
                 variant="outline"
                 size="sm"
@@ -810,39 +843,7 @@ export default function AyahDetail() {
               </Button>
             </div>
 
-            <div className="flex items-center justify-between gap-2 pt-2 border-t">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={goPrev}
-                disabled={target <= 1}
-                data-testid="ayah-detail-prev"
-                className="shrink-0"
-              >
-                <ChevronLeft className="w-4 h-4 me-1 rtl:rotate-180" />
-                {t("ayahDetail.previous")}
-              </Button>
-              <Link
-                href={`/reader/${ayah.pageNumber}?practice=${ayah.globalAyahNumber}`}
-                className="min-w-0 inline-flex items-center gap-1.5 px-2 py-1.5 rounded-md border bg-background text-xs font-medium hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors truncate"
-                data-testid="ayah-detail-open-reader"
-              >
-                <BookMarked className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{t("ayahDetail.openInReader", { page: ayah.pageNumber })}</span>
-              </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={goNext}
-                disabled={target >= TOTAL_AYAHS}
-                data-testid="ayah-detail-next"
-                className="shrink-0"
-              >
-                {t("ayahDetail.next")}
-                <ChevronRight className="w-4 h-4 ms-1 rtl:rotate-180" />
-              </Button>
-            </div>
-
+            {/* 6. Save timestamp */}
             {lastSaved && (
               <p
                 className="text-center text-[11px] text-muted-foreground"
