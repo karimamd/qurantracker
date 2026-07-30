@@ -513,7 +513,17 @@
       "cancel": "Cancel",
       "goalUpdated": "Daily goal updated",
       "goalUpdateFailed": "Could not update the daily goal",
-      "goalCleared": "Reverted to default daily goal"
+      "goalCleared": "Reverted to default daily goal",
+      "dashboard": {
+        "title": "In-scope reading",
+        "cycleProgress": "{{done}} / {{total}} pages read · Cycle {{cycle}}",
+        "cyclePct": "{{pct}}% of cycle {{cycle}} complete",
+        "todayProgress": "{{done}} / {{total}} today",
+        "remaining_one": "{{count}} left today",
+        "remaining_other": "{{count}} left today",
+        "allDone": "Done for today",
+        "readNext": "Read p. {{page}}"
+      }
     },
     "homeworkReading": {
       "title": "Homework reading goal",

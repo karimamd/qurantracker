@@ -23,6 +23,7 @@ import {
   useGetProgressChart,
   useListHomework,
   useGetTelawaToday,
+  useGetTelawaScopeToday,
   useUpdatePageProgress,
   useUndoRecitation,
   useGetSettings,
@@ -41,7 +42,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QualityBadge } from "@/components/quality-badge";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight, ChevronDown, Undo2, Repeat } from "lucide-react";
+import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight, ChevronDown, Undo2, Repeat, BookOpenCheck } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -69,7 +70,7 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { PageLabel } from "@/components/page-label";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import GuestSavePrompt from "@/components/guest-save-prompt";
@@ -252,6 +253,86 @@ function TelawaCard() {
         </CardContent>
       </Card>
     </Link>
+  );
+}
+
+function TelawaScopeCard() {
+  const { t } = useTranslation();
+  const [, setLocation] = useLocation();
+  const { data, isLoading } = useGetTelawaScopeToday();
+
+  if (isLoading) return <Skeleton className="h-20 rounded-xl" />;
+  if (!data || data.totalInScope === 0) return null;
+
+  const cyclePct = Math.min(100, Math.round((data.readInCycle / Math.max(1, data.totalInScope)) * 100));
+  const remaining = Math.max(0, data.pagesPerDay - data.readToday);
+  const nextPage = data.upcomingPages[0];
+
+  return (
+    <div
+      className="border rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer bg-card"
+      onClick={() => setLocation("/telawa")}
+      data-testid="dashboard-telawa-scope-card"
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setLocation("/telawa"); }}
+    >
+      <div className="py-4 px-5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-teal-600 dark:text-teal-400 uppercase tracking-wide mb-0.5 flex items-center gap-1.5">
+              <BookOpenCheck className="w-3.5 h-3.5" />
+              {t("telawa.scope.dashboard.title")}
+            </p>
+            <p className="font-semibold text-sm">
+              {t("telawa.scope.dashboard.cycleProgress", {
+                done: data.readInCycle,
+                total: data.totalInScope,
+                cycle: data.cycleNumber,
+              })}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ms-3">
+            <div className="text-end">
+              <p className="text-xs text-muted-foreground">
+                {t("telawa.scope.dashboard.todayProgress", {
+                  done: data.readToday,
+                  total: data.pagesPerDay,
+                })}
+              </p>
+              <p className="text-xs font-medium">
+                {remaining > 0
+                  ? t("telawa.scope.dashboard.remaining", { count: remaining })
+                  : t("telawa.scope.dashboard.allDone")}
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground rtl:rotate-180" />
+          </div>
+        </div>
+        <Progress value={cyclePct} className="h-2" />
+        <div className="flex items-center justify-between mt-1.5">
+          <p className="text-xs text-muted-foreground">
+            {t("telawa.scope.dashboard.cyclePct", { pct: cyclePct, cycle: data.cycleNumber })}
+          </p>
+          {nextPage != null && (
+            <Link
+              href={`/reader/${nextPage}`}
+              onClick={e => e.stopPropagation()}
+            >
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 text-xs gap-1 px-2 py-0"
+                onClick={e => e.stopPropagation()}
+              >
+                <BookOpen className="w-3 h-3" />
+                {t("telawa.scope.dashboard.readNext", { page: nextPage })}
+              </Button>
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1169,6 +1250,8 @@ export default function Dashboard() {
       <ActiveHomeworkSection />
 
       <TelawaCard />
+
+      <TelawaScopeCard />
 
       <ProgressChartSection />
 

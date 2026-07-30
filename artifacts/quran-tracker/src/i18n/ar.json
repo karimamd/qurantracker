@@ -525,7 +525,21 @@
       "cancel": "إلغاء",
       "goalUpdated": "تم تحديث الهدف اليومي",
       "goalUpdateFailed": "تعذّر تحديث الهدف اليومي",
-      "goalCleared": "تمت العودة إلى الهدف اليومي الافتراضي"
+      "goalCleared": "تمت العودة إلى الهدف اليومي الافتراضي",
+      "dashboard": {
+        "title": "قراءة المقرّر",
+        "cycleProgress": "{{done}} / {{total}} صفحة مقروءة · الدورة {{cycle}}",
+        "cyclePct": "{{pct}}% من الدورة {{cycle}} مكتمل",
+        "todayProgress": "{{done}} / {{total}} اليوم",
+        "remaining_zero": "بقيت {{count}} صفحات اليوم",
+        "remaining_one": "بقيت صفحة واحدة اليوم",
+        "remaining_two": "بقيت صفحتان اليوم",
+        "remaining_few": "بقيت {{count}} صفحات اليوم",
+        "remaining_many": "بقيت {{count}} صفحة اليوم",
+        "remaining_other": "بقيت {{count}} صفحة اليوم",
+        "allDone": "اكتمل ورد اليوم",
+        "readNext": "اقرأ ص. {{page}}"
+      }
     },
     "homeworkReading": {
       "title": "هدف قراءة الواجب",
