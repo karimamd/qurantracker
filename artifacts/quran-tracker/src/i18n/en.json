@@ -591,7 +591,8 @@
       "remaining_other": "{{count}} left today",
       "allDone": "Done for today",
       "totalRead_one": "{{count}} page read all-time",
-      "totalRead_other": "{{count}} pages read all-time"
+      "totalRead_other": "{{count}} pages read all-time",
+      "readNext": "Read p. {{page}}"
     }
   },
   "homework": {

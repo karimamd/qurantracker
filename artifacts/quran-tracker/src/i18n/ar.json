@@ -627,7 +627,8 @@
       "totalRead_two": "صفحتان مقروءتان إجمالًا",
       "totalRead_few": "{{count}} صفحات مقروءة إجمالًا",
       "totalRead_many": "{{count}} صفحة مقروءة إجمالًا",
-      "totalRead_other": "{{count}} صفحة مقروءة إجمالًا"
+      "totalRead_other": "{{count}} صفحة مقروءة إجمالًا",
+      "readNext": "اقرأ ص. {{page}}"
     }
   },
   "homework": {

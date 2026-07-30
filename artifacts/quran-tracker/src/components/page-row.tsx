@@ -17,6 +17,7 @@ import {
 } from "@/lib/quality";
 import { useTranslation } from "react-i18next";
 import { useGetSettings } from "@workspace/api-client-react";
+import { readerUrl } from "@/lib/reader-url";
 
 export interface PageRowProps {
   pageNumber: number;
@@ -170,7 +171,7 @@ export function PageRow({
         <div className="flex items-center gap-1 shrink-0 flex-wrap justify-start sm:justify-end sm:ms-auto ps-8 sm:ps-0">
           <button
             type="button"
-            onClick={() => setLocation(`/reader/${pageNumber}${hideOnJump ? "?hide=1" : ""}`)}
+            onClick={() => setLocation(readerUrl(pageNumber, hideOnJump))}
             className="me-1 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border bg-background text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             title={t("reader.openReader")}
             aria-label={t("reader.openReader")}

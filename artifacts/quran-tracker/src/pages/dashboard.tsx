@@ -79,6 +79,7 @@ import { OnboardingScopeSetup } from "@/components/onboarding-scope-setup";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
+import { readerUrl } from "@/lib/reader-url";
 import { SURAHS } from "@/lib/quran-ref";
 
 type Quality = "excellent" | "good" | "hard" | "relearn";
@@ -205,7 +206,10 @@ function ActiveHomeworkSection() {
 
 function TelawaCard() {
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
   const { data, isLoading } = useGetTelawaToday();
+  const { data: settings } = useGetSettings();
+  const hideOnJump = settings?.hideReaderOnJump !== false;
 
   if (isLoading) return <Skeleton className="h-20 rounded-xl" />;
   if (!data) return null;
@@ -214,46 +218,64 @@ function TelawaCard() {
   const remaining = Math.max(0, data.pagesPerDay - data.readToday);
 
   return (
-    <Link href="/telawa">
-      <Card
-        className="border shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer"
-        data-testid="dashboard-telawa-card"
-      >
-        <CardContent className="py-4 px-5">
-          <div className="flex items-center justify-between mb-2">
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-primary uppercase tracking-wide mb-0.5 flex items-center gap-1.5">
-                <Repeat className="w-3.5 h-3.5" />
-                {t("telawa.dashboard.title")}
-              </p>
-              <p className="font-semibold text-sm truncate">
-                {t("telawa.dashboard.subtitle", { next: data.nextPage, cycle: data.cycleNumber })}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 ms-3">
-              <div className="text-end">
-                <p className="text-xs text-muted-foreground">
-                  {t("telawa.dashboard.todayProgress", {
-                    done: data.readToday,
-                    total: data.pagesPerDay,
-                  })}
-                </p>
-                <p className="text-xs font-medium">
-                  {remaining > 0
-                    ? t("telawa.dashboard.remaining", { count: remaining })
-                    : t("telawa.dashboard.allDone")}
-                </p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground rtl:rotate-180" />
-            </div>
+    <div
+      className="border rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer bg-card"
+      onClick={() => setLocation("/telawa")}
+      data-testid="dashboard-telawa-card"
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setLocation("/telawa"); }}
+    >
+      <div className="py-4 px-5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-primary uppercase tracking-wide mb-0.5 flex items-center gap-1.5">
+              <Repeat className="w-3.5 h-3.5" />
+              {t("telawa.dashboard.title")}
+            </p>
+            <p className="font-semibold text-sm truncate">
+              {t("telawa.dashboard.subtitle", { next: data.nextPage, cycle: data.cycleNumber })}
+            </p>
           </div>
-          <Progress value={pct} className="h-2" />
-          <p className="text-xs text-muted-foreground mt-1.5">
+          <div className="flex items-center gap-2 shrink-0 ms-3">
+            <div className="text-end">
+              <p className="text-xs text-muted-foreground">
+                {t("telawa.dashboard.todayProgress", {
+                  done: data.readToday,
+                  total: data.pagesPerDay,
+                })}
+              </p>
+              <p className="text-xs font-medium">
+                {remaining > 0
+                  ? t("telawa.dashboard.remaining", { count: remaining })
+                  : t("telawa.dashboard.allDone")}
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground rtl:rotate-180" />
+          </div>
+        </div>
+        <Progress value={pct} className="h-2" />
+        <div className="flex items-center justify-between mt-1.5">
+          <p className="text-xs text-muted-foreground">
             {t("telawa.dashboard.totalRead", { count: data.totalRead })}
           </p>
-        </CardContent>
-      </Card>
-    </Link>
+          <Link
+            href={readerUrl(data.nextPage, hideOnJump)}
+            onClick={e => e.stopPropagation()}
+          >
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 text-xs gap-1 px-2 py-0"
+              onClick={e => e.stopPropagation()}
+            >
+              <BookOpen className="w-3 h-3" />
+              {t("telawa.dashboard.readNext", { page: data.nextPage })}
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -261,6 +283,8 @@ function TelawaScopeCard() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { data, isLoading } = useGetTelawaScopeToday();
+  const { data: settings } = useGetSettings();
+  const hideOnJump = settings?.hideReaderOnJump !== false;
 
   if (isLoading) return <Skeleton className="h-20 rounded-xl" />;
   if (!data || data.totalInScope === 0) return null;
@@ -317,7 +341,7 @@ function TelawaScopeCard() {
           </p>
           {nextPage != null && (
             <Link
-              href={`/reader/${nextPage}`}
+              href={readerUrl(nextPage, hideOnJump)}
               onClick={e => e.stopPropagation()}
             >
               <Button
@@ -341,6 +365,8 @@ function HomeworkReadingCard() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { data, isLoading } = useGetTelawaHomeworkReading();
+  const { data: settings } = useGetSettings();
+  const hideOnJump = settings?.hideReaderOnJump !== false;
 
   if (isLoading) return <Skeleton className="h-20 rounded-xl" />;
   if (!data || data.pages.length === 0) return null;
@@ -402,7 +428,7 @@ function HomeworkReadingCard() {
           </p>
           {nextPage != null && (
             <Link
-              href={`/reader/${nextPage.pageNumber}`}
+              href={readerUrl(nextPage.pageNumber, hideOnJump)}
               onClick={e => e.stopPropagation()}
             >
               <Button
@@ -556,7 +582,7 @@ function DuePagesSection() {
                 {daysLabel}
               </span>
             )}
-            <Link href={`/reader/${page.pageNumber}${settings?.hideReaderOnJump !== false ? "?hide=1" : ""}`}>
+            <Link href={readerUrl(page.pageNumber, settings?.hideReaderOnJump !== false)}>
               <Button
                 variant="ghost"
                 size="icon"
