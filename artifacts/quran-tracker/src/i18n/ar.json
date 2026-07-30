@@ -543,6 +543,20 @@
     },
     "homeworkReading": {
       "title": "هدف قراءة الواجب",
+      "dashboard": {
+        "title": "قراءة الواجب",
+        "progress": "{{done}} / {{total}} قراءة هذا الأسبوع (الهدف: {{goal}}×/صفحة)",
+        "pagesMet": "{{met}} / {{total}} صفحة مكتملة",
+        "allDone": "كل الصفحات بلغت الهدف",
+        "remaining_zero": "بقيت {{count}} صفحات",
+        "remaining_one": "بقيت صفحة واحدة",
+        "remaining_two": "بقيت صفحتان",
+        "remaining_few": "بقيت {{count}} صفحات",
+        "remaining_many": "بقيت {{count}} صفحة",
+        "remaining_other": "بقيت {{count}} صفحة",
+        "pct": "{{pct}}% من قراءات الأسبوع مكتملة",
+        "readNext": "اقرأ ص. {{page}} ({{count}}/{{goal}})"
+      },
       "description": "اقرأ كل صفحة من صفحات الواجب النشط {{goal}} مرات على الأقل أسبوعيًا. تُحتسب التلاوة أو القراءة.",
       "empty": "لا توجد صفحات واجب نشطة حاليًا. تظهر الصفحات هنا أثناء وجود جلسة واجب مفتوحة.",
       "summary": "{{met}} من {{total}} صفحة بلغت هدف هذا الأسبوع"

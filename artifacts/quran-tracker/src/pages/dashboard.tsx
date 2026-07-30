@@ -24,6 +24,7 @@ import {
   useListHomework,
   useGetTelawaToday,
   useGetTelawaScopeToday,
+  useGetTelawaHomeworkReading,
   useUpdatePageProgress,
   useUndoRecitation,
   useGetSettings,
@@ -327,6 +328,95 @@ function TelawaScopeCard() {
               >
                 <BookOpen className="w-3 h-3" />
                 {t("telawa.scope.dashboard.readNext", { page: nextPage })}
+              </Button>
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HomeworkReadingCard() {
+  const { t } = useTranslation();
+  const [, setLocation] = useLocation();
+  const { data, isLoading } = useGetTelawaHomeworkReading();
+
+  if (isLoading) return <Skeleton className="h-20 rounded-xl" />;
+  if (!data || data.pages.length === 0) return null;
+
+  const { weeklyGoal, pages } = data;
+  const totalNeeded = pages.length * weeklyGoal;
+  const totalDone = pages.reduce((sum, p) => sum + Math.min(p.weekCount, weeklyGoal), 0);
+  const pct = Math.min(100, Math.round((totalDone / Math.max(1, totalNeeded)) * 100));
+  const pagesMet = pages.filter(p => p.weekCount >= weeklyGoal).length;
+  const nextPage = pages.find(p => p.weekCount < weeklyGoal);
+
+  return (
+    <div
+      className="border rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer bg-card"
+      onClick={() => setLocation("/telawa")}
+      data-testid="dashboard-homework-reading-card"
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setLocation("/telawa"); }}
+    >
+      <div className="py-4 px-5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-violet-600 dark:text-violet-400 uppercase tracking-wide mb-0.5 flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5" />
+              {t("telawa.homeworkReading.dashboard.title")}
+            </p>
+            <p className="font-semibold text-sm">
+              {t("telawa.homeworkReading.dashboard.progress", {
+                done: totalDone,
+                total: totalNeeded,
+                goal: weeklyGoal,
+              })}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ms-3">
+            <div className="text-end">
+              <p className="text-xs text-muted-foreground">
+                {t("telawa.homeworkReading.dashboard.pagesMet", {
+                  met: pagesMet,
+                  total: pages.length,
+                })}
+              </p>
+              <p className="text-xs font-medium">
+                {pagesMet === pages.length
+                  ? t("telawa.homeworkReading.dashboard.allDone")
+                  : t("telawa.homeworkReading.dashboard.remaining", {
+                      count: pages.length - pagesMet,
+                    })}
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground rtl:rotate-180" />
+          </div>
+        </div>
+        <Progress value={pct} className="h-2" />
+        <div className="flex items-center justify-between mt-1.5">
+          <p className="text-xs text-muted-foreground">
+            {t("telawa.homeworkReading.dashboard.pct", { pct })}
+          </p>
+          {nextPage != null && (
+            <Link
+              href={`/reader/${nextPage.pageNumber}`}
+              onClick={e => e.stopPropagation()}
+            >
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 text-xs gap-1 px-2 py-0"
+                onClick={e => e.stopPropagation()}
+              >
+                <BookOpen className="w-3 h-3" />
+                {t("telawa.homeworkReading.dashboard.readNext", {
+                  page: nextPage.pageNumber,
+                  count: nextPage.weekCount,
+                  goal: weeklyGoal,
+                })}
               </Button>
             </Link>
           )}
@@ -1252,6 +1342,8 @@ export default function Dashboard() {
       <TelawaCard />
 
       <TelawaScopeCard />
+
+      <HomeworkReadingCard />
 
       <ProgressChartSection />
 

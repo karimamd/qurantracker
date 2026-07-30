@@ -529,7 +529,17 @@
       "title": "Homework reading goal",
       "description": "Read each active homework page at least {{goal}} times a week. Reciting or reading both count.",
       "empty": "No active homework pages right now. Pages appear here while a homework session is open.",
-      "summary": "{{met}} of {{total}} pages have hit this week's goal"
+      "summary": "{{met}} of {{total}} pages have hit this week's goal",
+      "dashboard": {
+        "title": "Homework reading",
+        "progress": "{{done}} / {{total}} reads this week (goal: {{goal}}×/page)",
+        "pagesMet": "{{met}} / {{total}} pages done",
+        "allDone": "All pages met goal",
+        "remaining_one": "{{count}} page left",
+        "remaining_other": "{{count}} pages left",
+        "pct": "{{pct}}% of weekly reads complete",
+        "readNext": "Read p. {{page}} ({{count}}/{{goal}})"
+      }
     },
     "khatmah": {
       "startNew": "Start new Khatmah",
