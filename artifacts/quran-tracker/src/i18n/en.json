@@ -538,7 +538,10 @@
         "remaining_one": "{{count}} page left",
         "remaining_other": "{{count}} pages left",
         "pct": "{{pct}}% of weekly reads complete",
-        "readNext": "Read p. {{page}} ({{count}}/{{goal}})"
+        "readNext": "Read p. {{page}} ({{count}}/{{goal}})",
+        "increaseGoal": "Increase goal to {{next}}×/page",
+        "goalIncreased": "Weekly goal raised to {{goal}}×/page",
+        "goalIncreaseFailed": "Could not update the goal"
       }
     },
     "khatmah": {

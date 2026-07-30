@@ -25,6 +25,8 @@ import {
   useGetTelawaToday,
   useGetTelawaScopeToday,
   useGetTelawaHomeworkReading,
+  useUpdateSettings,
+  getGetSettingsQueryKey,
   useUpdatePageProgress,
   useUndoRecitation,
   useGetSettings,
@@ -43,7 +45,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QualityBadge } from "@/components/quality-badge";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight, ChevronDown, Undo2, Repeat, BookOpenCheck } from "lucide-react";
+import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight, ChevronDown, Undo2, Repeat, BookOpenCheck, PlusCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -367,6 +369,9 @@ function HomeworkReadingCard() {
   const { data, isLoading } = useGetTelawaHomeworkReading();
   const { data: settings } = useGetSettings();
   const hideOnJump = settings?.hideReaderOnJump !== false;
+  const updateSettings = useUpdateSettings();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   if (isLoading) return <Skeleton className="h-20 rounded-xl" />;
   if (!data || data.pages.length === 0) return null;
@@ -376,7 +381,25 @@ function HomeworkReadingCard() {
   const totalDone = pages.reduce((sum, p) => sum + Math.min(p.weekCount, weeklyGoal), 0);
   const pct = Math.min(100, Math.round((totalDone / Math.max(1, totalNeeded)) * 100));
   const pagesMet = pages.filter(p => p.weekCount >= weeklyGoal).length;
+  const allDone = pagesMet === pages.length;
   const nextPage = pages.find(p => p.weekCount < weeklyGoal);
+
+  const handleIncreaseGoal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newGoal = weeklyGoal + 2;
+    updateSettings.mutate(
+      { data: { homeworkWeeklyReadGoal: newGoal } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+          toast({ title: t("telawa.homeworkReading.dashboard.goalIncreased", { goal: newGoal }) });
+        },
+        onError: () => {
+          toast({ title: t("telawa.homeworkReading.dashboard.goalIncreaseFailed"), variant: "destructive" });
+        },
+      },
+    );
+  };
 
   return (
     <div
@@ -411,7 +434,7 @@ function HomeworkReadingCard() {
                 })}
               </p>
               <p className="text-xs font-medium">
-                {pagesMet === pages.length
+                {allDone
                   ? t("telawa.homeworkReading.dashboard.allDone")
                   : t("telawa.homeworkReading.dashboard.remaining", {
                       count: pages.length - pagesMet,
@@ -426,7 +449,18 @@ function HomeworkReadingCard() {
           <p className="text-xs text-muted-foreground">
             {t("telawa.homeworkReading.dashboard.pct", { pct })}
           </p>
-          {nextPage != null && (
+          {allDone ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 text-xs gap-1 px-2 py-0 border-violet-300 text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950"
+              onClick={handleIncreaseGoal}
+              disabled={updateSettings.isPending}
+            >
+              <PlusCircle className="w-3 h-3" />
+              {t("telawa.homeworkReading.dashboard.increaseGoal", { current: weeklyGoal, next: weeklyGoal + 2 })}
+            </Button>
+          ) : nextPage != null ? (
             <Link
               href={readerUrl(nextPage.pageNumber, hideOnJump)}
               onClick={e => e.stopPropagation()}
@@ -445,7 +479,7 @@ function HomeworkReadingCard() {
                 })}
               </Button>
             </Link>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
