@@ -28,7 +28,7 @@ import { ArrowLeft, Check, X, Pencil, ChevronDown, Link2, BookOpen, Play } from 
 import { PageRow } from "@/components/page-row";
 import { type Quality, QUALITIES } from "@/lib/quality";
 import { fetchPageAyahs, pageAyahsQueryKey, type ApiAyah } from "@/hooks/use-page-ayahs";
-import { HomeworkRangePickers } from "@/components/homework-range-pickers";
+import { HomeworkScopePicker } from "@/components/homework-range-pickers";
 import { parsePageRange, appendPageRange, compressPages } from "@/lib/homework-pages";
 import { getAyahIndex, type AyahIndexEntry } from "@/lib/ayah-index";
 import { useTranslation } from "react-i18next";
@@ -694,35 +694,28 @@ export default function HomeworkDetail() {
               </div>
               <div>
                 <Label>{t("homework.form.memorize")}</Label>
-                <Input
-                  value={editMemorizeRange}
-                  onChange={e => setEditMemorizeRange(e.target.value)}
-                  placeholder={t("homework.form.memorizePlaceholder")}
-                  data-testid="input-hw-edit-memorize"
-                />
-                <HomeworkRangePickers
+                <HomeworkScopePicker
                   testIdPrefix="edit-memorize"
-                  onPick={(start, end, fga, lga) => {
+                  pageRange={editMemorizeRange}
+                  onPageRangeChange={setEditMemorizeRange}
+                  onGrainPick={(start, end, fga, lga) => {
                     setEditMemorizeRange(appendPageRange(editMemorizeRange, start, end));
                     expandEditBounds(fga, lga);
                   }}
+                  pagePlaceholder={t("homework.form.memorizePlaceholder")}
                 />
-                <p className="text-xs text-muted-foreground mt-1">{t("homework.form.rangeHint")}</p>
               </div>
               <div>
                 <Label>{t("homework.form.revise")}</Label>
-                <Input
-                  value={editReviseRange}
-                  onChange={e => setEditReviseRange(e.target.value)}
-                  placeholder={t("homework.form.revisePlaceholder")}
-                  data-testid="input-hw-edit-revise"
-                />
-                <HomeworkRangePickers
+                <HomeworkScopePicker
                   testIdPrefix="edit-revise"
-                  onPick={(start, end, fga, lga) => {
+                  pageRange={editReviseRange}
+                  onPageRangeChange={setEditReviseRange}
+                  onGrainPick={(start, end, fga, lga) => {
                     setEditReviseRange(appendPageRange(editReviseRange, start, end));
                     expandEditBounds(fga, lga);
                   }}
+                  pagePlaceholder={t("homework.form.revisePlaceholder")}
                 />
               </div>
               <p className="text-xs text-muted-foreground">{t("homework.editPreserveHint")}</p>

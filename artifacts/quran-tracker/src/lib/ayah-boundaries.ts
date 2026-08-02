@@ -29,3 +29,18 @@ export function surahAyahBounds(surahNumber: number): AyahRange | null {
 export function rob3AyahBounds(rob3Number: number): AyahRange | null {
   return rob3s[String(rob3Number)] ?? null;
 }
+
+/**
+ * Returns the global-ayah range for the given Juz number (1–30), or null.
+ *
+ * Computed from the Rub' boundaries: each Juz contains exactly 8 consecutive
+ * Rub's, so Juz N spans rob3s [(N-1)×8 + 1 … N×8].
+ */
+export function juzAyahBounds(juzNumber: number): AyahRange | null {
+  const firstRob3 = (juzNumber - 1) * 8 + 1;
+  const lastRob3 = juzNumber * 8;
+  const first = rob3s[String(firstRob3)];
+  const last = rob3s[String(lastRob3)];
+  if (!first || !last) return null;
+  return { first: first.first, last: last.last };
+}

@@ -12,7 +12,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronRight } from "lucide-react";
-import { HomeworkRangePickers } from "@/components/homework-range-pickers";
+import { HomeworkScopePicker } from "@/components/homework-range-pickers";
 import { parsePageRange, appendPageRange } from "@/lib/homework-pages";
 import { useTranslation } from "react-i18next";
 
@@ -126,25 +126,28 @@ export default function HomeworkList() {
               </div>
               <div>
                 <Label>{t("homework.form.memorize")}</Label>
-                <Input value={memorizeRange} onChange={e => setMemorizeRange(e.target.value)} placeholder={t("homework.form.memorizePlaceholder")} data-testid="input-hw-memorize" />
-                <HomeworkRangePickers
+                <HomeworkScopePicker
                   testIdPrefix="memorize"
-                  onPick={(start, end, fga, lga) => {
+                  pageRange={memorizeRange}
+                  onPageRangeChange={setMemorizeRange}
+                  onGrainPick={(start, end, fga, lga) => {
                     setMemorizeRange(appendPageRange(memorizeRange, start, end));
                     expandBounds(fga, lga);
                   }}
+                  pagePlaceholder={t("homework.form.memorizePlaceholder")}
                 />
-                <p className="text-xs text-muted-foreground mt-1">{t("homework.form.rangeHint")}</p>
               </div>
               <div>
                 <Label>{t("homework.form.revise")}</Label>
-                <Input value={reviseRange} onChange={e => setReviseRange(e.target.value)} placeholder={t("homework.form.revisePlaceholder")} data-testid="input-hw-revise" />
-                <HomeworkRangePickers
+                <HomeworkScopePicker
                   testIdPrefix="revise"
-                  onPick={(start, end, fga, lga) => {
+                  pageRange={reviseRange}
+                  onPageRangeChange={setReviseRange}
+                  onGrainPick={(start, end, fga, lga) => {
                     setReviseRange(appendPageRange(reviseRange, start, end));
                     expandBounds(fga, lga);
                   }}
+                  pagePlaceholder={t("homework.form.revisePlaceholder")}
                 />
               </div>
               <Button onClick={handleCreate} disabled={createHomework.isPending} className="w-full" data-testid="btn-submit-homework">
