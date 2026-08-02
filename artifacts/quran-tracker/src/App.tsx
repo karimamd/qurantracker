@@ -22,7 +22,9 @@
  */
 import { useEffect, useRef } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
-import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { ClerkProvider, SignIn, SignUp, useAuth, useClerk } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
@@ -53,6 +55,27 @@ import Welcome from "@/pages/welcome";
 import NotFound from "@/pages/not-found";
 import { isGuestMode } from "@/lib/guest-mode";
 import { queryClient } from "@/lib/query-client";
+
+/**
+ * Persists the React Query cache to localStorage so that when mobile
+ * browsers unload the tab in the background and the user returns, all
+ * previously loaded data (settings, homework, progress, mistakes) is
+ * instantly available without waiting for network round-trips.
+ *
+ * Quran page text is excluded: it already has its own IndexedDB layer
+ * (see use-page-ayahs.ts / quran-page-cache.ts) and storing it in
+ * localStorage too would waste ~5 MB.
+ *
+ * A `v1` suffix on the key lets us invalidate stale serialized caches
+ * if the query-key shape ever changes in a breaking way.
+ */
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  key: "qurantracker.querycache.v1",
+  // Throttle localStorage writes — 1 s debounce (library default) avoids
+  // hammering storage on rapid successive mutations.
+  throttleTime: 1000,
+});
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -252,7 +275,27 @@ function ClerkProviderWithRoutes() {
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister,
+          // Keep persisted data for up to 7 days — matches the queryClient's
+          // gcTime so nothing is evicted from storage before memory would
+          // drop it.
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+          dehydrateOptions: {
+            shouldDehydrateQuery: (query) => {
+              // Exclude Quran page text (already in IndexedDB) and
+              // exclude failed queries (no point caching errors).
+              const firstKey = query.queryKey[0];
+              return (
+                firstKey !== "alquran-cloud-page" &&
+                query.state.status !== "error"
+              );
+            },
+          },
+        }}
+      >
         <ClerkQueryClientCacheInvalidator />
         <TooltipProvider>
           <ErrorBoundary>
@@ -265,7 +308,7 @@ function ClerkProviderWithRoutes() {
           </ErrorBoundary>
           <Toaster />
         </TooltipProvider>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </ClerkProvider>
   );
 }
