@@ -982,6 +982,16 @@ export const CreateHomeworkBody = zod.object({
   dueDate: zod.coerce.date(),
   memorizePages: zod.array(zod.number()).optional(),
   revisePages: zod.array(zod.number()).optional(),
+  firstGlobalAyah: zod
+    .number()
+    .nullish()
+    .describe(
+      "First global ayah number (1–6236) of this homework's scope. When set together with lastGlobalAyah, per-ayah views filter to only these ayahs; pages always use the ceiling rule.",
+    ),
+  lastGlobalAyah: zod
+    .number()
+    .nullish()
+    .describe("Last global ayah number (1–6236) of this homework's scope."),
 });
 
 /**
@@ -996,6 +1006,16 @@ export const GetHomeworkResponse = zod.object({
   title: zod.string(),
   dueDate: zod.coerce.date(),
   createdAt: zod.coerce.date(),
+  firstGlobalAyah: zod
+    .number()
+    .nullable()
+    .describe(
+      "First global ayah of this homework's scope, or null if not set.",
+    ),
+  lastGlobalAyah: zod
+    .number()
+    .nullable()
+    .describe("Last global ayah of this homework's scope, or null if not set."),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -1044,6 +1064,18 @@ export const UpdateHomeworkBody = zod.object({
     .array(zod.number())
     .optional()
     .describe("Same semantics as memorizePages, for revise-type items."),
+  firstGlobalAyah: zod
+    .number()
+    .nullish()
+    .describe(
+      "Update the homework's ayah-level scope start. Pass null to clear.",
+    ),
+  lastGlobalAyah: zod
+    .number()
+    .nullish()
+    .describe(
+      "Update the homework's ayah-level scope end. Pass null to clear.",
+    ),
 });
 
 export const UpdateHomeworkResponse = zod.object({

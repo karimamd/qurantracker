@@ -11,4 +11,8 @@ export interface CreateHomeworkBody {
   dueDate: Date;
   memorizePages?: number[];
   revisePages?: number[];
+  /** First global ayah number (1–6236) of this homework's scope. When set together with lastGlobalAyah, per-ayah views filter to only these ayahs; pages always use the ceiling rule. */
+  firstGlobalAyah?: number | null;
+  /** Last global ayah number (1–6236) of this homework's scope. */
+  lastGlobalAyah?: number | null;
 }

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { SURAHS, ALL_ROB3S, ROB3S_PER_JUZ, JUZ_RANGES, getSurahsInPageRange } from "@/lib/quran-ref";
 import { Rob3FirstAyahPreview } from "@/components/rob3-first-ayah-preview";
+import { surahAyahBounds, rob3AyahBounds } from "@/lib/ayah-boundaries";
 
 /**
  * Surah / Part picker pair shared by the Create and Edit homework dialogs.
@@ -19,7 +20,13 @@ import { Rob3FirstAyahPreview } from "@/components/rob3-first-ayah-preview";
  */
 export interface HomeworkRangePickersProps {
   testIdPrefix: string;
-  onPick: (startPage: number, endPage: number) => void;
+  /**
+   * Called when the user picks a surah or part.
+   * `firstGlobalAyah` and `lastGlobalAyah` are the tight ayah-level bounds
+   * of the selected scope (use these to set the homework's ayah boundary).
+   * Pages always keep the ceiling rule (whole page included).
+   */
+  onPick: (startPage: number, endPage: number, firstGlobalAyah?: number, lastGlobalAyah?: number) => void;
 }
 
 export function HomeworkRangePickers({ testIdPrefix, onPick }: HomeworkRangePickersProps) {
@@ -31,7 +38,8 @@ export function HomeworkRangePickers({ testIdPrefix, onPick }: HomeworkRangePick
     const n = parseInt(value, 10);
     const s = SURAHS.find(x => x.number === n);
     if (s) {
-      onPick(s.startPage, s.endPage);
+      const bounds = surahAyahBounds(n);
+      onPick(s.startPage, s.endPage, bounds?.first, bounds?.last);
       setFilterSurah(n);
     }
     setSurahKey(k => k + 1);
@@ -40,7 +48,10 @@ export function HomeworkRangePickers({ testIdPrefix, onPick }: HomeworkRangePick
   const handlePart = (value: string) => {
     const n = parseInt(value, 10);
     const r = ALL_ROB3S.find(x => x.rob3 === n);
-    if (r) onPick(r.startPage, r.endPage);
+    if (r) {
+      const bounds = rob3AyahBounds(n);
+      onPick(r.startPage, r.endPage, bounds?.first, bounds?.last);
+    }
     setPartKey(k => k + 1);
   };
 

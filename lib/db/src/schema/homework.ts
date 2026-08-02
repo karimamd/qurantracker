@@ -27,6 +27,14 @@ export const homeworkSessionsTable = pgTable("homework_sessions", {
   userId: text("user_id"),
   title: text("title").notNull(),
   dueDate: timestamp("due_date", { withTimezone: true }).notNull(),
+  /**
+   * Optional ayah-level boundary for this homework.  When set, only ayahs
+   * with globalAyahNumber in [firstGlobalAyah, lastGlobalAyah] are counted
+   * in the per-ayah correctness views.  Pages always use the ceiling rule
+   * (full page included if any boundary ayah lives on it).
+   */
+  firstGlobalAyah: integer("first_global_ayah"),
+  lastGlobalAyah: integer("last_global_ayah"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({

@@ -1640,6 +1640,14 @@ components:
           type: array
           items:
             type: integer
+        firstGlobalAyah:
+          type: integer
+          nullable: true
+          description: First global ayah number (1–6236) of this homework's scope. When set together with lastGlobalAyah, per-ayah views filter to only these ayahs; pages always use the ceiling rule.
+        lastGlobalAyah:
+          type: integer
+          nullable: true
+          description: Last global ayah number (1–6236) of this homework's scope.
       required:
         - title
         - dueDate
@@ -1662,6 +1670,14 @@ components:
           items:
             type: integer
           description: "Same semantics as memorizePages, for revise-type items."
+        firstGlobalAyah:
+          type: integer
+          nullable: true
+          description: Update the homework's ayah-level scope start. Pass null to clear.
+        lastGlobalAyah:
+          type: integer
+          nullable: true
+          description: Update the homework's ayah-level scope end. Pass null to clear.
 
     HomeworkSessionDetail:
       type: object
@@ -1676,6 +1692,12 @@ components:
         createdAt:
           type: string
           format: date-time
+        firstGlobalAyah:
+          type: ["integer", "null"]
+          description: First global ayah of this homework's scope, or null if not set.
+        lastGlobalAyah:
+          type: ["integer", "null"]
+          description: Last global ayah of this homework's scope, or null if not set.
         items:
           type: array
           items:
@@ -1685,6 +1707,8 @@ components:
         - title
         - dueDate
         - createdAt
+        - firstGlobalAyah
+        - lastGlobalAyah
         - items
 
     HomeworkItem:

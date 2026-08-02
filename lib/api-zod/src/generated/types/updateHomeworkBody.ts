@@ -13,4 +13,8 @@ export interface UpdateHomeworkBody {
   memorizePages?: number[];
   /** Same semantics as memorizePages, for revise-type items. */
   revisePages?: number[];
+  /** Update the homework's ayah-level scope start. Pass null to clear. */
+  firstGlobalAyah?: number | null;
+  /** Update the homework's ayah-level scope end. Pass null to clear. */
+  lastGlobalAyah?: number | null;
 }

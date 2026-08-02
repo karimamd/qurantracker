@@ -336,7 +336,16 @@ router.get("/telawa/homework-ayah-correctness", async (req, res): Promise<void> 
     for (const gn of ayahs) ayahEntries.push({ globalAyahNumber: gn, pageNumber: page });
   }
 
-  const totalAyahs = ayahEntries.length;
+  // Apply ayah-level boundary filter — same ceiling/tight-boundary split as
+  // GET /homework/:id/ayahs: pages use the whole page, ayahs use the tight range.
+  const firstBound = session.firstGlobalAyah;
+  const lastBound = session.lastGlobalAyah;
+  const filteredEntries =
+    firstBound != null && lastBound != null
+      ? ayahEntries.filter((e) => e.globalAyahNumber >= firstBound && e.globalAyahNumber <= lastBound)
+      : ayahEntries;
+
+  const totalAyahs = filteredEntries.length;
 
   if (totalAyahs === 0) {
     res.json(
@@ -353,8 +362,7 @@ router.get("/telawa/homework-ayah-correctness", async (req, res): Promise<void> 
     return;
   }
 
-  // Fetch all active marks (resolvedAt IS NULL) for these ayahs.
-  const globalNumbers = ayahEntries.map((e) => e.globalAyahNumber);
+  const globalNumbers = filteredEntries.map((e) => e.globalAyahNumber);
   const activeMarks = await db
     .select({
       globalAyahNumber: ayahMistakesTable.globalAyahNumber,
@@ -387,7 +395,7 @@ router.get("/telawa/homework-ayah-correctness", async (req, res): Promise<void> 
 
   let correctAyahs = 0;
   let firstIncorrectAyahNumber: number | null = null;
-  for (const { globalAyahNumber } of ayahEntries) {
+  for (const { globalAyahNumber } of filteredEntries) {
     if (isCorrect(globalAyahNumber)) {
       correctAyahs++;
     } else if (firstIncorrectAyahNumber === null) {
@@ -401,7 +409,7 @@ router.get("/telawa/homework-ayah-correctness", async (req, res): Promise<void> 
       homeworkTitle: session.title,
       dueDate: session.dueDate.toISOString(),
       isOverdue: isHomeworkOverdue(session.dueDate, now),
-      totalAyahs,
+      totalAyahs: filteredEntries.length,
       correctAyahs,
       firstIncorrectAyahNumber,
     }),

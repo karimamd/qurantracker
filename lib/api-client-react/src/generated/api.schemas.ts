@@ -522,6 +522,10 @@ export interface CreateHomeworkBody {
   dueDate: string;
   memorizePages?: number[];
   revisePages?: number[];
+  /** First global ayah number (1–6236) of this homework's scope. When set together with lastGlobalAyah, per-ayah views filter to only these ayahs; pages always use the ceiling rule. */
+  firstGlobalAyah?: number | null;
+  /** Last global ayah number (1–6236) of this homework's scope. */
+  lastGlobalAyah?: number | null;
 }
 
 export interface UpdateHomeworkBody {
@@ -531,6 +535,10 @@ export interface UpdateHomeworkBody {
   memorizePages?: number[];
   /** Same semantics as memorizePages, for revise-type items. */
   revisePages?: number[];
+  /** Update the homework's ayah-level scope start. Pass null to clear. */
+  firstGlobalAyah?: number | null;
+  /** Update the homework's ayah-level scope end. Pass null to clear. */
+  lastGlobalAyah?: number | null;
 }
 
 export type HomeworkItemType = typeof HomeworkItemType[keyof typeof HomeworkItemType];
@@ -576,6 +584,16 @@ export interface HomeworkSessionDetail {
   title: string;
   dueDate: string;
   createdAt: string;
+  /**
+   * First global ayah of this homework's scope, or null if not set.
+   * @nullable
+   */
+  firstGlobalAyah: number | null;
+  /**
+   * Last global ayah of this homework's scope, or null if not set.
+   * @nullable
+   */
+  lastGlobalAyah: number | null;
   items: HomeworkItem[];
 }
 

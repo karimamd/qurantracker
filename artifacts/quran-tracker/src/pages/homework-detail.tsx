@@ -49,7 +49,11 @@ import { useEffect, useMemo, useState } from "react";
  */
 type PageCoverage = { total: number; done: number; loading: boolean };
 
-function usePagesCoverage(pageNumbers: number[]): Map<number, PageCoverage> {
+function usePagesCoverage(
+  pageNumbers: number[],
+  firstGlobalAyah?: number | null,
+  lastGlobalAyah?: number | null,
+): Map<number, PageCoverage> {
   // Stable list so useQueries doesn't re-run every render. We dedupe and
   // sort so identical homework configurations produce identical query
   // sets (helps React Query reuse).
@@ -88,7 +92,12 @@ function usePagesCoverage(pageNumbers: number[]): Map<number, PageCoverage> {
     uniquePages.forEach((pageNumber, idx) => {
       const ayahsRes = ayahsResults[idx];
       const mistakesRes = mistakesResults[idx];
-      const ayahs = (ayahsRes.data ?? []) as ApiAyah[];
+      let ayahs = (ayahsRes.data ?? []) as ApiAyah[];
+      // Apply tight ayah-level boundary so pages that sit at the edge of a
+      // surah/part only count in-scope ayahs, not every ayah on the page.
+      if (firstGlobalAyah != null && lastGlobalAyah != null) {
+        ayahs = ayahs.filter(a => a.number >= firstGlobalAyah && a.number <= lastGlobalAyah);
+      }
       const marks = (mistakesRes.data ?? []) as ActiveAyahMistake[];
       const total = ayahs.length;
       const cleared = new Set<number>();
@@ -110,7 +119,7 @@ function usePagesCoverage(pageNumbers: number[]): Map<number, PageCoverage> {
       });
     });
     return map;
-  }, [uniquePages, ayahsResults, mistakesResults]);
+  }, [uniquePages, ayahsResults, mistakesResults, firstGlobalAyah, lastGlobalAyah]);
 }
 
 /** Badge styling per active status, mirroring the Mistakes page palette. */
@@ -369,6 +378,14 @@ export default function HomeworkDetail() {
   const [editDueDate, setEditDueDate] = useState("");
   const [editMemorizeRange, setEditMemorizeRange] = useState("");
   const [editReviseRange, setEditReviseRange] = useState("");
+  const [editFirstGlobalAyah, setEditFirstGlobalAyah] = useState<number | null>(null);
+  const [editLastGlobalAyah, setEditLastGlobalAyah] = useState<number | null>(null);
+
+  const expandEditBounds = (fga: number | undefined, lga: number | undefined) => {
+    if (fga == null || lga == null) return;
+    setEditFirstGlobalAyah(prev => (prev == null ? fga : Math.min(prev, fga)));
+    setEditLastGlobalAyah(prev => (prev == null ? lga : Math.max(prev, lga)));
+  };
 
   const openEdit = () => {
     if (!detail) return;
@@ -386,6 +403,8 @@ export default function HomeworkDetail() {
     setEditDueDate(`${yyyy}-${mm}-${dd}`);
     setEditMemorizeRange(compressPages(detail.items.filter(i => i.type === "memorize").map(i => i.pageNumber)));
     setEditReviseRange(compressPages(detail.items.filter(i => i.type === "revise").map(i => i.pageNumber)));
+    setEditFirstGlobalAyah(detail.firstGlobalAyah ?? null);
+    setEditLastGlobalAyah(detail.lastGlobalAyah ?? null);
     setEditOpen(true);
   };
 
@@ -406,6 +425,10 @@ export default function HomeworkDetail() {
           dueDate: new Date(`${editDueDate}T00:00:00.000Z`).toISOString(),
           memorizePages: parsePageRange(editMemorizeRange),
           revisePages: parsePageRange(editReviseRange),
+          // Always send boundaries so the user can clear them by editing
+          // without picking a new surah/part (null = use all ayahs on pages).
+          firstGlobalAyah: editFirstGlobalAyah,
+          lastGlobalAyah: editLastGlobalAyah,
         },
       },
       {
@@ -466,7 +489,11 @@ export default function HomeworkDetail() {
   // These queries share React-Query cache with the reader, so marking an
   // ayah in the reader will live-update the counts shown here.
   const allPageNumbers = (detail?.items ?? []).map(i => i.pageNumber);
-  const coverageByPage = usePagesCoverage(allPageNumbers);
+  const coverageByPage = usePagesCoverage(
+    allPageNumbers,
+    detail?.firstGlobalAyah,
+    detail?.lastGlobalAyah,
+  );
 
   if (isLoading) {
     return (
@@ -675,7 +702,10 @@ export default function HomeworkDetail() {
                 />
                 <HomeworkRangePickers
                   testIdPrefix="edit-memorize"
-                  onPick={(start, end) => setEditMemorizeRange(appendPageRange(editMemorizeRange, start, end))}
+                  onPick={(start, end, fga, lga) => {
+                    setEditMemorizeRange(appendPageRange(editMemorizeRange, start, end));
+                    expandEditBounds(fga, lga);
+                  }}
                 />
                 <p className="text-xs text-muted-foreground mt-1">{t("homework.form.rangeHint")}</p>
               </div>
@@ -689,7 +719,10 @@ export default function HomeworkDetail() {
                 />
                 <HomeworkRangePickers
                   testIdPrefix="edit-revise"
-                  onPick={(start, end) => setEditReviseRange(appendPageRange(editReviseRange, start, end))}
+                  onPick={(start, end, fga, lga) => {
+                    setEditReviseRange(appendPageRange(editReviseRange, start, end));
+                    expandEditBounds(fga, lga);
+                  }}
                 />
               </div>
               <p className="text-xs text-muted-foreground">{t("homework.editPreserveHint")}</p>

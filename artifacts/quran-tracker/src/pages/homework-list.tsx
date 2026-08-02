@@ -29,6 +29,17 @@ export default function HomeworkList() {
   const [dueDate, setDueDate] = useState("");
   const [memorizeRange, setMemorizeRange] = useState("");
   const [reviseRange, setReviseRange] = useState("");
+  // Accumulated ayah-level boundaries from the surah/part pickers. Each pick
+  // expands the range (min first, max last) so multiple picks combine correctly.
+  // Cleared on dialog close/submit. Null when no picker has been used.
+  const [firstGlobalAyah, setFirstGlobalAyah] = useState<number | null>(null);
+  const [lastGlobalAyah, setLastGlobalAyah] = useState<number | null>(null);
+
+  const expandBounds = (fga: number | undefined, lga: number | undefined) => {
+    if (fga == null || lga == null) return;
+    setFirstGlobalAyah(prev => (prev == null ? fga : Math.min(prev, fga)));
+    setLastGlobalAyah(prev => (prev == null ? lga : Math.max(prev, lga)));
+  };
 
   const handleCreate = () => {
     if (!title || !dueDate) {
@@ -43,6 +54,9 @@ export default function HomeworkList() {
           dueDate: new Date(dueDate).toISOString(),
           memorizePages: parsePageRange(memorizeRange),
           revisePages: parsePageRange(reviseRange),
+          ...(firstGlobalAyah != null && lastGlobalAyah != null
+            ? { firstGlobalAyah, lastGlobalAyah }
+            : {}),
         },
       },
       {
@@ -53,6 +67,8 @@ export default function HomeworkList() {
           setDueDate("");
           setMemorizeRange("");
           setReviseRange("");
+          setFirstGlobalAyah(null);
+          setLastGlobalAyah(null);
           queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
         },
       }
@@ -113,7 +129,10 @@ export default function HomeworkList() {
                 <Input value={memorizeRange} onChange={e => setMemorizeRange(e.target.value)} placeholder={t("homework.form.memorizePlaceholder")} data-testid="input-hw-memorize" />
                 <HomeworkRangePickers
                   testIdPrefix="memorize"
-                  onPick={(start, end) => setMemorizeRange(appendPageRange(memorizeRange, start, end))}
+                  onPick={(start, end, fga, lga) => {
+                    setMemorizeRange(appendPageRange(memorizeRange, start, end));
+                    expandBounds(fga, lga);
+                  }}
                 />
                 <p className="text-xs text-muted-foreground mt-1">{t("homework.form.rangeHint")}</p>
               </div>
@@ -122,7 +141,10 @@ export default function HomeworkList() {
                 <Input value={reviseRange} onChange={e => setReviseRange(e.target.value)} placeholder={t("homework.form.revisePlaceholder")} data-testid="input-hw-revise" />
                 <HomeworkRangePickers
                   testIdPrefix="revise"
-                  onPick={(start, end) => setReviseRange(appendPageRange(reviseRange, start, end))}
+                  onPick={(start, end, fga, lga) => {
+                    setReviseRange(appendPageRange(reviseRange, start, end));
+                    expandBounds(fga, lga);
+                  }}
                 />
               </div>
               <Button onClick={handleCreate} disabled={createHomework.isPending} className="w-full" data-testid="btn-submit-homework">

@@ -1,0 +1,31 @@
+/**
+ * Static ayah-boundary lookups derived from the bundled Quran data.
+ *
+ * Each surah and each Rub' (quarter-juz, rob3) has a known first and last
+ * global ayah number (1-based, 1..6236).  The homework picker uses these
+ * to store accurate ayah-level boundaries alongside the page-level ceiling
+ * used for the pages list.
+ *
+ * The JSON source (`ayah-boundaries.json`) was pre-computed from the
+ * bundled `quran-dump.json` and the `rob3-boundaries.json` data; it never
+ * changes at runtime.
+ */
+import boundariesData from "@/lib/ayah-boundaries.json";
+
+export interface AyahRange {
+  first: number;
+  last: number;
+}
+
+const surahs = boundariesData.surahs as Record<string, AyahRange>;
+const rob3s   = boundariesData.rob3s  as Record<string, AyahRange>;
+
+/** Returns the global-ayah range for the given surah number (1–114), or null. */
+export function surahAyahBounds(surahNumber: number): AyahRange | null {
+  return surahs[String(surahNumber)] ?? null;
+}
+
+/** Returns the global-ayah range for the given Rub' / part number (1–240), or null. */
+export function rob3AyahBounds(rob3Number: number): AyahRange | null {
+  return rob3s[String(rob3Number)] ?? null;
+}

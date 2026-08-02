@@ -12,5 +12,15 @@ export interface HomeworkSessionDetail {
   title: string;
   dueDate: Date;
   createdAt: Date;
+  /**
+   * First global ayah of this homework's scope, or null if not set.
+   * @nullable
+   */
+  firstGlobalAyah: number | null;
+  /**
+   * Last global ayah of this homework's scope, or null if not set.
+   * @nullable
+   */
+  lastGlobalAyah: number | null;
   items: HomeworkItem[];
 }

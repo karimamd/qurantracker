@@ -128,6 +128,8 @@ router.post("/homework", async (req, res): Promise<void> => {
     userId,
     title: parsed.data.title,
     dueDate: new Date(parsed.data.dueDate),
+    firstGlobalAyah: parsed.data.firstGlobalAyah ?? null,
+    lastGlobalAyah: parsed.data.lastGlobalAyah ?? null,
   }).returning();
 
   const memorizePages = parsed.data.memorizePages || [];
@@ -217,6 +219,8 @@ router.get("/homework/:id", async (req, res): Promise<void> => {
     title: session.title,
     dueDate: session.dueDate,
     createdAt: session.createdAt,
+    firstGlobalAyah: session.firstGlobalAyah ?? null,
+    lastGlobalAyah: session.lastGlobalAyah ?? null,
     items: rows.map(r => {
       const defaultName = getDefaultPageName(r.pageNumber);
       return {
@@ -284,12 +288,22 @@ router.get("/homework/:id/ayahs", async (req, res): Promise<void> => {
     }
   }
 
-  if (ayahEntries.length === 0) {
+  // Apply ayah-level boundary filter when the session has explicit bounds.
+  // Pages always use the ceiling rule (whole page included); only the ayah
+  // view respects the tight boundary.
+  const firstBound = session.firstGlobalAyah;
+  const lastBound = session.lastGlobalAyah;
+  const filteredEntries =
+    firstBound != null && lastBound != null
+      ? ayahEntries.filter(e => e.globalAyahNumber >= firstBound && e.globalAyahNumber <= lastBound)
+      : ayahEntries;
+
+  if (filteredEntries.length === 0) {
     res.json(GetHomeworkAyahsResponse.parse({ lastVisitedGlobalAyahNumber: null, ayahs: [] }));
     return;
   }
 
-  const globalNumbers = ayahEntries.map(e => e.globalAyahNumber);
+  const globalNumbers = filteredEntries.map(e => e.globalAyahNumber);
 
   // Active per-ayah marks for these ayahs (resolvedAt IS NULL).
   const activeMarks = await db
@@ -344,7 +358,7 @@ router.get("/homework/:id/ayahs", async (req, res): Promise<void> => {
   const STATUS_ORDER = ["cleared", "memorization", "link"];
   const payload = {
     lastVisitedGlobalAyahNumber,
-    ayahs: ayahEntries.map(e => {
+    ayahs: filteredEntries.map(e => {
       const set = statusMap.get(e.globalAyahNumber);
       const statuses = set ? STATUS_ORDER.filter(s => set.has(s)) : [];
       const lastAt = lastAtMap.get(e.globalAyahNumber);
@@ -378,6 +392,8 @@ router.patch("/homework/:id", async (req, res): Promise<void> => {
   const updateData: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) updateData.title = parsed.data.title;
   if (parsed.data.dueDate !== undefined) updateData.dueDate = new Date(parsed.data.dueDate);
+  if (parsed.data.firstGlobalAyah !== undefined) updateData.firstGlobalAyah = parsed.data.firstGlobalAyah ?? null;
+  if (parsed.data.lastGlobalAyah !== undefined) updateData.lastGlobalAyah = parsed.data.lastGlobalAyah ?? null;
 
   // Confirm the session belongs to this user before touching items, even
   // when no session-level fields changed (the page-list fields below
