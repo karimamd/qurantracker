@@ -4,3 +4,7 @@
 - [Auto-assign coverage needs same-day recitedAt](auto-assign-coverage-recitedat.md) — stale per-ayah marks silently block page auto-assign; re-affirming a mark must refresh recitedAt (client always POSTs, server updates recitedAt on existing row).
 - [Arabic per-word gloss dataset](arabic-wbw-dataset.md) — no complete Arabic-to-Arabic WBW dataset exists; Ayah view falls back to English gloss in all langs. Search already done, don't redo.
 - [/active-mistakes broad invalidation](active-mistakes-invalidation.md) — any screen posting per-ayah marks must mirror the Reader's broad invalidation (server auto-assigns page recitation as a side effect).
+- [Clerk hydration emits null before the real user](clerk-hydration-identity.md) — never treat Clerk's null→user event as a user switch; gate on isLoaded and compare a persisted identity baseline.
+- [First-paint settings need a sync mirror](first-paint-settings-mirror.md) — server-backed UI settings must be mirrored in localStorage and identity-stamped, or they flash/stick on defaults and can bleed across accounts.
+- [TanStack persist must version-lock to react-query](tanstack-persist-version-lock.md) — a query-core version split makes the persister hydrate a different QueryClient class and restore silently no-ops.
+- [Lazy per-user row creation must tolerate conflicts](lazy-row-creation-races.md) — concurrent first-load endpoints race on unique indexes; use onConflictDoNothing + re-select or the first load 500s.

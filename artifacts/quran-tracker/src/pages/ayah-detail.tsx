@@ -74,6 +74,8 @@ import {
 import { getAyahIndex, type AyahIndexEntry } from "@/lib/ayah-index";
 import { getAyahTafsir } from "@/lib/tafsir";
 import { getAyahWbw, type WbwWord } from "@/lib/wbw";
+import { useAuth } from "@clerk/react";
+import { readCachedUiSettings, clampFontSize, resolveIdentity } from "@/lib/ui-settings-cache";
 
 // Bounds mirror the OpenAPI schema for settings.ayahViewFontSize so a
 // user's saved default is always honoured (e.g. 14 stays 14, never falls
@@ -126,7 +128,18 @@ export default function AyahDetail() {
 
   const { data: settings } = useGetSettings();
 
-  const [fontSize, setFontSize] = useState<number>(FONT_DEFAULT_FALLBACK);
+  // Seeded from the synchronous, identity-scoped settings mirror (see
+  // reader.tsx) so a reloaded tab shows the saved ayah font size on first
+  // paint without risking another account's value.
+  const { userId: clerkUserId } = useAuth();
+  const [fontSize, setFontSize] = useState<number>(
+    () =>
+      clampFontSize(
+        readCachedUiSettings(resolveIdentity(clerkUserId)).ayahViewFontSize,
+        FONT_MIN,
+        FONT_MAX,
+      ) ?? FONT_DEFAULT_FALLBACK,
+  );
   // Reseed the font size from settings whenever they finish loading or the
   // user navigates to a different ayah. We re-apply on every target change
   // so backing out to the list and opening another card always shows the

@@ -64,6 +64,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, BookMarked, Search, AlertCircle, Eye, EyeOff, Check, X, ChevronsLeft, Link2, Repeat, Sparkles, Minus, Plus, Eraser, BookOpen, ClipboardList, ArrowUpRight } from "lucide-react";
 import { format } from "date-fns";
 import { SURAHS, JUZ_RANGES, ALL_ROB3S, TOTAL_PAGES } from "@/lib/quran-ref";
+import { useAuth } from "@clerk/react";
+import { readCachedUiSettings, clampFontSize, resolveIdentity } from "@/lib/ui-settings-cache";
 import { getDefaultPageName } from "@/lib/page-names";
 import { type Quality, QUALITIES, qualityStyle } from "@/lib/quality";
 import { usePageAyahs, usePrefetchPageAyahs, stripBasmalaText, type ApiAyah } from "@/hooks/use-page-ayahs";
@@ -765,7 +767,22 @@ export default function Reader() {
   const READER_FONT_DEFAULT = 24;
   const { data: settings } = useGetSettings();
   const updateSettings = useUpdateSettings();
-  const [readerFontSize, setReaderFontSize] = useState<number>(READER_FONT_DEFAULT);
+  // Seed from the synchronous settings mirror so a tab that a mobile
+  // browser unloaded and reloaded paints the user's saved size immediately,
+  // instead of flashing (or getting stuck on) the 24px default while
+  // GET /api/settings is in flight. Server data still wins once it lands.
+  // Reads are identity-scoped, so another account's size can never be
+  // picked up here. Safe to read userId during render: ProtectedApp holds
+  // this page behind an isLoaded gate, so Clerk has already settled.
+  const { userId: clerkUserId } = useAuth();
+  const [readerFontSize, setReaderFontSize] = useState<number>(
+    () =>
+      clampFontSize(
+        readCachedUiSettings(resolveIdentity(clerkUserId)).readerFontSize,
+        READER_FONT_MIN,
+        READER_FONT_MAX,
+      ) ?? READER_FONT_DEFAULT,
+  );
   const fontSizePersistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync local state when settings load or change from elsewhere (e.g.,

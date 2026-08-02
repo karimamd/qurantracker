@@ -11,9 +11,8 @@
  *     and Clerk says signed-out — converts guests via /sign-up.
  *
  * Sign-out path always invalidates the React Query cache (via the global
- * ClerkQueryClientCacheInvalidator in App.tsx for sign-out, and
- * `queryClient.clear()` here for guest exit) so the next user's data starts
- * cold.
+ * QueryCacheIdentityGuard in App.tsx for sign-out, and `queryClient.clear()`
+ * here for guest exit) so the next user's data starts cold.
  */
 import { Link, useLocation } from "wouter";
 import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info, AlertTriangle, Repeat, Sparkles, Compass, WifiOff } from "lucide-react";
@@ -26,6 +25,7 @@ import { useGetSettings } from "@workspace/api-client-react";
 import { isGuestMode, exitGuestMode } from "@/lib/guest-mode";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { resolveBottomNavKeys } from "@/lib/bottom-nav";
+import { readCachedUiSettings, resolveIdentity } from "@/lib/ui-settings-cache";
 
 const navItems = [
   { href: "/homework", key: "homework", testId: "homework", icon: ClipboardList },
@@ -50,15 +50,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { user } = useUser();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId: clerkUserId } = useAuth();
   const { signOut } = useClerk();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
-  // Settings drives the bottom-nav. Until it loads we render the historical
-  // five (resolveBottomNavKeys handles the empty/undefined fallback) so the
-  // bar never flickers blank on first paint.
+  // Settings drives the bottom-nav. Before the network answers we fall back
+  // to the synchronous settings mirror (the user's own saved order from the
+  // last session) and only then to the historical five — otherwise a
+  // reloaded mobile tab shows the default bar until /api/settings lands.
   const { data: settings } = useGetSettings();
-  const bottomNavItems = resolveBottomNavKeys(settings?.bottomNavKeys)
+  const [cachedNavKeys] = useState(
+    () => readCachedUiSettings(resolveIdentity(clerkUserId)).bottomNavKeys,
+  );
+  const bottomNavItems = resolveBottomNavKeys(settings?.bottomNavKeys ?? cachedNavKeys)
     .map(k => navItems.find(n => n.key === k))
     .filter((n): n is (typeof navItems)[number] => n !== undefined);
 

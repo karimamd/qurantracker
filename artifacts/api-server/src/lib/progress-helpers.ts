@@ -68,13 +68,38 @@ export function computeEffectiveQuality(
   };
 }
 
+/**
+ * Read the user's settings, lazily creating the row on first access.
+ *
+ * The insert MUST tolerate a conflict. A single page load fans out to
+ * several endpoints at once (telawa/today, telawa/scope/today,
+ * progress-chart, telawa/homework-reading, ...) and each of them calls
+ * this helper. For a brand-new user they all miss the select and race to
+ * insert, but `settings_user_id_unique` only lets one win — the losers
+ * used to throw a duplicate-key error and 500 the whole request, which is
+ * why a first load could come back partly blank until a manual refresh.
+ * Swallow the conflict and re-read the winner's row instead.
+ */
 export async function getSettings(userId: string) {
   const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.userId, userId));
-  if (!settings) {
-    const [created] = await db.insert(settingsTable).values({ userId }).returning();
-    return created;
+  if (settings) return settings;
+
+  const [created] = await db
+    .insert(settingsTable)
+    .values({ userId })
+    .onConflictDoNothing({ target: settingsTable.userId })
+    .returning();
+  if (created) return created;
+
+  // Lost the race: the concurrent insert has committed, so re-read it.
+  const [existing] = await db
+    .select()
+    .from(settingsTable)
+    .where(eq(settingsTable.userId, userId));
+  if (!existing) {
+    throw new Error(`Failed to create or load settings for user ${userId}`);
   }
-  return settings;
+  return existing;
 }
 
 export function calculateDueDate(lastRecited: Date, quality: string, settings: { excellentDays: number; goodDays: number; hardDays: number; relearnDays: number }): Date {
@@ -252,12 +277,32 @@ export async function getWeeklyReadCounts(
   return map;
 }
 
+/**
+ * Read a page's progress row, lazily creating it on first access.
+ *
+ * Same concurrency hazard as getSettings: the Reader can fire several
+ * per-page writes for the same page at once, and `page_progress_user_page_unique`
+ * would turn the losing inserts into duplicate-key 500s. Tolerate the
+ * conflict and re-read instead.
+ */
 export async function ensurePageExists(userId: string, pageNumber: number) {
   const [existing] = await db.select().from(pageProgressTable)
     .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)));
-  if (!existing) {
-    const [created] = await db.insert(pageProgressTable).values({ userId, pageNumber }).returning();
-    return created;
+  if (existing) return existing;
+
+  const [created] = await db
+    .insert(pageProgressTable)
+    .values({ userId, pageNumber })
+    .onConflictDoNothing({
+      target: [pageProgressTable.userId, pageProgressTable.pageNumber],
+    })
+    .returning();
+  if (created) return created;
+
+  const [raced] = await db.select().from(pageProgressTable)
+    .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)));
+  if (!raced) {
+    throw new Error(`Failed to create or load page progress ${pageNumber} for user ${userId}`);
   }
-  return existing;
+  return raced;
 }

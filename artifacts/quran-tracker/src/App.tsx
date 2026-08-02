@@ -14,18 +14,20 @@
  *                           OR a guest session exists (lib/guest-mode.ts)
  *       /sign-in, /sign-up→ Clerk-hosted forms
  *       everything else   → ProtectedApp (Layout + page routes)
- *   - LanguageSync reads the user's saved settings.language and pushes it
- *     into the i18n runtime so language preference persists across devices.
- *   - ClerkQueryClientCacheInvalidator wipes the React Query cache when the
- *     signed-in user id changes, preventing the previous user's data from
- *     leaking into the next session in the same browser tab.
+ *   - SettingsSync pushes saved settings where they're needed before the
+ *     network answers: language into the i18n runtime, and font sizes +
+ *     bottom-nav order into a synchronous localStorage mirror so a reloaded
+ *     mobile tab paints the user's preferences instead of defaults.
+ *   - QueryCacheIdentityGuard wipes cached data only when the settled
+ *     signed-in identity actually differs from the one the cache was built
+ *     for, preventing cross-user leakage without nuking the cache on every
+ *     ordinary page load.
  */
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
-import { ClerkProvider, SignIn, SignUp, useAuth, useClerk } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, useAuth } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Toaster } from "@/components/ui/toaster";
@@ -55,27 +57,37 @@ import Welcome from "@/pages/welcome";
 import NotFound from "@/pages/not-found";
 import { isGuestMode } from "@/lib/guest-mode";
 import { queryClient } from "@/lib/query-client";
+import {
+  persister,
+  purgeLegacyPersistedCaches,
+  removePersistedCache,
+  shouldPersistQuery,
+} from "@/lib/query-persister";
+import {
+  writeCachedUiSettings,
+  clearCachedUiSettings,
+  resolveIdentity,
+} from "@/lib/ui-settings-cache";
+
+// Drop any cache written by the previous persistence scheme. The old blob
+// could have been overwritten with an empty cache by the identity bug that
+// QueryCacheIdentityGuard (below) now prevents, in which case restoring it
+// would show a blank app that a refresh couldn't fix.
+purgeLegacyPersistedCaches();
 
 /**
- * Persists the React Query cache to localStorage so that when mobile
- * browsers unload the tab in the background and the user returns, all
- * previously loaded data (settings, homework, progress, mistakes) is
- * instantly available without waiting for network round-trips.
- *
- * Quran page text is excluded: it already has its own IndexedDB layer
- * (see use-page-ayahs.ts / quran-page-cache.ts) and storing it in
- * localStorage too would waste ~5 MB.
- *
- * A `v1` suffix on the key lets us invalidate stale serialized caches
- * if the query-key shape ever changes in a breaking way.
+ * Key used to remember which identity the persisted cache belongs to.
+ * Stored in localStorage (not a ref) so it survives the full page reload a
+ * mobile browser performs when it reclaims a backgrounded tab.
  */
-const persister = createSyncStoragePersister({
-  storage: window.localStorage,
-  key: "qurantracker.querycache.v1",
-  // Throttle localStorage writes — 1 s debounce (library default) avoids
-  // hammering storage on rapid successive mutations.
-  throttleTime: 1000,
-});
+const LAST_IDENTITY_KEY = "qurantracker.lastIdentity";
+
+/**
+ * In-memory mirror of the above, used when localStorage is unavailable.
+ * It cannot survive a reload, but it still catches identity changes that
+ * happen within a single session.
+ */
+let inMemoryLastIdentity: string | null = null;
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -165,17 +177,40 @@ function Landing() {
   return <Welcome withAuthChrome={true} />;
 }
 
-/** Sync the user's persisted language preference into i18n + <html dir/lang>. */
-function LanguageSync() {
-  const { isLoaded, isSignedIn } = useAuth();
+/**
+ * Push the user's saved settings into the places that need them before the
+ * network can answer:
+ *   - language → i18n runtime + <html dir/lang>
+ *   - font sizes / bottom-nav order → a small synchronous localStorage
+ *     mirror (lib/ui-settings-cache.ts)
+ *
+ * The mirror is what stops a reloaded tab from rendering default fonts and
+ * the default nav order while `GET /api/settings` is still in flight — or
+ * indefinitely, if the device came back online slowly.
+ */
+function SettingsSync() {
+  const { isLoaded, isSignedIn, userId } = useAuth();
   const enabled = isLoaded && (isSignedIn || isGuestMode());
   const { data: settings } = useGetSettings({ query: { enabled, queryKey: getGetSettingsQueryKey() } });
+
   useEffect(() => {
     const lang = settings?.language;
     if (lang === "en" || lang === "ar") {
       setLanguage(lang as SupportedLanguage);
     }
   }, [settings?.language]);
+
+  useEffect(() => {
+    if (!settings || !isLoaded) return;
+    // Stamp the mirror with the identity it belongs to so another account
+    // can never read these values back on first paint.
+    writeCachedUiSettings(resolveIdentity(userId), {
+      readerFontSize: settings.readerFontSize,
+      ayahViewFontSize: settings.ayahViewFontSize,
+      bottomNavKeys: settings.bottomNavKeys ? [...settings.bottomNavKeys] : undefined,
+    });
+  }, [settings, isLoaded, userId]);
+
   return null;
 }
 
@@ -201,7 +236,7 @@ function ProtectedApp() {
   if (!isSignedIn && !isGuestMode()) return <Redirect to="/" />;
   return (
     <Layout>
-      <LanguageSync />
+      <SettingsSync />
       <ErrorBoundary>
         <Switch>
           <Route path="/dashboard" component={Dashboard} />
@@ -229,21 +264,55 @@ function ProtectedApp() {
   );
 }
 
-function ClerkQueryClientCacheInvalidator() {
-  const { addListener } = useClerk();
+/**
+ * Wipe cached data when the *identity* behind it changes, so one account's
+ * data never leaks into another's session in the same browser.
+ *
+ * This deliberately does NOT listen to Clerk resource events. During
+ * hydration Clerk momentarily reports `user: null` before resolving the
+ * real session, so an event-based listener sees `null → user-id` on every
+ * single page load and reads it as a user switch. That cleared the cache
+ * (and, once persistence was added, the saved localStorage copy too) every
+ * time a backgrounded mobile tab reloaded — leaving the dashboard and
+ * homework blank with no way to recover by refreshing.
+ *
+ * Instead we wait for `isLoaded`, then compare the settled identity against
+ * one remembered in localStorage. That baseline survives reloads, so
+ * returning as the same user is correctly treated as "no change".
+ */
+function QueryCacheIdentityGuard() {
+  const { isLoaded, userId } = useAuth();
   const qc = useQueryClient();
-  const prevUserIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
-    const unsubscribe = addListener(({ user }) => {
-      const userId = user?.id ?? null;
-      if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
-        qc.clear();
-      }
-      prevUserIdRef.current = userId;
-    });
-    return unsubscribe;
-  }, [addListener, qc]);
+    if (!isLoaded) return;
+
+    const identity = resolveIdentity(userId);
+
+    // Prefer the stored baseline (survives reloads). Fall back to the
+    // in-memory one so that when localStorage is blocked — Safari private
+    // mode, strict cookie/storage settings — in-session transitions like
+    // sign-out or A -> B still clear the previous user's cached data.
+    let previous: string | null = inMemoryLastIdentity;
+    try {
+      previous = window.localStorage.getItem(LAST_IDENTITY_KEY) ?? inMemoryLastIdentity;
+    } catch {
+      // Keep the in-memory baseline.
+    }
+
+    if (previous !== null && previous !== identity) {
+      qc.clear();
+      removePersistedCache();
+      clearCachedUiSettings();
+    }
+
+    inMemoryLastIdentity = identity;
+    try {
+      window.localStorage.setItem(LAST_IDENTITY_KEY, identity);
+    } catch {
+      /* ignore */
+    }
+  }, [isLoaded, userId, qc]);
 
   return null;
 }
@@ -283,20 +352,10 @@ function ClerkProviderWithRoutes() {
           // gcTime so nothing is evicted from storage before memory would
           // drop it.
           maxAge: 7 * 24 * 60 * 60 * 1000,
-          dehydrateOptions: {
-            shouldDehydrateQuery: (query) => {
-              // Exclude Quran page text (already in IndexedDB) and
-              // exclude failed queries (no point caching errors).
-              const firstKey = query.queryKey[0];
-              return (
-                firstKey !== "alquran-cloud-page" &&
-                query.state.status !== "error"
-              );
-            },
-          },
+          dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
         }}
       >
-        <ClerkQueryClientCacheInvalidator />
+        <QueryCacheIdentityGuard />
         <TooltipProvider>
           <ErrorBoundary>
             <Switch>
