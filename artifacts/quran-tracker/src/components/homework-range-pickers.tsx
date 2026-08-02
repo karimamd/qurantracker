@@ -111,7 +111,15 @@ export function HomeworkScopePicker({
     const r = ALL_ROB3S.find(x => x.rob3 === n);
     if (r) {
       const bounds = rob3AyahBounds(n);
-      onGrainPick(r.startPage, r.endPage, bounds?.first, bounds?.last);
+      const nextPart = ALL_ROB3S[n];
+      // The shared Part ranges intentionally overlap their next Part's first
+      // page for progress reporting. Homework needs strict whole-page scopes:
+      // if the next Part begins on p.137, this Part stops at p.136. When both
+      // Parts begin on the same page, retain that page so the range is valid.
+      const homeworkEndPage = nextPart
+        ? Math.max(r.startPage, nextPart.startPage - 1)
+        : r.endPage;
+      onGrainPick(r.startPage, homeworkEndPage, bounds?.first, bounds?.last);
     }
     setPartKey(k => k + 1);
   };
