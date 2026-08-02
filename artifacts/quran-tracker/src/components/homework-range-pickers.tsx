@@ -81,6 +81,8 @@ export function HomeworkScopePicker({
   const [juzKey,  setJuzKey]  = useState(0);
   const [surahKey, setSurahKey] = useState(0);
   const [partKey,  setPartKey]  = useState(0);
+  const [partFilterJuz, setPartFilterJuz] = useState<number | null>(null);
+  const [partFilterSurah, setPartFilterSurah] = useState<number | null>(null);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -127,11 +129,28 @@ export function HomeworkScopePicker({
     return { ...juz, desc };
   });
 
-  // All 240 parts grouped by Juz — no surah filter.
-  const partsByJuz = JUZ_RANGES.map(juz => ({
-    juz:   juz.juz,
-    parts: ALL_ROB3S.filter(r => r.juz === juz.juz),
-  }));
+  // Filter parts by the selected Juz and/or Surah. Surah filtering uses
+  // tight global-ayah ranges rather than page overlap, so a boundary page
+  // does not make an unrelated part appear in the results.
+  const filteredParts = ALL_ROB3S.filter(r => {
+    if (partFilterJuz !== null && r.juz !== partFilterJuz) return false;
+    if (partFilterSurah !== null) {
+      const partBounds = rob3AyahBounds(r.rob3);
+      const surahBounds = surahAyahBounds(partFilterSurah);
+      if (!partBounds || !surahBounds) return false;
+      if (partBounds.last < surahBounds.first || partBounds.first > surahBounds.last) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  const partsByJuz = JUZ_RANGES
+    .map(juz => ({
+      juz: juz.juz,
+      parts: filteredParts.filter(r => r.juz === juz.juz),
+    }))
+    .filter(group => group.parts.length > 0);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -214,50 +233,123 @@ export function HomeworkScopePicker({
 
       {/* Part picker — all 240 Rub's grouped by Juz, no surah pre-filter */}
       {mode === "part" && (
-        <Select key={`part-${partKey}`} onValueChange={handlePart}>
-          <SelectTrigger data-testid={`select-part-${testIdPrefix}`}>
-            <SelectValue placeholder="Add Part…" />
-          </SelectTrigger>
-          <SelectContent className="max-h-72">
-            {partsByJuz.map(({ juz, parts }) => (
-              <SelectGroup key={juz}>
-                <SelectLabel>Juz {juz}</SelectLabel>
-                {parts.map(r => {
-                  const range = pRange(r.startPage, r.endPage);
-                  const surahsSpanned = getSurahsInPageRange(r.startPage, r.endPage);
-                  const surahsLabel =
-                    surahsSpanned
-                      .slice(0, 2)
-                      .map(s => s.name)
-                      .join(", ") +
-                    (surahsSpanned.length > 2 ? ` +${surahsSpanned.length - 2}` : "");
-                  return (
-                    <SelectItem
-                      key={r.rob3}
-                      value={String(r.rob3)}
-                      data-testid={`opt-part-${testIdPrefix}-${r.rob3}`}
-                    >
-                      <div className="flex flex-col items-start gap-0.5 py-0.5 max-w-[280px]">
-                        <span className="text-sm">
-                          Part {r.rob3InJuz + 1}/{ROB3S_PER_JUZ}
-                          <span className="ml-2 text-muted-foreground">· {range}</span>
-                        </span>
-                        {surahsLabel && (
-                          <span className="text-[11px] text-muted-foreground">{surahsLabel}</span>
-                        )}
-                        <Rob3FirstAyahPreview
-                          rob3Number={r.rob3}
-                          className="block text-[12px] mt-0.5 max-w-full"
-                          wordCount={6}
-                        />
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectGroup>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Select
+              value={partFilterJuz === null ? "all" : String(partFilterJuz)}
+              onValueChange={value => setPartFilterJuz(value === "all" ? null : parseInt(value, 10))}
+            >
+              <SelectTrigger data-testid={`select-part-filter-juz-${testIdPrefix}`}>
+                <SelectValue placeholder="Filter by Juz" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value="all" data-testid={`opt-part-filter-juz-all-${testIdPrefix}`}>
+                  All Juzs
+                </SelectItem>
+                {JUZ_RANGES.map(juz => (
+                  <SelectItem
+                    key={juz.juz}
+                    value={String(juz.juz)}
+                    data-testid={`opt-part-filter-juz-${testIdPrefix}-${juz.juz}`}
+                  >
+                    Juz {juz.juz}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={partFilterSurah === null ? "all" : String(partFilterSurah)}
+              onValueChange={value => setPartFilterSurah(value === "all" ? null : parseInt(value, 10))}
+            >
+              <SelectTrigger data-testid={`select-part-filter-surah-${testIdPrefix}`}>
+                <SelectValue placeholder="Filter by Surah" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value="all" data-testid={`opt-part-filter-surah-all-${testIdPrefix}`}>
+                  All Surahs
+                </SelectItem>
+                {SURAHS.map(surah => (
+                  <SelectItem
+                    key={surah.number}
+                    value={String(surah.number)}
+                    data-testid={`opt-part-filter-surah-${testIdPrefix}-${surah.number}`}
+                  >
+                    {surah.number}. {surah.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Select key={`part-${partKey}`} onValueChange={handlePart}>
+            <SelectTrigger data-testid={`select-part-${testIdPrefix}`}>
+              <SelectValue placeholder={filteredParts.length > 0 ? "Add Part…" : "No matching Parts"} />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              {partsByJuz.length === 0 ? (
+                <div className="px-2 py-3 text-xs text-muted-foreground">
+                  No Parts match these filters.
+                </div>
+              ) : (
+                partsByJuz.map(({ juz, parts }) => (
+                  <SelectGroup key={juz}>
+                    <SelectLabel>Juz {juz}</SelectLabel>
+                    {parts.map(r => {
+                      const range = pRange(r.startPage, r.endPage);
+                      const surahsSpanned = getSurahsInPageRange(r.startPage, r.endPage);
+                      const surahsLabel =
+                        surahsSpanned
+                          .slice(0, 2)
+                          .map(s => s.name)
+                          .join(", ") +
+                        (surahsSpanned.length > 2 ? ` +${surahsSpanned.length - 2}` : "");
+                      return (
+                        <SelectItem
+                          key={r.rob3}
+                          value={String(r.rob3)}
+                          data-testid={`opt-part-${testIdPrefix}-${r.rob3}`}
+                        >
+                          <div className="flex flex-col items-start gap-0.5 py-0.5 max-w-[280px]">
+                            <span className="text-sm">
+                              Part {r.rob3InJuz + 1}/{ROB3S_PER_JUZ}
+                              <span className="ml-2 text-muted-foreground">· {range}</span>
+                            </span>
+                            {surahsLabel && (
+                              <span className="text-[11px] text-muted-foreground">{surahsLabel}</span>
+                            )}
+                            <Rob3FirstAyahPreview
+                              rob3Number={r.rob3}
+                              className="block text-[12px] mt-0.5 max-w-full"
+                              wordCount={6}
+                            />
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectGroup>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+
+          {(partFilterJuz !== null || partFilterSurah !== null) && (
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{filteredParts.length} matching part{filteredParts.length === 1 ? "" : "s"}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setPartFilterJuz(null);
+                  setPartFilterSurah(null);
+                }}
+                className="text-teal-700 hover:text-teal-800 underline"
+                data-testid={`clear-part-filters-${testIdPrefix}`}
+              >
+                Show all Parts
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Pages mode — free-text input */}
