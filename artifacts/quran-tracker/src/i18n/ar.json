@@ -541,6 +541,18 @@
         "readNext": "اقرأ ص. {{page}}"
       }
     },
+    "homeworkAyahCorrectness": {
+      "dashboard": {
+        "title": "صحة آيات الواجب",
+        "progress": "{{correct}} / {{total}} آية صحيحة",
+        "pct": "{{pct}}% من الآيات صحيحة",
+        "allCorrect": "جميع الآيات صحيحة",
+        "dueIn": "موعد التسليم {{date}}",
+        "overdue": "متأخر",
+        "practiceNext": "تدرّب على الآية {{ayah}}",
+        "doneLabel": "جميعها صحيحة!"
+      }
+    },
     "homeworkReading": {
       "title": "هدف قراءة الواجب",
       "dashboard": {

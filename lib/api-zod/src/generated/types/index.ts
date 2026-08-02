@@ -62,6 +62,7 @@ export * from "./startKhatmahBody";
 export * from "./surahDetail";
 export * from "./surahProgress";
 export * from "./telawaDailyCount";
+export * from "./telawaHomeworkAyahCorrectness";
 export * from "./telawaHomeworkReading";
 export * from "./telawaHomeworkReadingPage";
 export * from "./telawaKhatmah";

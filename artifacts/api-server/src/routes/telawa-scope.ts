@@ -41,8 +41,13 @@ import {
   UpdateActiveScopeCycleBody,
   UpdateActiveScopeCycleResponse,
   GetTelawaHomeworkReadingResponse,
+  GetTelawaHomeworkAyahCorrectnessResponse,
 } from "@workspace/api-zod";
 import { getSettings, getDefaultPageName, getWeeklyReadCounts } from "../lib/progress-helpers";
+import pageAyahsData from "../lib/page-ayahs.json" with { type: "json" };
+
+const PAGE_AYAHS = pageAyahsData as Record<string, number[]>;
+import { ayahMistakesTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -288,6 +293,119 @@ router.patch("/telawa/scope/active", async (req, res): Promise<void> => {
 
   const today = await buildScopeToday(userId);
   res.json(UpdateActiveScopeCycleResponse.parse(today));
+});
+
+router.get("/telawa/homework-ayah-correctness", async (req, res): Promise<void> => {
+  const userId = req.userId!;
+  const now = new Date();
+
+  // Fetch all homework sessions for this user.
+  const sessions = await db
+    .select()
+    .from(homeworkSessionsTable)
+    .where(eq(homeworkSessionsTable.userId, userId));
+
+  if (sessions.length === 0) {
+    res.json(GetTelawaHomeworkAyahCorrectnessResponse.parse(null));
+    return;
+  }
+
+  // Pick the most relevant session:
+  //   1. Non-overdue sessions ordered by dueDate ASC (earliest upcoming).
+  //   2. If all overdue, pick the one with the most recent (largest) dueDate.
+  const nonOverdue = sessions
+    .filter((s) => !isHomeworkOverdue(s.dueDate, now))
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+  const overdue = sessions
+    .filter((s) => isHomeworkOverdue(s.dueDate, now))
+    .sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
+
+  const session = nonOverdue[0] ?? overdue[0];
+
+  // Collect all ayahs for this homework's pages.
+  const items = await db
+    .select({ pageNumber: homeworkItemsTable.pageNumber })
+    .from(homeworkItemsTable)
+    .where(and(eq(homeworkItemsTable.userId, userId), eq(homeworkItemsTable.homeworkId, session.id)));
+
+  const pageNumbers = Array.from(new Set(items.map((i) => i.pageNumber))).sort((a, b) => a - b);
+
+  const ayahEntries: { globalAyahNumber: number; pageNumber: number }[] = [];
+  for (const page of pageNumbers) {
+    const ayahs = PAGE_AYAHS[String(page)] ?? [];
+    for (const gn of ayahs) ayahEntries.push({ globalAyahNumber: gn, pageNumber: page });
+  }
+
+  const totalAyahs = ayahEntries.length;
+
+  if (totalAyahs === 0) {
+    res.json(
+      GetTelawaHomeworkAyahCorrectnessResponse.parse({
+        homeworkId: session.id,
+        homeworkTitle: session.title,
+        dueDate: session.dueDate.toISOString(),
+        isOverdue: isHomeworkOverdue(session.dueDate, now),
+        totalAyahs: 0,
+        correctAyahs: 0,
+        firstIncorrectAyahNumber: null,
+      }),
+    );
+    return;
+  }
+
+  // Fetch all active marks (resolvedAt IS NULL) for these ayahs.
+  const globalNumbers = ayahEntries.map((e) => e.globalAyahNumber);
+  const activeMarks = await db
+    .select({
+      globalAyahNumber: ayahMistakesTable.globalAyahNumber,
+      mistakeType: ayahMistakesTable.mistakeType,
+    })
+    .from(ayahMistakesTable)
+    .where(
+      and(
+        eq(ayahMistakesTable.userId, userId),
+        inArray(ayahMistakesTable.globalAyahNumber, globalNumbers),
+        sql`${ayahMistakesTable.resolvedAt} is null`,
+      ),
+    );
+
+  // Build per-ayah status set: mistakeType values present for each ayah.
+  const markMap = new Map<number, Set<string>>();
+  for (const m of activeMarks) {
+    let set = markMap.get(m.globalAyahNumber);
+    if (!set) { set = new Set(); markMap.set(m.globalAyahNumber, set); }
+    set.add(m.mistakeType);
+  }
+
+  // An ayah is "correct" iff it has the `cleared` mark AND no `memorization`
+  // or `link` marks.  Ayahs with no marks at all are not yet cleared.
+  function isCorrect(gn: number): boolean {
+    const s = markMap.get(gn);
+    if (!s) return false;
+    return s.has("cleared") && !s.has("memorization") && !s.has("link");
+  }
+
+  let correctAyahs = 0;
+  let firstIncorrectAyahNumber: number | null = null;
+  for (const { globalAyahNumber } of ayahEntries) {
+    if (isCorrect(globalAyahNumber)) {
+      correctAyahs++;
+    } else if (firstIncorrectAyahNumber === null) {
+      firstIncorrectAyahNumber = globalAyahNumber;
+    }
+  }
+
+  res.json(
+    GetTelawaHomeworkAyahCorrectnessResponse.parse({
+      homeworkId: session.id,
+      homeworkTitle: session.title,
+      dueDate: session.dueDate.toISOString(),
+      isOverdue: isHomeworkOverdue(session.dueDate, now),
+      totalAyahs,
+      correctAyahs,
+      firstIncorrectAyahNumber,
+    }),
+  );
 });
 
 router.get("/telawa/homework-reading", async (req, res): Promise<void> => {

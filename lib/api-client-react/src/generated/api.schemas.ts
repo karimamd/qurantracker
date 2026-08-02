@@ -9,31 +9,31 @@ export interface HealthStatus {
   status: string;
 }
 
-export type SettingsLanguage =
-  (typeof SettingsLanguage)[keyof typeof SettingsLanguage];
+export type SettingsLanguage = typeof SettingsLanguage[keyof typeof SettingsLanguage];
+
 
 export const SettingsLanguage = {
-  en: "en",
-  ar: "ar",
+  en: 'en',
+  ar: 'ar',
 } as const;
 
-export type SettingsBottomNavKeysItem =
-  (typeof SettingsBottomNavKeysItem)[keyof typeof SettingsBottomNavKeysItem];
+export type SettingsBottomNavKeysItem = typeof SettingsBottomNavKeysItem[keyof typeof SettingsBottomNavKeysItem];
+
 
 export const SettingsBottomNavKeysItem = {
-  homework: "homework",
-  dashboard: "dashboard",
-  telawa: "telawa",
-  reader: "reader",
-  mistakes: "mistakes",
-  juz: "juz",
-  rub: "rub",
-  surah: "surah",
-  pages: "pages",
-  ayahs: "ayahs",
-  recite: "recite",
-  welcome: "welcome",
-  settings: "settings",
+  homework: 'homework',
+  dashboard: 'dashboard',
+  telawa: 'telawa',
+  reader: 'reader',
+  mistakes: 'mistakes',
+  juz: 'juz',
+  rub: 'rub',
+  surah: 'surah',
+  pages: 'pages',
+  ayahs: 'ayahs',
+  recite: 'recite',
+  welcome: 'welcome',
+  settings: 'settings',
 } as const;
 
 export interface Settings {
@@ -82,31 +82,31 @@ export interface Settings {
   hideReaderOnJump: boolean;
 }
 
-export type UpdateSettingsBodyLanguage =
-  (typeof UpdateSettingsBodyLanguage)[keyof typeof UpdateSettingsBodyLanguage];
+export type UpdateSettingsBodyLanguage = typeof UpdateSettingsBodyLanguage[keyof typeof UpdateSettingsBodyLanguage];
+
 
 export const UpdateSettingsBodyLanguage = {
-  en: "en",
-  ar: "ar",
+  en: 'en',
+  ar: 'ar',
 } as const;
 
-export type UpdateSettingsBodyBottomNavKeysItem =
-  (typeof UpdateSettingsBodyBottomNavKeysItem)[keyof typeof UpdateSettingsBodyBottomNavKeysItem];
+export type UpdateSettingsBodyBottomNavKeysItem = typeof UpdateSettingsBodyBottomNavKeysItem[keyof typeof UpdateSettingsBodyBottomNavKeysItem];
+
 
 export const UpdateSettingsBodyBottomNavKeysItem = {
-  homework: "homework",
-  dashboard: "dashboard",
-  telawa: "telawa",
-  reader: "reader",
-  mistakes: "mistakes",
-  juz: "juz",
-  rub: "rub",
-  surah: "surah",
-  pages: "pages",
-  ayahs: "ayahs",
-  recite: "recite",
-  welcome: "welcome",
-  settings: "settings",
+  homework: 'homework',
+  dashboard: 'dashboard',
+  telawa: 'telawa',
+  reader: 'reader',
+  mistakes: 'mistakes',
+  juz: 'juz',
+  rub: 'rub',
+  surah: 'surah',
+  pages: 'pages',
+  ayahs: 'ayahs',
+  recite: 'recite',
+  welcome: 'welcome',
+  settings: 'settings',
 } as const;
 
 export interface UpdateSettingsBody {
@@ -208,41 +208,39 @@ export interface Rob3Progress {
 /**
  * @nullable
  */
-export type PageProgressQuality =
-  | (typeof PageProgressQuality)[keyof typeof PageProgressQuality]
-  | null;
+export type PageProgressQuality = typeof PageProgressQuality[keyof typeof PageProgressQuality] | null;
+
 
 export const PageProgressQuality = {
-  excellent: "excellent",
-  good: "good",
-  hard: "hard",
-  relearn: "relearn",
+  excellent: 'excellent',
+  good: 'good',
+  hard: 'hard',
+  relearn: 'relearn',
 } as const;
 
-export type PageProgressStatus =
-  (typeof PageProgressStatus)[keyof typeof PageProgressStatus];
+export type PageProgressStatus = typeof PageProgressStatus[keyof typeof PageProgressStatus];
+
 
 export const PageProgressStatus = {
-  overdue: "overdue",
-  due_soon: "due_soon",
-  on_track: "on_track",
-  not_started: "not_started",
-  out_of_scope: "out_of_scope",
+  overdue: 'overdue',
+  due_soon: 'due_soon',
+  on_track: 'on_track',
+  not_started: 'not_started',
+  out_of_scope: 'out_of_scope',
 } as const;
 
 /**
  * Display-only quality after auto-downgrade. Drops one level (excellent → good → hard → relearn) for every full 14 days a page is overdue. Equals quality when the page is not overdue. Does NOT affect history, due date, or status.
  * @nullable
  */
-export type PageProgressEffectiveQuality =
-  | (typeof PageProgressEffectiveQuality)[keyof typeof PageProgressEffectiveQuality]
-  | null;
+export type PageProgressEffectiveQuality = typeof PageProgressEffectiveQuality[keyof typeof PageProgressEffectiveQuality] | null;
+
 
 export const PageProgressEffectiveQuality = {
-  excellent: "excellent",
-  good: "good",
-  hard: "hard",
-  relearn: "relearn",
+  excellent: 'excellent',
+  good: 'good',
+  hard: 'hard',
+  relearn: 'relearn',
 } as const;
 
 export interface PageProgress {
@@ -340,26 +338,26 @@ export interface RenamePageBody {
   customName?: string | null;
 }
 
-export type RecordRecitationBodyQuality =
-  (typeof RecordRecitationBodyQuality)[keyof typeof RecordRecitationBodyQuality];
+export type RecordRecitationBodyQuality = typeof RecordRecitationBodyQuality[keyof typeof RecordRecitationBodyQuality];
+
 
 export const RecordRecitationBodyQuality = {
-  excellent: "excellent",
-  good: "good",
-  hard: "hard",
-  relearn: "relearn",
+  excellent: 'excellent',
+  good: 'good',
+  hard: 'hard',
+  relearn: 'relearn',
 } as const;
 
 /**
  * memorization = mistake within the ayah text itself; link = failed to predict this ayah from the previous one; cleared = user explicitly marked the ayah as recited correctly (mutually exclusive with the two mistake types — adding either side resolves the other on the server)
  */
-export type AyahMistakeInputMistakeType =
-  (typeof AyahMistakeInputMistakeType)[keyof typeof AyahMistakeInputMistakeType];
+export type AyahMistakeInputMistakeType = typeof AyahMistakeInputMistakeType[keyof typeof AyahMistakeInputMistakeType];
+
 
 export const AyahMistakeInputMistakeType = {
-  memorization: "memorization",
-  link: "link",
-  cleared: "cleared",
+  memorization: 'memorization',
+  link: 'link',
+  cleared: 'cleared',
 } as const;
 
 export interface AyahMistakeInput {
@@ -379,12 +377,12 @@ export interface RecordRecitationBody {
   ayahMistakes?: AyahMistakeInput[];
 }
 
-export type MistakeMistakeType =
-  (typeof MistakeMistakeType)[keyof typeof MistakeMistakeType];
+export type MistakeMistakeType = typeof MistakeMistakeType[keyof typeof MistakeMistakeType];
+
 
 export const MistakeMistakeType = {
-  memorization: "memorization",
-  link: "link",
+  memorization: 'memorization',
+  link: 'link',
 } as const;
 
 export interface Mistake {
@@ -398,13 +396,13 @@ export interface Mistake {
   recitedAt: string;
 }
 
-export type ActiveAyahMistakeMistakeType =
-  (typeof ActiveAyahMistakeMistakeType)[keyof typeof ActiveAyahMistakeMistakeType];
+export type ActiveAyahMistakeMistakeType = typeof ActiveAyahMistakeMistakeType[keyof typeof ActiveAyahMistakeMistakeType];
+
 
 export const ActiveAyahMistakeMistakeType = {
-  memorization: "memorization",
-  link: "link",
-  cleared: "cleared",
+  memorization: 'memorization',
+  link: 'link',
+  cleared: 'cleared',
 } as const;
 
 export interface ActiveAyahMistake {
@@ -414,13 +412,13 @@ export interface ActiveAyahMistake {
   mistakeType: ActiveAyahMistakeMistakeType;
 }
 
-export type RemoveActiveMistakeBodyMistakeType =
-  (typeof RemoveActiveMistakeBodyMistakeType)[keyof typeof RemoveActiveMistakeBodyMistakeType];
+export type RemoveActiveMistakeBodyMistakeType = typeof RemoveActiveMistakeBodyMistakeType[keyof typeof RemoveActiveMistakeBodyMistakeType];
+
 
 export const RemoveActiveMistakeBodyMistakeType = {
-  memorization: "memorization",
-  link: "link",
-  cleared: "cleared",
+  memorization: 'memorization',
+  link: 'link',
+  cleared: 'cleared',
 } as const;
 
 export interface RemoveActiveMistakeBody {
@@ -479,14 +477,14 @@ export interface SurahDetail {
   pages: PageProgress[];
 }
 
-export type BatchRecitationBodyQuality =
-  (typeof BatchRecitationBodyQuality)[keyof typeof BatchRecitationBodyQuality];
+export type BatchRecitationBodyQuality = typeof BatchRecitationBodyQuality[keyof typeof BatchRecitationBodyQuality];
+
 
 export const BatchRecitationBodyQuality = {
-  excellent: "excellent",
-  good: "good",
-  hard: "hard",
-  relearn: "relearn",
+  excellent: 'excellent',
+  good: 'good',
+  hard: 'hard',
+  relearn: 'relearn',
 } as const;
 
 export interface BatchRecitationBody {
@@ -500,13 +498,13 @@ export interface ScopeBody {
   pageNumbers: number[];
 }
 
-export type HomeworkSessionStatus =
-  (typeof HomeworkSessionStatus)[keyof typeof HomeworkSessionStatus];
+export type HomeworkSessionStatus = typeof HomeworkSessionStatus[keyof typeof HomeworkSessionStatus];
+
 
 export const HomeworkSessionStatus = {
-  active: "active",
-  completed: "completed",
-  overdue: "overdue",
+  active: 'active',
+  completed: 'completed',
+  overdue: 'overdue',
 } as const;
 
 export interface HomeworkSession {
@@ -535,26 +533,25 @@ export interface UpdateHomeworkBody {
   revisePages?: number[];
 }
 
-export type HomeworkItemType =
-  (typeof HomeworkItemType)[keyof typeof HomeworkItemType];
+export type HomeworkItemType = typeof HomeworkItemType[keyof typeof HomeworkItemType];
+
 
 export const HomeworkItemType = {
-  memorize: "memorize",
-  revise: "revise",
+  memorize: 'memorize',
+  revise: 'revise',
 } as const;
 
 /**
  * @nullable
  */
-export type HomeworkItemQuality =
-  | (typeof HomeworkItemQuality)[keyof typeof HomeworkItemQuality]
-  | null;
+export type HomeworkItemQuality = typeof HomeworkItemQuality[keyof typeof HomeworkItemQuality] | null;
+
 
 export const HomeworkItemQuality = {
-  excellent: "excellent",
-  good: "good",
-  hard: "hard",
-  relearn: "relearn",
+  excellent: 'excellent',
+  good: 'good',
+  hard: 'hard',
+  relearn: 'relearn',
 } as const;
 
 export interface HomeworkItem {
@@ -582,14 +579,14 @@ export interface HomeworkSessionDetail {
   items: HomeworkItem[];
 }
 
-export type UpdateHomeworkItemBodyQuality =
-  (typeof UpdateHomeworkItemBodyQuality)[keyof typeof UpdateHomeworkItemBodyQuality];
+export type UpdateHomeworkItemBodyQuality = typeof UpdateHomeworkItemBodyQuality[keyof typeof UpdateHomeworkItemBodyQuality];
+
 
 export const UpdateHomeworkItemBodyQuality = {
-  excellent: "excellent",
-  good: "good",
-  hard: "hard",
-  relearn: "relearn",
+  excellent: 'excellent',
+  good: 'good',
+  hard: 'hard',
+  relearn: 'relearn',
 } as const;
 
 export interface UpdateHomeworkItemBody {
@@ -597,13 +594,13 @@ export interface UpdateHomeworkItemBody {
   quality?: UpdateHomeworkItemBodyQuality;
 }
 
-export type HomeworkAyahEntryStatusesItem =
-  (typeof HomeworkAyahEntryStatusesItem)[keyof typeof HomeworkAyahEntryStatusesItem];
+export type HomeworkAyahEntryStatusesItem = typeof HomeworkAyahEntryStatusesItem[keyof typeof HomeworkAyahEntryStatusesItem];
+
 
 export const HomeworkAyahEntryStatusesItem = {
-  cleared: "cleared",
-  memorization: "memorization",
-  link: "link",
+  cleared: 'cleared',
+  memorization: 'memorization',
+  link: 'link',
 } as const;
 
 export interface HomeworkAyahEntry {
@@ -629,14 +626,14 @@ export interface HomeworkAyahList {
   ayahs: HomeworkAyahEntry[];
 }
 
-export type ActivityEntryQuality =
-  (typeof ActivityEntryQuality)[keyof typeof ActivityEntryQuality];
+export type ActivityEntryQuality = typeof ActivityEntryQuality[keyof typeof ActivityEntryQuality];
+
 
 export const ActivityEntryQuality = {
-  excellent: "excellent",
-  good: "good",
-  hard: "hard",
-  relearn: "relearn",
+  excellent: 'excellent',
+  good: 'good',
+  hard: 'hard',
+  relearn: 'relearn',
 } as const;
 
 export interface ActivityEntry {
@@ -819,6 +816,22 @@ export interface TelawaHomeworkReadingPage {
 }
 
 /**
+ * Per-ayah correctness progress for the single most relevant homework.
+Null when the user has no homework sessions at all.
+
+ */
+export type TelawaHomeworkAyahCorrectness = {
+  homeworkId: number;
+  homeworkTitle: string;
+  dueDate: string;
+  isOverdue: boolean;
+  totalAyahs: number;
+  correctAyahs: number;
+  /** Global ayah number of the first ayah that is not correct, or null if all are correct. */
+  firstIncorrectAyahNumber: number | null;
+} | null;
+
+/**
  * Homework reading-goal progress across active homework pages.
  */
 export interface TelawaHomeworkReading {
@@ -828,43 +841,44 @@ export interface TelawaHomeworkReading {
 }
 
 export type ListPageProgressParams = {
-  juz?: number;
-  surah?: number;
-  inScope?: boolean;
-  status?: ListPageProgressStatus;
+juz?: number;
+surah?: number;
+inScope?: boolean;
+status?: ListPageProgressStatus;
 };
 
-export type ListPageProgressStatus =
-  (typeof ListPageProgressStatus)[keyof typeof ListPageProgressStatus];
+export type ListPageProgressStatus = typeof ListPageProgressStatus[keyof typeof ListPageProgressStatus];
+
 
 export const ListPageProgressStatus = {
-  overdue: "overdue",
-  due_soon: "due_soon",
-  on_track: "on_track",
-  not_started: "not_started",
+  overdue: 'overdue',
+  due_soon: 'due_soon',
+  on_track: 'on_track',
+  not_started: 'not_started',
 } as const;
 
 export type GetDailyChartParams = {
-  days?: number;
+days?: number;
 };
 
 export type GetProgressChartParams = {
-  days?: number;
+days?: number;
 };
 
 export type GetMistakesParams = {
-  limit?: number;
-  type?: GetMistakesType;
+limit?: number;
+type?: GetMistakesType;
 };
 
-export type GetMistakesType =
-  (typeof GetMistakesType)[keyof typeof GetMistakesType];
+export type GetMistakesType = typeof GetMistakesType[keyof typeof GetMistakesType];
+
 
 export const GetMistakesType = {
-  memorization: "memorization",
-  link: "link",
+  memorization: 'memorization',
+  link: 'link',
 } as const;
 
 export type GetRecentActivityParams = {
-  limit?: number;
+limit?: number;
 };
+

@@ -525,6 +525,18 @@
         "readNext": "Read p. {{page}}"
       }
     },
+    "homeworkAyahCorrectness": {
+      "dashboard": {
+        "title": "Homework ayah correctness",
+        "progress": "{{correct}} / {{total}} ayahs correct",
+        "pct": "{{pct}}% of ayahs correct",
+        "allCorrect": "All ayahs correct",
+        "dueIn": "Due {{date}}",
+        "overdue": "Overdue",
+        "practiceNext": "Practice ayah {{ayah}}",
+        "doneLabel": "All correct!"
+      }
+    },
     "homeworkReading": {
       "title": "Homework reading goal",
       "description": "Read each active homework page at least {{goal}} times a week. Reciting or reading both count.",

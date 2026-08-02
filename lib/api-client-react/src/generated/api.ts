@@ -50,6 +50,7 @@ import type {
   StartKhatmahBody,
   SurahDetail,
   SurahProgress,
+  TelawaHomeworkAyahCorrectness,
   TelawaHomeworkReading,
   TelawaScopeToday,
   TelawaStats,
@@ -3598,6 +3599,93 @@ export const useUpdateActiveScopeCycle = <
 > => {
   return useMutation(getUpdateActiveScopeCycleMutationOptions(options));
 };
+
+/**
+ * Picks the single most relevant homework session: among non-overdue
+sessions the one with the earliest due date; if all sessions are
+overdue, the one with the most-recent (closest-to-today) due date.
+Returns totals of correct vs total ayahs and the first ayah that is
+not yet correct (cleared with no memorization or link mistakes) so
+the client can jump directly to it.
+
+ * @summary Per-ayah correctness progress for the most relevant active homework
+ */
+export const getGetTelawaHomeworkAyahCorrectnessUrl = () => {
+  return `/api/telawa/homework-ayah-correctness`;
+};
+
+export const getTelawaHomeworkAyahCorrectness = async (
+  options?: RequestInit,
+): Promise<TelawaHomeworkAyahCorrectness | null> => {
+  return customFetch<TelawaHomeworkAyahCorrectness | null>(
+    getGetTelawaHomeworkAyahCorrectnessUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetTelawaHomeworkAyahCorrectnessQueryKey = () => {
+  return [`/api/telawa/homework-ayah-correctness`] as const;
+};
+
+export const getGetTelawaHomeworkAyahCorrectnessQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTelawaHomeworkAyahCorrectness>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaHomeworkAyahCorrectness>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetTelawaHomeworkAyahCorrectnessQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTelawaHomeworkAyahCorrectness>>
+  > = ({ signal }) =>
+    getTelawaHomeworkAyahCorrectness({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaHomeworkAyahCorrectness>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTelawaHomeworkAyahCorrectnessQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTelawaHomeworkAyahCorrectness>>
+>;
+export type GetTelawaHomeworkAyahCorrectnessQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Per-ayah correctness progress for the most relevant active homework
+ */
+
+export function useGetTelawaHomeworkAyahCorrectness<
+  TData = Awaited<ReturnType<typeof getTelawaHomeworkAyahCorrectness>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTelawaHomeworkAyahCorrectness>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTelawaHomeworkAyahCorrectnessQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * Returns the distinct pages drawn from the user's active (not yet

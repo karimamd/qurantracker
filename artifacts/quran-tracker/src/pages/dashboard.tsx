@@ -25,6 +25,8 @@ import {
   useGetTelawaToday,
   useGetTelawaScopeToday,
   useGetTelawaHomeworkReading,
+  useGetTelawaHomeworkAyahCorrectness,
+  getGetTelawaHomeworkAyahCorrectnessQueryKey,
   useUpdateSettings,
   getGetSettingsQueryKey,
   useUpdatePageProgress,
@@ -45,7 +47,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QualityBadge } from "@/components/quality-badge";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, AlertTriangle, Clock, CheckCircle, Flame, ChevronRight, ChevronDown, Undo2, Repeat, BookOpenCheck, PlusCircle } from "lucide-react";
+import { BookOpen, AlertTriangle, Clock, CheckCircle, CheckCircle2, Flame, ChevronRight, ChevronDown, Undo2, Repeat, BookOpenCheck, PlusCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -476,6 +478,93 @@ function HomeworkReadingCard() {
                   page: nextPage.pageNumber,
                   count: nextPage.weekCount,
                   goal: weeklyGoal,
+                })}
+              </Button>
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HomeworkAyahCorrectnessCard() {
+  const { t } = useTranslation();
+  const [, setLocation] = useLocation();
+  const { data, isLoading } = useGetTelawaHomeworkAyahCorrectness();
+
+  if (isLoading) return <Skeleton className="h-20 rounded-xl" />;
+  if (!data) return null;
+
+  const { homeworkTitle, dueDate, isOverdue, totalAyahs, correctAyahs, firstIncorrectAyahNumber } = data;
+  const pct = Math.min(100, Math.round((correctAyahs / Math.max(1, totalAyahs)) * 100));
+  const allCorrect = correctAyahs === totalAyahs;
+
+  const dueDateLabel = isOverdue
+    ? t("telawa.homeworkAyahCorrectness.dashboard.overdue")
+    : t("telawa.homeworkAyahCorrectness.dashboard.dueIn", {
+        date: format(new Date(dueDate), "MMM d"),
+      });
+
+  return (
+    <div
+      className="border rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer bg-card"
+      onClick={() => setLocation("/homework")}
+      data-testid="dashboard-homework-ayah-correctness-card"
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setLocation("/homework"); }}
+    >
+      <div className="py-4 px-5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-0.5 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              {t("telawa.homeworkAyahCorrectness.dashboard.title")}
+            </p>
+            <p className="font-semibold text-sm truncate" title={homeworkTitle}>
+              {homeworkTitle}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ms-3">
+            <div className="text-end">
+              <p className="text-xs text-muted-foreground">
+                {t("telawa.homeworkAyahCorrectness.dashboard.progress", {
+                  correct: correctAyahs,
+                  total: totalAyahs,
+                })}
+              </p>
+              <p className={`text-xs font-medium ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
+                {dueDateLabel}
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground rtl:rotate-180" />
+          </div>
+        </div>
+        <Progress value={pct} className="h-2" />
+        <div className="flex items-center justify-between mt-1.5">
+          <p className="text-xs text-muted-foreground">
+            {t("telawa.homeworkAyahCorrectness.dashboard.pct", { pct })}
+          </p>
+          {allCorrect ? (
+            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" />
+              {t("telawa.homeworkAyahCorrectness.dashboard.doneLabel")}
+            </span>
+          ) : firstIncorrectAyahNumber != null ? (
+            <Link
+              href={`/ayahs/${firstIncorrectAyahNumber}`}
+              onClick={e => e.stopPropagation()}
+            >
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 text-xs gap-1 px-2 py-0 border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-950"
+                onClick={e => e.stopPropagation()}
+              >
+                <BookOpenCheck className="w-3 h-3" />
+                {t("telawa.homeworkAyahCorrectness.dashboard.practiceNext", {
+                  ayah: firstIncorrectAyahNumber,
                 })}
               </Button>
             </Link>
@@ -1404,6 +1493,8 @@ export default function Dashboard() {
       <TelawaScopeCard />
 
       <HomeworkReadingCard />
+
+      <HomeworkAyahCorrectnessCard />
 
       <ProgressChartSection />
 

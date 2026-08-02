@@ -849,6 +849,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/TelawaScopeToday"
 
+  /telawa/homework-ayah-correctness:
+    get:
+      operationId: getTelawaHomeworkAyahCorrectness
+      tags: [telawa]
+      summary: Per-ayah correctness progress for the most relevant active homework
+      description: |
+        Picks the single most relevant homework session: among non-overdue
+        sessions the one with the earliest due date; if all sessions are
+        overdue, the one with the most-recent (closest-to-today) due date.
+        Returns totals of correct vs total ayahs and the first ayah that is
+        not yet correct (cleared with no memorization or link mistakes) so
+        the client can jump directly to it.
+      responses:
+        "200":
+          description: Homework ayah correctness progress (null when no homework exists)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelawaHomeworkAyahCorrectness"
+
   /telawa/homework-reading:
     get:
       operationId: getTelawaHomeworkReading
@@ -2055,6 +2075,39 @@ components:
         - pageNumber
         - name
         - weekCount
+
+    TelawaHomeworkAyahCorrectness:
+      type: object
+      nullable: true
+      description: |
+        Per-ayah correctness progress for the single most relevant homework.
+        Null when the user has no homework sessions at all.
+      properties:
+        homeworkId:
+          type: integer
+        homeworkTitle:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+        isOverdue:
+          type: boolean
+        totalAyahs:
+          type: integer
+        correctAyahs:
+          type: integer
+        firstIncorrectAyahNumber:
+          type: integer
+          nullable: true
+          description: Global ayah number of the first ayah that is not correct, or null if all are correct.
+      required:
+        - homeworkId
+        - homeworkTitle
+        - dueDate
+        - isOverdue
+        - totalAyahs
+        - correctAyahs
+        - firstIncorrectAyahNumber
 
     TelawaHomeworkReading:
       type: object

@@ -2044,6 +2044,36 @@ export const UpdateActiveScopeCycleResponse = zod
   .describe("Today's In-Scope Round-Robin batch and active-cycle progress.");
 
 /**
+ * Picks the single most relevant homework session: among non-overdue
+sessions the one with the earliest due date; if all sessions are
+overdue, the one with the most-recent (closest-to-today) due date.
+Returns totals of correct vs total ayahs and the first ayah that is
+not yet correct (cleared with no memorization or link mistakes) so
+the client can jump directly to it.
+
+ * @summary Per-ayah correctness progress for the most relevant active homework
+ */
+export const GetTelawaHomeworkAyahCorrectnessResponse = zod
+  .object({
+    homeworkId: zod.number(),
+    homeworkTitle: zod.string(),
+    dueDate: zod.coerce.date(),
+    isOverdue: zod.boolean(),
+    totalAyahs: zod.number(),
+    correctAyahs: zod.number(),
+    firstIncorrectAyahNumber: zod
+      .number()
+      .nullable()
+      .describe(
+        "Global ayah number of the first ayah that is not correct, or null if all are correct.",
+      ),
+  })
+  .nullable()
+  .describe(
+    "Per-ayah correctness progress for the single most relevant homework.\nNull when the user has no homework sessions at all.\n",
+  );
+
+/**
  * Returns the distinct pages drawn from the user's active (not yet
 overdue) homework sessions, each with its weekly read count. The
 weekly count includes both quality recitations and explicit Telawa
