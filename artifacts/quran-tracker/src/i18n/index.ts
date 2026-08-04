@@ -15,7 +15,9 @@ function getInitialLanguage(): SupportedLanguage {
   } catch {
     /* ignore */
   }
-  return "en";
+  // Arabic is the default for new users; once a language is chosen it is
+  // stored above and always wins.
+  return "ar";
 }
 
 void i18n.use(initReactI18next).init({
@@ -24,7 +26,7 @@ void i18n.use(initReactI18next).init({
     ar: { translation: ar },
   },
   lng: getInitialLanguage(),
-  fallbackLng: "en",
+  fallbackLng: "ar",
   interpolation: { escapeValue: false },
   returnNull: false,
 });

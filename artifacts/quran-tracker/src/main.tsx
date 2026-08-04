@@ -20,7 +20,46 @@ void purgeStaleWbwVersions();
 
 // Register the Workbox service worker (auto-updates on new deploy).
 // devOptions.enabled: false in vite.config.ts makes this a no-op in dev.
-registerSW({ onNeedRefresh() { /* auto-update takes care of it */ } });
+//
+// `immediate: true` checks for a new SW on load instead of waiting for the
+// browser's own schedule; we also re-check every time the app returns to
+// the foreground, and reload once when a new SW takes control. Without
+// this, a mobile browser that keeps the tab parked can serve a stale
+// bundle indefinitely — a refresh alone may never pick up new fixes.
+const updateSW = registerSW({ immediate: true });
+void updateSW;
+
+let swReloading = false;
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (swReloading) return;
+    swReloading = true;
+    window.location.reload();
+  });
+}
+
+// When the app returns to the foreground (phone unlocked, tab switched
+// back): pull any waiting service-worker update and refetch every query so
+// the user sees their current data, not whatever was rendered when the tab
+// was parked. Paired with the persisted cache (which paints instantly),
+// this makes "come back minutes later" show fresh state without a manual
+// refresh.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  if (navigator.onLine) {
+    // Refetch everything except the bundled Quran page text — that content
+    // never changes and is already cached in IndexedDB, so revalidating it
+    // on every foreground would waste mobile data.
+    void queryClient.invalidateQueries({
+      predicate: (q) => q.queryKey[0] !== "alquran-cloud-page",
+    });
+  }
+  if ("serviceWorker" in navigator) {
+    void navigator.serviceWorker.ready
+      .then((registration) => registration.update())
+      .catch(() => undefined);
+  }
+});
 
 // Wire customFetch so offline non-GET requests are persisted to IndexedDB
 // instead of surfacing as raw network errors.

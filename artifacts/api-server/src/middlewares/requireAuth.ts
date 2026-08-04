@@ -256,6 +256,23 @@ export const requireAuth: RequestHandler = async (req: Request, res: Response, n
     return;
   }
 
+  // Not signed in according to Clerk. If the browser still carries a live
+  // __client_uat cookie, the user WAS signed in — their session just failed
+  // validation (expired while the phone was parked, server cold-start,
+  // rotated token the client hasn't refreshed yet). Demoting that request
+  // to a brand-new guest is catastrophic: every endpoint returns empty
+  // guest data, and the client then persists that empty guest state over
+  // the user's cached data. Answer 401 instead so the client can run its
+  // session-recovery flow (reload → re-sign-in). Clerk sets __client_uat=0
+  // on explicit sign-out, so genuinely signed-out visitors still reach the
+  // guest path below.
+  const uat = req.cookies?.["__client_uat"];
+  const hadClerkSession = typeof uat === "string" && uat !== "" && uat !== "0";
+  if (hadClerkSession) {
+    res.status(401).json({ error: "session_expired", message: "Session expired; please sign in again." });
+    return;
+  }
+
   // Not signed in. Use the existing guest cookie or mint a new one.
   let userId = guestId;
   if (!userId) {

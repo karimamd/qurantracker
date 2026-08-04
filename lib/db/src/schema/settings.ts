@@ -25,12 +25,12 @@ export const settingsTable = pgTable("settings", {
   goodDays: integer("good_days").notNull().default(14),
   hardDays: integer("hard_days").notNull().default(7),
   relearnDays: integer("relearn_days").notNull().default(3),
-  language: text("language").notNull().default("en"),
+  language: text("language").notNull().default("ar"),
   telawaPagesPerDay: integer("telawa_pages_per_day").notNull().default(5),
   // Font size in pixels for the Quran page text in the Reader. Persisted
   // per user so adjustments stick across devices. Bounded client-side to
   // keep page text readable and avoid extreme layouts.
-  readerFontSize: integer("reader_font_size").notNull().default(24),
+  readerFontSize: integer("reader_font_size").notNull().default(32),
   // Default font size in pixels for the single-ayah detail page on the
   // /ayahs route. Tracked separately from readerFontSize so the user can
   // browse the full Mushaf page at one size and study a single ayah at a

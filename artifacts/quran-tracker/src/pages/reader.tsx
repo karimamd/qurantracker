@@ -764,12 +764,12 @@ export default function Reader() {
   const READER_FONT_MIN = 14;
   const READER_FONT_MAX = 64;
   const READER_FONT_STEP = 2;
-  const READER_FONT_DEFAULT = 24;
+  const READER_FONT_DEFAULT = 32;
   const { data: settings } = useGetSettings();
   const updateSettings = useUpdateSettings();
   // Seed from the synchronous settings mirror so a tab that a mobile
   // browser unloaded and reloaded paints the user's saved size immediately,
-  // instead of flashing (or getting stuck on) the 24px default while
+  // instead of flashing (or getting stuck on) the default size while
   // GET /api/settings is in flight. Server data still wins once it lands.
   // Reads are identity-scoped, so another account's size can never be
   // picked up here. Safe to read userId during render: ProtectedApp holds

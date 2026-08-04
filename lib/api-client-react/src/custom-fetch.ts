@@ -427,6 +427,18 @@ export async function customFetch<T = unknown>(
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
+    // A 401 from the app API means the server rejected the session (it
+    // expired while the app was parked). Surface it as a DOM event so the
+    // app shell can run its session-recovery flow (reload / re-sign-in)
+    // instead of silently rendering an empty, default-looking app.
+    // Clerk's own proxy traffic is excluded — it has its own retry logic.
+    if (
+      response.status === 401 &&
+      typeof window !== "undefined" &&
+      !requestInfo.url.includes("/__clerk")
+    ) {
+      window.dispatchEvent(new CustomEvent("qurantracker:unauthorized"));
+    }
     throw new ApiError(response, errorData, requestInfo);
   }
 

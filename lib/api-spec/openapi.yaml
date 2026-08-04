@@ -918,7 +918,7 @@ components:
           description: Number of pages per day for the recurring Telawa (read-only) rotation. Default 5.
         readerFontSize:
           type: integer
-          description: Font size in pixels used for the Quran page text in the Reader. Default 24.
+          description: Font size in pixels used for the Quran page text in the Reader. Default 32.
         ayahViewFontSize:
           type: integer
           description: Default font size in pixels used for the single-ayah detail page (/ayahs/:n). Default 40.

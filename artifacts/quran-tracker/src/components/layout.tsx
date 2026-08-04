@@ -79,6 +79,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     setLocation("/");
   };
 
+  // Explicit sign-out is a privacy boundary on shared devices. Removing the
+  // persisted cache namespace is handled centrally by the identity gate in
+  // App.tsx (it detects explicit sign-out via Clerk's __client_uat cookie),
+  // which covers this button AND Clerk's UserButton sign-out — so here we
+  // just sign out.
+  const handleSignOut = () => {
+    void signOut({ redirectUrl: "/" });
+  };
+
   const isOnline = useOnlineStatus();
 
   return (
@@ -135,7 +144,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <span className="text-xs text-sidebar-foreground/80 truncate flex-1" title={userLabel}>{userLabel}</span>
               </div>
               <button
-                onClick={() => signOut({ redirectUrl: "/" })}
+                onClick={handleSignOut}
                 className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
                 data-testid="button-sign-out"
               >
@@ -236,7 +245,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </>
                 ) : (
                   <button
-                    onClick={() => { setDrawerOpen(false); signOut({ redirectUrl: "/" }); }}
+                    onClick={() => { setDrawerOpen(false); handleSignOut(); }}
                     className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
                     data-testid="mobile-button-sign-out"
                   >

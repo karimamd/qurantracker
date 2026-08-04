@@ -18,16 +18,20 @@
  *     network answers: language into the i18n runtime, and font sizes +
  *     bottom-nav order into a synchronous localStorage mirror so a reloaded
  *     mobile tab paints the user's preferences instead of defaults.
- *   - QueryCacheIdentityGuard wipes cached data only when the settled
- *     signed-in identity actually differs from the one the cache was built
- *     for, preventing cross-user leakage without nuking the cache on every
- *     ordinary page load.
+ *   - IdentityPersistGate mounts a per-identity persisted React Query cache
+ *     (qurantracker.querycache.v3.<identity>). A dead Clerk session makes
+ *     the identity flip to guest/anon — the same person — so the user's
+ *     cache must NOT be wiped; namespacing isolates identities on disk
+ *     without any destructive clears.
+ *   - SessionRecoveryHandler listens for API 401s (server reports the
+ *     session expired) and automates the user's old manual workaround:
+ *     reload once, and if the session is still rejected, sign out locally
+ *     and land on the sign-in page.
  */
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { ClerkProvider, SignIn, SignUp, useAuth } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, useAuth, useClerk } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Toaster } from "@/components/ui/toaster";
@@ -58,36 +62,19 @@ import NotFound from "@/pages/not-found";
 import { isGuestMode } from "@/lib/guest-mode";
 import { queryClient } from "@/lib/query-client";
 import {
-  persister,
+  createIdentityPersister,
   purgeLegacyPersistedCaches,
   removePersistedCache,
   shouldPersistQuery,
 } from "@/lib/query-persister";
-import {
-  writeCachedUiSettings,
-  clearCachedUiSettings,
-  resolveIdentity,
-} from "@/lib/ui-settings-cache";
+import { writeCachedUiSettings, resolveIdentity } from "@/lib/ui-settings-cache";
 
-// Drop any cache written by the previous persistence scheme. The old blob
-// could have been overwritten with an empty cache by the identity bug that
-// QueryCacheIdentityGuard (below) now prevents, in which case restoring it
-// would show a blank app that a refresh couldn't fix.
+// Drop any cache written by the previous persistence schemes. The v1/v2
+// blobs were shared across identities: v1 could hold an empty cache written
+// by the old clear-on-every-load bug, and v2 could hold guest-shaped empty
+// data written during a dead-session window. Restoring either would show a
+// blank app that a refresh couldn't fix.
 purgeLegacyPersistedCaches();
-
-/**
- * Key used to remember which identity the persisted cache belongs to.
- * Stored in localStorage (not a ref) so it survives the full page reload a
- * mobile browser performs when it reclaims a backgrounded tab.
- */
-const LAST_IDENTITY_KEY = "qurantracker.lastIdentity";
-
-/**
- * In-memory mirror of the above, used when localStorage is unavailable.
- * It cannot survive a reload, but it still catches identity changes that
- * happen within a single session.
- */
-let inMemoryLastIdentity: string | null = null;
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -265,45 +252,113 @@ function ProtectedApp() {
 }
 
 /**
- * Wipe cached data when the *identity* behind it changes, so one account's
- * data never leaks into another's session in the same browser.
- *
- * This deliberately does NOT listen to Clerk resource events. During
- * hydration Clerk momentarily reports `user: null` before resolving the
- * real session, so an event-based listener sees `null → user-id` on every
- * single page load and reads it as a user switch. That cleared the cache
- * (and, once persistence was added, the saved localStorage copy too) every
- * time a backgrounded mobile tab reloaded — leaving the dashboard and
- * homework blank with no way to recover by refreshing.
- *
- * Instead we wait for `isLoaded`, then compare the settled identity against
- * one remembered in localStorage. That baseline survives reloads, so
- * returning as the same user is correctly treated as "no change".
+ * The last identity that mounted the app, remembered across reloads. Used
+ * ONLY to detect that an explicit sign-out happened while the app was away
+ * — never as a trigger to wipe caches (a dead session must keep its data).
  */
-function QueryCacheIdentityGuard() {
+const LAST_IDENTITY_KEY = "qurantracker.lastIdentity";
+/**
+ * Set by SessionRecoveryHandler when IT performs a sign-out because the
+ * session is unrecoverable. Tells the gate to keep the user's persisted
+ * namespace: that sign-out is a session-repair measure, not the user
+ * choosing to leave, so their cache must be waiting when they sign back in.
+ */
+const KEEP_CACHE_KEY = "qurantracker.keepCacheAfterSignOut";
+let inMemoryLastIdentity: string | null = null;
+
+/**
+ * Clerk sets the JS-readable `__client_uat` cookie to "0" on explicit
+ * sign-out. A session that merely expired keeps its last timestamp value,
+ * which is how we tell "user chose to sign out" (remove their persisted
+ * cache, privacy on shared devices) apart from "session died" (keep it).
+ */
+function wasExplicitSignOut(): boolean {
+  try {
+    const match = document.cookie.match(/(?:^|;\s*)__client_uat=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) === "0" : false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Mount a per-identity persisted React Query cache.
+ *
+ * The app waits for Clerk to settle, computes a stable identity string, and
+ * mounts PersistQueryClientProvider keyed on it. Each identity gets its own
+ * localStorage namespace, so:
+ *
+ *   - A session expiring on a parked phone (identity flips user → guest)
+ *     never touches the user's saved cache — signing back in remounts the
+ *     user's namespace and their data is instantly there again.
+ *   - A guest or a different account mounts a different namespace and can
+ *     never read the previous user's persisted data.
+ *   - An EXPLICIT sign-out (any path — custom button or Clerk UserButton)
+ *     is detected here via __client_uat=0 and removes the previous user's
+ *     namespace, so no cleanup hook on individual buttons is needed.
+ *
+ * IN-MEMORY BOUNDARY
+ * ------------------
+ * Storage namespacing alone is not enough: the singleton queryClient would
+ * otherwise keep the previous identity's data in memory across the remount
+ * and serve it to the new identity before refetch (privacy leak on shared
+ * devices). So on every identity CHANGE we hold a loading screen, clear the
+ * in-memory cache (queries + pending mutations), and only then mount the
+ * new identity's provider. The first mount of the session clears nothing.
+ *
+ * Gating the whole tree on `isLoaded` also guarantees cache restore
+ * completes before any query can fire, removing the old restore/fetch race.
+ */
+function IdentityPersistGate({ children }: { children: React.ReactNode }) {
   const { isLoaded, userId } = useAuth();
-  const qc = useQueryClient();
+  const identity = isLoaded ? resolveIdentity(userId) : null;
+  // Which identity the in-memory cache currently belongs to.
+  const [cacheReadyFor, setCacheReadyFor] = useState<string | null>(null);
+  const cacheOwnerRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!identity) return;
 
-    const identity = resolveIdentity(userId);
-
-    // Prefer the stored baseline (survives reloads). Fall back to the
-    // in-memory one so that when localStorage is blocked — Safari private
-    // mode, strict cookie/storage settings — in-session transitions like
-    // sign-out or A -> B still clear the previous user's cached data.
+    // Baseline from previous loads (in-memory ref resets on reload).
     let previous: string | null = inMemoryLastIdentity;
     try {
       previous = window.localStorage.getItem(LAST_IDENTITY_KEY) ?? inMemoryLastIdentity;
     } catch {
-      // Keep the in-memory baseline.
+      /* keep the in-memory baseline */
     }
 
-    if (previous !== null && previous !== identity) {
-      qc.clear();
-      removePersistedCache();
-      clearCachedUiSettings();
+    // One-shot flag: a recovery-driven sign-out must keep the user's cache.
+    let keepCache = false;
+    try {
+      keepCache = window.localStorage.getItem(KEEP_CACHE_KEY) === "1";
+      if (keepCache) window.localStorage.removeItem(KEEP_CACHE_KEY);
+    } catch {
+      /* ignore */
+    }
+
+    // In-memory boundary: on identity change, drop the previous identity's
+    // queries and pending mutations before the new provider mounts.
+    if (cacheOwnerRef.current !== null && cacheOwnerRef.current !== identity) {
+      queryClient.clear();
+    }
+    cacheOwnerRef.current = identity;
+    setCacheReadyFor(identity);
+
+    // Explicit sign-out cleanup: the previous visitor was a signed-in user
+    // who CHOSE to sign out — remove their persisted namespace so nobody
+    // else on this device can restore it. Deferred past the persister's 1 s
+    // throttle window so a pending flush can't re-write the key afterwards.
+    // Session expiry (uat != 0) and recovery sign-outs (keepCache) skip
+    // this — the same person is coming back.
+    if (
+      previous !== null &&
+      previous !== identity &&
+      previous.startsWith("user_") &&
+      !keepCache &&
+      wasExplicitSignOut()
+    ) {
+      const doomed = previous;
+      setTimeout(() => removePersistedCache(doomed), 1200);
     }
 
     inMemoryLastIdentity = identity;
@@ -312,7 +367,98 @@ function QueryCacheIdentityGuard() {
     } catch {
       /* ignore */
     }
-  }, [isLoaded, userId, qc]);
+  }, [identity]);
+
+  if (!identity || cacheReadyFor !== identity) return <AuthLoadingScreen />;
+
+  return (
+    <PersistQueryClientProvider
+      key={identity}
+      client={queryClient}
+      persistOptions={{
+        persister: createIdentityPersister(identity),
+        // Keep persisted data for up to 7 days — matches the queryClient's
+        // gcTime so nothing is evicted from storage before memory would
+        // drop it.
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
+      }}
+    >
+      {children}
+    </PersistQueryClientProvider>
+  );
+}
+
+/**
+ * React to the server reporting an expired session (API 401).
+ *
+ * This automates the workaround users discovered by hand: reload, and if
+ * that doesn't heal the session, sign out and sign back in.
+ *
+ *   - First 401 while Clerk believes we're signed in: hard-reload once
+ *     (a fresh page makes Clerk refresh its token and warms a cold-started
+ *     server). Rate-limited to one reload per 60 s so a persistently dead
+ *     session can't loop.
+ *   - Another 401 inside that window: the session is truly dead — sign out
+ *     locally and land on /sign-in, exactly the manual flow that always
+ *     recovered things.
+ *   - 401 while signed out: just go to /sign-in.
+ */
+const RELOAD_GUARD_KEY = "qurantracker.authReloadAt";
+// In-memory fallback for the reload guard. sessionStorage can be blocked
+// (private mode, strict storage settings); without a durable guard every
+// signed-in 401 would trigger a fresh reload and loop. The in-memory value
+// doesn't survive a reload, but it still breaks reload loops WITHIN one
+// page lifetime, and the 60 s window bounds the cross-reload case.
+let inMemoryLastAuthReloadAt = 0;
+
+function SessionRecoveryHandler() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const { signOut } = useClerk();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const onUnauthorized = () => {
+      if (!isSignedIn) {
+        setLocation("/sign-in");
+        return;
+      }
+      let lastReloadAt = inMemoryLastAuthReloadAt;
+      try {
+        lastReloadAt = Math.max(
+          lastReloadAt,
+          Number(window.sessionStorage.getItem(RELOAD_GUARD_KEY) ?? 0),
+        );
+      } catch {
+        /* keep the in-memory value */
+      }
+      const now = Date.now();
+      if (now - lastReloadAt > 60_000) {
+        inMemoryLastAuthReloadAt = now;
+        try {
+          window.sessionStorage.setItem(RELOAD_GUARD_KEY, String(now));
+        } catch {
+          /* ignore */
+        }
+        window.location.reload();
+        return;
+      }
+      // Reload didn't heal it — do what the user used to do manually.
+      // This sign-out is session repair, not the user leaving: flag it so
+      // the identity gate keeps their persisted cache for their return.
+      try {
+        window.localStorage.setItem(KEEP_CACHE_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+      void signOut({ redirectUrl: `${basePath}/sign-in` });
+    };
+
+    window.addEventListener("qurantracker:unauthorized", onUnauthorized);
+    return () => window.removeEventListener("qurantracker:unauthorized", onUnauthorized);
+  }, [isLoaded, isSignedIn, signOut, setLocation]);
 
   return null;
 }
@@ -344,18 +490,8 @@ function ClerkProviderWithRoutes() {
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={{
-          persister,
-          // Keep persisted data for up to 7 days — matches the queryClient's
-          // gcTime so nothing is evicted from storage before memory would
-          // drop it.
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-          dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
-        }}
-      >
-        <QueryCacheIdentityGuard />
+      <IdentityPersistGate>
+        <SessionRecoveryHandler />
         <TooltipProvider>
           <ErrorBoundary>
             <Switch>
@@ -367,7 +503,7 @@ function ClerkProviderWithRoutes() {
           </ErrorBoundary>
           <Toaster />
         </TooltipProvider>
-      </PersistQueryClientProvider>
+      </IdentityPersistGate>
     </ClerkProvider>
   );
 }
