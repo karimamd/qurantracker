@@ -384,7 +384,23 @@ function HomeworkReadingCard() {
   const pct = Math.min(100, Math.round((totalDone / Math.max(1, totalNeeded)) * 100));
   const pagesMet = pages.filter(p => p.weekCount >= weeklyGoal).length;
   const allDone = pagesMet === pages.length;
-  const nextPage = pages.find(p => p.weekCount < weeklyGoal);
+  // When the weekly goal will not be fully completed, spread each action
+  // across the homework pages instead of walking the API's page order.
+  // Page number breaks equal-count ties so the button is deterministic even
+  // if the server returns pages in a different order.
+  const nextPage = pages
+    .filter(p => p.weekCount < weeklyGoal)
+    .reduce<(typeof pages)[number] | undefined>((leastRead, page) => {
+      if (
+        !leastRead ||
+        page.weekCount < leastRead.weekCount ||
+        (page.weekCount === leastRead.weekCount &&
+          page.pageNumber < leastRead.pageNumber)
+      ) {
+        return page;
+      }
+      return leastRead;
+    }, undefined);
 
   const handleIncreaseGoal = (e: React.MouseEvent) => {
     e.stopPropagation();
