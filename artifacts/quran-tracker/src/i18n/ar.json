@@ -315,7 +315,11 @@
     "undoing": "جارٍ التراجع...",
     "undoSuccess": "تم التراجع عن التلاوة",
     "undoSuccessDesc": "تمت استعادة تقدّم الصفحة {{page}}.",
-    "undoFailed": "فشل التراجع"
+    "undoFailed": "فشل التراجع",
+    "remaining_zero": "لا يتبقّى شيء",
+    "remaining_two": "متبقّي اثنان",
+    "remaining_few": "متبقّي {{count}}",
+    "remaining_many": "متبقّي {{count}}"
   },
   "settings": {
     "title": "الإعدادات",
@@ -758,7 +762,11 @@
     "markedDesc": "{{count}} صفحات بتقييم {{quality}}.",
     "markedDesc_one": "{{count}} صفحة بتقييم {{quality}}.",
     "recordFailed": "فشل تسجيل التلاوة",
-    "ariaMark": "تقييم الربع {{n}} كـ {{quality}}"
+    "ariaMark": "تقييم الربع {{n}} كـ {{quality}}",
+    "markedDesc_zero": "لا صفحات بتقييم {{quality}}.",
+    "markedDesc_two": "صفحتان بتقييم {{quality}}.",
+    "markedDesc_few": "{{count}} صفحات بتقييم {{quality}}.",
+    "markedDesc_many": "{{count}} صفحة بتقييم {{quality}}."
   },
   "pageList": {
     "title": "الصفحات",
@@ -840,7 +848,11 @@
     "submitting": "جارٍ التسجيل...",
     "selectError": "يرجى اختيار نطاق صفحات صحيح",
     "recordedToast": "تم تسجيل {{count}} صفحة بتقييم {{quality}}",
-    "surahPageHint": "ص.{{start}}{{end}}"
+    "surahPageHint": "ص.{{start}}{{end}}",
+    "submitN_zero": "لا صفحات",
+    "submitN_two": "تسجيل صفحتين",
+    "submitN_few": "تسجيل {{count}} صفحات",
+    "submitN_many": "تسجيل {{count}} صفحة"
   },
   "reader": {
     "title": "مصحف القراءة",
@@ -923,7 +935,27 @@
     "markFailed": "تعذّر حفظ العلامة — يرجى المحاولة مرة أخرى",
     "prevPageAyahShow": "إظهار آخر آية من الصفحة السابقة",
     "prevPageAyahHide": "إخفاء آخر آية من الصفحة السابقة",
-    "prevPageAyahLabel": "آخر آية من صفحة {{page}}"
+    "prevPageAyahLabel": "آخر آية من صفحة {{page}}",
+    "allRevealedWith_zero": "",
+    "allRevealedWith_two": " مع خطأين.",
+    "allRevealedWith_few": " مع {{count}} أخطاء.",
+    "allRevealedWith_many": " مع {{count}} خطأ.",
+    "cleared_zero": "لا آيات صحيحة",
+    "cleared_two": "آيتان صحيحتان",
+    "cleared_few": "{{count}} صحيحة",
+    "cleared_many": "{{count}} صحيحة",
+    "linkIssuesShort_zero": "لا مشاكل ربط",
+    "linkIssuesShort_two": "ربطان",
+    "linkIssuesShort_few": "{{count}} ربط",
+    "linkIssuesShort_many": "{{count}} ربط",
+    "mistakes_zero": "لا أخطاء",
+    "mistakes_two": "خطآن",
+    "mistakes_few": "{{count}} أخطاء",
+    "mistakes_many": "{{count}} خطأ",
+    "revealed_zero": "لم تُظهَر أي آية",
+    "revealed_two": "{{count}} / {{total}} آيتان ظاهرتان",
+    "revealed_few": "{{count}} / {{total}} آيات ظاهرة",
+    "revealed_many": "{{count}} / {{total}} آية ظاهرة"
   },
   "mistakes": {
     "title": "الأخطاء",
@@ -964,7 +996,15 @@
     "recitations_other": "{{count}} تلاوة",
     "storedTail": "محفوظة على هذا الجهاز. أنشئ حسابًا وسننقلها إلى حسابك تلقائيًا.",
     "introTail": "تقدّمك حاليًا محفوظ على هذا الجهاز فقط. أنشئ حسابًا للحفاظ عليه عبر أجهزتك — يستغرق ثوانٍ.",
-    "signUp": "أنشئ حسابًا"
+    "signUp": "أنشئ حسابًا",
+    "pages_zero": "لا صفحات ضمن النطاق",
+    "pages_two": "صفحتان ضمن النطاق",
+    "pages_few": "{{count}} صفحات ضمن النطاق",
+    "pages_many": "{{count}} صفحة ضمن النطاق",
+    "recitations_zero": "لا تلاوات",
+    "recitations_two": "تلاوتان",
+    "recitations_few": "{{count}} تلاوات",
+    "recitations_many": "{{count}} تلاوة"
   },
   "pageRow": {
     "thisWeek": "{{count}}× هذا الأسبوع"

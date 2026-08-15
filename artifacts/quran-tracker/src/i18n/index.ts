@@ -26,7 +26,10 @@ void i18n.use(initReactI18next).init({
     ar: { translation: ar },
   },
   lng: getInitialLanguage(),
-  fallbackLng: "ar",
+  // Fall back to English so that any missing Arabic plural form (Arabic
+  // needs 6 forms: zero/one/two/few/many/other vs English's one/other)
+  // renders a readable English string rather than the raw key path.
+  fallbackLng: "en",
   interpolation: { escapeValue: false },
   returnNull: false,
 });
