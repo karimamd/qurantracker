@@ -29,6 +29,24 @@
  * underlying writes are themselves wrapped in their own transaction with
  * a per-user advisory lock to prevent two near-simultaneous mutations
  * from racing into duplicate auto-recordings.
+ *
+ * EXACTLY ONE RECITATION PER PASS
+ * --------------------------------
+ * A "pass" starts when the user first marks any ayah on a page and ends
+ * when they clear all marks (manually or via schedule). Within one pass,
+ * correcting or updating individual ayah marks should UPDATE the single
+ * existing recitation_log row, never INSERT a new one, so the activity
+ * feed doesn't accumulate a new entry for every small correction.
+ *
+ * Decision tree for each call:
+ *   1. No recitation for this page today → INSERT (first mark of the pass).
+ *   2. All active marks are newer than the last recitation ("fresh full
+ *      pass") → INSERT (user cleared all marks and went through the page
+ *      again from scratch; this is a new pass).
+ *   3. Existing recitation today, quality unchanged, NOT a fresh pass
+ *      → no-op (nothing changed, skip the write entirely).
+ *   4. Existing recitation today, quality changed, NOT a fresh pass
+ *      → UPDATE the existing row (user corrected a mark mid-pass).
  */
 import { db, settingsTable, pageProgressTable, recitationLogTable, ayahMistakesTable } from "@workspace/db";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
@@ -162,19 +180,11 @@ export async function maybeAutoAssignPageRecitation(
     const totalMistakes = allActiveMarks.length;
     const quality = bucketQuality(totalMistakes, settings.goodMax, settings.hardMax);
 
-    // Avoid recording a duplicate when the user is just shuffling marks
-    // around without changing the page's overall verdict. Look at the
-    // most recent recitation_log row TODAY for this page (bounded to
-    // exclude future-dated rows).
-    //
-    // Exception — a fresh FULL pass counts even with the same quality:
-    // if EVERY ayah's newest mark is more recent than that recitation
-    // (oldestNewestMark > its recitedAt), the user has re-gone over the
-    // whole page since it was recorded, so record a new recitation.
-    // Toggling one or two marks leaves other ayahs' marks older than the
-    // recitation, so the duplicate guard still holds for that case.
+    // Look up the most recent recitation_log entry recorded today for
+    // this page. We use this to decide whether to insert, update, or skip.
     const [latestToday] = await db
       .select({
+        id: recitationLogTable.id,
         quality: recitationLogTable.quality,
         recitedAt: recitationLogTable.recitedAt,
       })
@@ -189,10 +199,73 @@ export async function maybeAutoAssignPageRecitation(
       )
       .orderBy(desc(recitationLogTable.recitedAt))
       .limit(1);
+
+    // "Fresh full pass": every ayah's newest mark is more recent than the
+    // last recitation. This happens when the user cleared all marks and went
+    // through the page again from scratch — start a new pass.
+    // If some marks predate the last recitation, the user is still on the
+    // same pass and we must UPDATE rather than INSERT.
     const isFreshFullPass = (last: { recitedAt: Date | string }) =>
       oldestNewestMark > new Date(last.recitedAt).getTime();
-    if (latestToday && latestToday.quality === quality && !isFreshFullPass(latestToday)) return;
 
+    // Decision tree (see module-level comment):
+    //   Case 1: no recitation today → INSERT (fall through to insert block)
+    //   Case 2: fresh full pass → INSERT (fall through to insert block)
+    //   Case 3: same quality, not fresh → no-op
+    //   Case 4: quality changed, not fresh → UPDATE existing row
+    if (latestToday && !isFreshFullPass(latestToday)) {
+      if (latestToday.quality === quality) return; // case 3: nothing changed
+
+      // Case 4: user corrected a mark mid-pass — update the existing entry
+      // so the activity feed gets one recitation per pass, not one per edit.
+      const recitedAt = new Date();
+      const dueDate = calculateDueDate(recitedAt, quality, settings);
+
+      await db.transaction(async (tx) => {
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(${AUTO_ASSIGN_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
+        );
+        // Re-fetch under the lock to catch a race where another request
+        // already updated this row.
+        const [underLock] = await tx
+          .select({ id: recitationLogTable.id, quality: recitationLogTable.quality, recitedAt: recitationLogTable.recitedAt })
+          .from(recitationLogTable)
+          .where(
+            and(
+              eq(recitationLogTable.userId, userId),
+              eq(recitationLogTable.pageNumber, pageNumber),
+              gte(recitationLogTable.recitedAt, dayStart),
+              lt(recitationLogTable.recitedAt, dayEnd),
+            ),
+          )
+          .orderBy(desc(recitationLogTable.recitedAt))
+          .limit(1);
+        // If between outer check and lock somebody else changed things,
+        // re-evaluate: if it's now a fresh pass or same quality, bail out.
+        if (!underLock) return; // someone deleted it; INSERT path handles it next call
+        if (underLock.quality === quality && !isFreshFullPass(underLock)) return;
+        if (isFreshFullPass(underLock)) return; // now a fresh pass; INSERT path handles it
+
+        await tx
+          .update(recitationLogTable)
+          .set({ quality, mistakes: totalMistakes, recitedAt, dueDate })
+          .where(eq(recitationLogTable.id, underLock.id));
+
+        await tx
+          .update(pageProgressTable)
+          .set({ quality, mistakes: totalMistakes, lastRecited: recitedAt, dueDate, inScope: true })
+          .where(
+            and(
+              eq(pageProgressTable.userId, userId),
+              eq(pageProgressTable.pageNumber, pageNumber),
+            ),
+          );
+      });
+      return;
+    }
+
+    // Cases 1 & 2: INSERT a new recitation row (first mark today, or fresh
+    // pass after the user cleared all marks and went through the page again).
     await ensurePageExists(userId, pageNumber);
 
     const recitedAt = new Date();
@@ -200,8 +273,7 @@ export async function maybeAutoAssignPageRecitation(
 
     await db.transaction(async (tx) => {
       // Hold a per-user lock so two mutations landing in the same
-      // millisecond can't both pass the "no duplicate" check above and
-      // each insert a row.
+      // millisecond can't both pass the checks above and each insert a row.
       await tx.execute(
         sql`select pg_advisory_xact_lock(${AUTO_ASSIGN_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
       );
@@ -210,6 +282,7 @@ export async function maybeAutoAssignPageRecitation(
       // the same auto-assignment.
       const [latestUnderLock] = await tx
         .select({
+          id: recitationLogTable.id,
           quality: recitationLogTable.quality,
           recitedAt: recitationLogTable.recitedAt,
         })
@@ -224,8 +297,26 @@ export async function maybeAutoAssignPageRecitation(
         )
         .orderBy(desc(recitationLogTable.recitedAt))
         .limit(1);
-      if (latestUnderLock && latestUnderLock.quality === quality && !isFreshFullPass(latestUnderLock))
+      // Under the lock, if a row now exists and it's NOT a fresh pass →
+      // route to UPDATE instead (handles the case where a concurrent
+      // request inserted between our outer check and this lock).
+      if (latestUnderLock && !isFreshFullPass(latestUnderLock)) {
+        if (latestUnderLock.quality === quality) return; // no-op
+        await tx
+          .update(recitationLogTable)
+          .set({ quality, mistakes: totalMistakes, recitedAt, dueDate })
+          .where(eq(recitationLogTable.id, latestUnderLock.id));
+        await tx
+          .update(pageProgressTable)
+          .set({ quality, mistakes: totalMistakes, lastRecited: recitedAt, dueDate, inScope: true })
+          .where(
+            and(
+              eq(pageProgressTable.userId, userId),
+              eq(pageProgressTable.pageNumber, pageNumber),
+            ),
+          );
         return;
+      }
 
       await tx
         .update(pageProgressTable)
