@@ -52,6 +52,7 @@ import { db, settingsTable, pageProgressTable, recitationLogTable, ayahMistakesT
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import pageAyahsData from "./page-ayahs.json" with { type: "json" };
 import { calculateDueDate, ensurePageExists } from "./progress-helpers";
+import { awardRecitationPoints } from "./rewards";
 import { logger } from "./logger";
 
 const PAGE_AYAHS = pageAyahsData as Record<string, number[]>;
@@ -221,6 +222,13 @@ export async function maybeAutoAssignPageRecitation(
       const recitedAt = new Date();
       const dueDate = calculateDueDate(recitedAt, quality, settings);
 
+      const [priorPageMid] = await db
+        .select({ quality: pageProgressTable.quality })
+        .from(pageProgressTable)
+        .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)))
+        .limit(1);
+      let didWriteMid = false;
+
       await db.transaction(async (tx) => {
         await tx.execute(
           sql`select pg_advisory_xact_lock(${AUTO_ASSIGN_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
@@ -260,7 +268,11 @@ export async function maybeAutoAssignPageRecitation(
               eq(pageProgressTable.pageNumber, pageNumber),
             ),
           );
+        didWriteMid = true;
       });
+      if (didWriteMid) {
+        await awardRecitationPoints(userId, pageNumber, priorPageMid?.quality ?? null, quality, recitedAt);
+      }
       return;
     }
 
@@ -270,6 +282,13 @@ export async function maybeAutoAssignPageRecitation(
 
     const recitedAt = new Date();
     const dueDate = calculateDueDate(recitedAt, quality, settings);
+
+    const [priorPage] = await db
+      .select({ quality: pageProgressTable.quality })
+      .from(pageProgressTable)
+      .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)))
+      .limit(1);
+    let didWrite = false;
 
     await db.transaction(async (tx) => {
       // Hold a per-user lock so two mutations landing in the same
@@ -302,6 +321,7 @@ export async function maybeAutoAssignPageRecitation(
       // request inserted between our outer check and this lock).
       if (latestUnderLock && !isFreshFullPass(latestUnderLock)) {
         if (latestUnderLock.quality === quality) return; // no-op
+        didWrite = true;
         await tx
           .update(recitationLogTable)
           .set({ quality, mistakes: totalMistakes, recitedAt, dueDate })
@@ -342,7 +362,11 @@ export async function maybeAutoAssignPageRecitation(
         recitedAt,
         dueDate,
       });
+      didWrite = true;
     });
+    if (didWrite) {
+      await awardRecitationPoints(userId, pageNumber, priorPage?.quality ?? null, quality, recitedAt);
+    }
   } catch (err) {
     // Never let auto-assign errors propagate — the user's mark already
     // committed and the only loss is the convenience auto-record.

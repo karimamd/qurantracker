@@ -23,6 +23,7 @@ import {
   useGetProgressChart,
   useListHomework,
   useGetTelawaToday,
+  useGetRewardsSummary,
   useGetTelawaScopeToday,
   useGetTelawaHomeworkReading,
   useGetTelawaHomeworkAyahCorrectness,
@@ -42,12 +43,13 @@ import {
   getGetDailyChartQueryKey,
   getGetProgressChartQueryKey,
   getListHomeworkQueryKey,
+  getGetRewardsSummaryQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QualityBadge } from "@/components/quality-badge";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, AlertTriangle, Clock, CheckCircle, CheckCircle2, Flame, ChevronRight, ChevronDown, Undo2, Repeat, BookOpenCheck, PlusCircle } from "lucide-react";
+import { BookOpen, AlertTriangle, Clock, CheckCircle, CheckCircle2, Flame, ChevronRight, ChevronDown, Undo2, Repeat, BookOpenCheck, PlusCircle, Trophy } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -205,6 +207,53 @@ function ActiveHomeworkSection() {
         </CardContent>
       </Card>
     </Link>
+  );
+}
+
+function RewardsCard() {
+  const { t } = useTranslation();
+  const [, setLocation] = useLocation();
+  const { data, isLoading } = useGetRewardsSummary();
+
+  if (isLoading) return <Skeleton className="h-20 rounded-xl" />;
+  if (!data) return null;
+
+  // Scale today's bar against the best day in the window (min 10 so a
+  // fresh account still shows a sensible partial bar).
+  const scale = Math.max(10, data.bestDayPoints);
+  const pct = Math.min(100, Math.round((data.todayPoints / scale) * 100));
+
+  return (
+    <div
+      className="border rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer bg-card"
+      onClick={() => setLocation("/rewards")}
+      data-testid="dashboard-rewards-card"
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setLocation("/rewards"); }}
+    >
+      <div className="py-4 px-5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-primary uppercase tracking-wide mb-0.5 flex items-center gap-1.5">
+              <Trophy className="w-3.5 h-3.5" />
+              {t("rewards.dashboard.title")}
+            </p>
+            <p className="font-semibold text-sm truncate">
+              {t("rewards.dashboard.todayPoints", { count: data.todayPoints })}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ms-3">
+            <div className="text-end">
+              <p className="text-xs text-muted-foreground">{t("rewards.dashboard.balanceLabel")}</p>
+              <p className="text-xs font-medium">{t("rewards.pointsCount", { count: data.balance })}</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground rtl:rotate-180" />
+          </div>
+        </div>
+        <Progress value={pct} className="h-2" />
+      </div>
+    </div>
   );
 }
 
@@ -660,6 +709,7 @@ function DuePagesSection() {
           queryClient.invalidateQueries({ queryKey: getListJuzProgressQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListSurahProgressQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetRewardsSummaryQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetDailyChartQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetProgressChartQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
@@ -1293,6 +1343,7 @@ function RecentActivitySection() {
           setPendingUndo(null);
           toast({ title: t("dashboard.undoSuccess"), description: t("dashboard.undoSuccessDesc", { page: pageNumber }) });
           queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetRewardsSummaryQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListJuzProgressQueryKey() });
@@ -1505,6 +1556,7 @@ export default function Dashboard() {
       <ActiveHomeworkSection />
 
       <TelawaCard />
+      <RewardsCard />
 
       <TelawaScopeCard />
 

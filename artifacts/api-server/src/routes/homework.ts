@@ -37,6 +37,7 @@ import {
 } from "@workspace/api-zod";
 import { ensurePageExists, getSettings, calculateDueDate, getDefaultPageName, getWeeklyReadCounts } from "../lib/progress-helpers";
 import { requireAuth } from "../middlewares/requireAuth";
+import { awardRecitationPoints } from "../lib/rewards";
 import pageAyahsData from "../lib/page-ayahs.json" with { type: "json" };
 
 const PAGE_AYAHS = pageAyahsData as Record<string, number[]>;
@@ -566,6 +567,12 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
     const now = new Date();
     const dueDate = calculateDueDate(now, parsed.data.quality, settings);
 
+    const [priorPage] = await db
+      .select({ quality: pageProgressTable.quality })
+      .from(pageProgressTable)
+      .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, item.pageNumber)))
+      .limit(1);
+
     await db
       .update(pageProgressTable)
       .set({
@@ -583,6 +590,8 @@ router.patch("/homework/:homeworkId/items/:itemId", async (req, res): Promise<vo
       recitedAt: now,
       dueDate,
     });
+
+    await awardRecitationPoints(userId, item.pageNumber, priorPage?.quality ?? null, parsed.data.quality, now);
   }
 
   const weekStart = new Date();

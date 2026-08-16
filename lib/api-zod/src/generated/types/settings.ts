@@ -17,7 +17,7 @@ export interface Settings {
   language: SettingsLanguage;
   /** Number of pages per day for the recurring Telawa (read-only) rotation. Default 5. */
   telawaPagesPerDay: number;
-  /** Font size in pixels used for the Quran page text in the Reader. Default 24. */
+  /** Font size in pixels used for the Quran page text in the Reader. Default 32. */
   readerFontSize: number;
   /** Default font size in pixels used for the single-ayah detail page (/ayahs/:n). Default 40. */
   ayahViewFontSize: number;
@@ -52,4 +52,12 @@ export interface Settings {
   duePagesSectionCollapsed: boolean;
   /** When true (default), opening the Reader from the Dashboard due-pages section or from the Homework screen automatically enters hide/practice mode. */
   hideReaderOnJump: boolean;
+  /** Reward points for one unique page recitation per day. 0 disables. Default 1. */
+  pointsRecitation: number;
+  /** Reward points per quality-ladder level climbed (relearn→hard→good→excellent). 0 disables. Default 1. */
+  pointsStatusUpgrade: number;
+  /** Reward points per Telawa page read. 0 disables. Default 1. */
+  pointsTelawaRead: number;
+  /** Reward points when the Telawa daily page goal is met (once per day). 0 disables. Default 2. */
+  pointsTelawaGoal: number;
 }

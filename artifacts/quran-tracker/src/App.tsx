@@ -54,6 +54,7 @@ import AyahDetail from "@/pages/ayah-detail";
 import Recite from "@/pages/recite";
 import HomeworkList from "@/pages/homework-list";
 import TelawaPage from "@/pages/telawa";
+import RewardsPage from "@/pages/rewards";
 import HomeworkDetail from "@/pages/homework-detail";
 import MistakesPage from "@/pages/mistakes";
 import SettingsPage from "@/pages/settings-page";
@@ -242,6 +243,7 @@ function ProtectedApp() {
           <Route path="/homework" component={HomeworkList} />
           <Route path="/homework/:id" component={HomeworkDetail} />
           <Route path="/telawa" component={TelawaPage} />
+          <Route path="/rewards" component={RewardsPage} />
           <Route path="/mistakes" component={MistakesPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route component={NotFound} />

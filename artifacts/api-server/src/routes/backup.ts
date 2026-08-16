@@ -39,6 +39,9 @@ import {
   telawaLogTable,
   telawaScopeCycleTable,
   telawaScopeLogTable,
+  rewardEventsTable,
+  rewardPrizesTable,
+  rewardRedemptionsTable,
 } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -108,6 +111,35 @@ const SettingsImport = z.object({
   // Optional for backward compatibility — older backups omit this field
   // and restore with the schema default (true).
   duePagesSectionCollapsed: z.boolean().optional(),
+  // Optional for backward compatibility — older backups predate the
+  // reward system and restore with the schema defaults (1/1/1/2).
+  pointsRecitation: z.number().int().min(0).max(1000).optional(),
+  pointsStatusUpgrade: z.number().int().min(0).max(1000).optional(),
+  pointsTelawaRead: z.number().int().min(0).max(1000).optional(),
+  pointsTelawaGoal: z.number().int().min(0).max(1000).optional(),
+});
+
+const RewardEventImport = z.object({
+  metric: z.enum(["recitation", "statusUpgrade", "telawaRead", "telawaGoal"]),
+  points: z.number().int(),
+  sourceRef: z.string().min(1).max(200),
+  fromQuality: QualityEnum.nullable().optional(),
+  earnedAt: ts,
+});
+
+const RewardPrizeImport = z.object({
+  /** Old id — referenced by RewardRedemptionImport.prizeId for remap. */
+  id: z.number().int(),
+  name: z.string().min(1).max(200),
+  cost: z.number().int().min(1),
+  createdAt: ts.optional(),
+});
+
+const RewardRedemptionImport = z.object({
+  prizeId: z.number().int().nullable().optional(),
+  prizeName: z.string().min(1).max(200),
+  cost: z.number().int().min(0),
+  redeemedAt: ts,
 });
 
 const PageProgressImport = z.object({
@@ -205,12 +237,17 @@ const BackupSchema = z.object({
   // in-scope round-robin track and simply restore as empty.
   telawaScopeCycle: z.array(TelawaScopeCycleImport).default([]),
   telawaScopeLog: z.array(TelawaScopeLogImport).default([]),
+  // Optional for backward compatibility — older backups predate the
+  // reward system and simply restore as empty.
+  rewardEvents: z.array(RewardEventImport).default([]),
+  rewardPrizes: z.array(RewardPrizeImport).default([]),
+  rewardRedemptions: z.array(RewardRedemptionImport).default([]),
 });
 
 router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const userId = req.userId!;
 
-  const [settings, pageProgress, recitationLog, ayahMistakes, homeworkSessions, homeworkItems, telawaKhatmah, telawaLog, telawaScopeCycle, telawaScopeLog] =
+  const [settings, pageProgress, recitationLog, ayahMistakes, homeworkSessions, homeworkItems, telawaKhatmah, telawaLog, telawaScopeCycle, telawaScopeLog, rewardEvents, rewardPrizes, rewardRedemptions] =
     await Promise.all([
       getSettings(userId),
       db.select().from(pageProgressTable).where(eq(pageProgressTable.userId, userId)),
@@ -222,6 +259,9 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       db.select().from(telawaLogTable).where(eq(telawaLogTable.userId, userId)),
       db.select().from(telawaScopeCycleTable).where(eq(telawaScopeCycleTable.userId, userId)),
       db.select().from(telawaScopeLogTable).where(eq(telawaScopeLogTable.userId, userId)),
+      db.select().from(rewardEventsTable).where(eq(rewardEventsTable.userId, userId)),
+      db.select().from(rewardPrizesTable).where(eq(rewardPrizesTable.userId, userId)),
+      db.select().from(rewardRedemptionsTable).where(eq(rewardRedemptionsTable.userId, userId)),
     ]);
 
   const payload = {
@@ -243,6 +283,10 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       autoExpireAyahMarks: settings.autoExpireAyahMarks,
       homeworkWeeklyReadGoal: settings.homeworkWeeklyReadGoal,
       duePagesSectionCollapsed: settings.duePagesSectionCollapsed,
+      pointsRecitation: settings.pointsRecitation,
+      pointsStatusUpgrade: settings.pointsStatusUpgrade,
+      pointsTelawaRead: settings.pointsTelawaRead,
+      pointsTelawaGoal: settings.pointsTelawaGoal,
     },
     pageProgress: pageProgress.map((r) => ({
       pageNumber: r.pageNumber,
@@ -311,6 +355,25 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       cycleId: r.cycleId,
       readAt: r.readAt,
     })),
+    rewardEvents: rewardEvents.map((r) => ({
+      metric: r.metric,
+      points: r.points,
+      sourceRef: r.sourceRef,
+      fromQuality: r.fromQuality,
+      earnedAt: r.earnedAt,
+    })),
+    rewardPrizes: rewardPrizes.map((r) => ({
+      id: r.id,
+      name: r.name,
+      cost: r.cost,
+      createdAt: r.createdAt,
+    })),
+    rewardRedemptions: rewardRedemptions.map((r) => ({
+      prizeId: r.prizeId,
+      prizeName: r.prizeName,
+      cost: r.cost,
+      redeemedAt: r.redeemedAt,
+    })),
   };
 
   const stamp = new Date().toISOString().slice(0, 10);
@@ -349,6 +412,9 @@ router.post("/backup/import", requireAuth, importBodyParser, async (req, res): P
       // Wipe every user-scoped row first so the import is a clean replace
       // rather than a merge. Order doesn't matter since there are no FK
       // constraints, but we list them all for explicitness.
+      await tx.delete(rewardRedemptionsTable).where(eq(rewardRedemptionsTable.userId, userId));
+      await tx.delete(rewardEventsTable).where(eq(rewardEventsTable.userId, userId));
+      await tx.delete(rewardPrizesTable).where(eq(rewardPrizesTable.userId, userId));
       await tx.delete(telawaScopeLogTable).where(eq(telawaScopeLogTable.userId, userId));
       await tx.delete(telawaScopeCycleTable).where(eq(telawaScopeCycleTable.userId, userId));
       await tx.delete(telawaLogTable).where(eq(telawaLogTable.userId, userId));
@@ -498,6 +564,40 @@ router.post("/backup/import", requireAuth, importBodyParser, async (req, res): P
         );
       }
 
+      if (data.rewardEvents.length) {
+        await tx.insert(rewardEventsTable).values(
+          data.rewardEvents.map((r) => ({
+            userId,
+            metric: r.metric,
+            points: r.points,
+            sourceRef: r.sourceRef,
+            fromQuality: r.fromQuality ?? null,
+            earnedAt: r.earnedAt,
+          })),
+        );
+      }
+
+      const prizeIdMap = new Map<number, number>();
+      for (const p of data.rewardPrizes) {
+        const [inserted] = await tx
+          .insert(rewardPrizesTable)
+          .values({ userId, name: p.name, cost: p.cost, ...(p.createdAt ? { createdAt: p.createdAt } : {}) })
+          .returning({ id: rewardPrizesTable.id });
+        prizeIdMap.set(p.id, inserted.id);
+      }
+
+      if (data.rewardRedemptions.length) {
+        await tx.insert(rewardRedemptionsTable).values(
+          data.rewardRedemptions.map((r) => ({
+            userId,
+            prizeId: r.prizeId == null ? null : prizeIdMap.get(r.prizeId) ?? null,
+            prizeName: r.prizeName,
+            cost: r.cost,
+            redeemedAt: r.redeemedAt,
+          })),
+        );
+      }
+
       return {
         settings: data.settings ? 1 : 0,
         pageProgress: data.pageProgress.length,
@@ -509,6 +609,9 @@ router.post("/backup/import", requireAuth, importBodyParser, async (req, res): P
         telawaLog: data.telawaLog.length,
         telawaScopeCycle: data.telawaScopeCycle.length,
         telawaScopeLog: data.telawaScopeLog.length,
+        rewardEvents: data.rewardEvents.length,
+        rewardPrizes: data.rewardPrizes.length,
+        rewardRedemptions: data.rewardRedemptions.length,
       };
     });
 

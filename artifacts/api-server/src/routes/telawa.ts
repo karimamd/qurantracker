@@ -27,6 +27,7 @@ import {
   UpdateActiveKhatmahResponse,
 } from "@workspace/api-zod";
 import { getSettings } from "../lib/progress-helpers";
+import { awardTelawaReadPoints, revokeTelawaReadPoints, syncTelawaGoalPoints } from "../lib/rewards";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -144,6 +145,15 @@ async function ensureActiveKhatmah(tx: Tx, userId: string) {
   return created;
 }
 
+/**
+ * Public snapshot of today's Telawa state (goal + read count) for callers
+ * outside this router (e.g. settings PATCH resyncing the goal bonus).
+ */
+export async function getTelawaTodaySnapshot(userId: string): Promise<{ readToday: number; pagesPerDay: number }> {
+  const today = await buildToday(userId);
+  return { readToday: today.readToday, pagesPerDay: today.pagesPerDay };
+}
+
 async function buildToday(userId: string) {
   const settings = await getSettings(userId);
   const defaultPagesPerDay = settings.telawaPagesPerDay ?? 5;
@@ -228,6 +238,7 @@ router.post("/telawa/read", async (req, res): Promise<void> => {
   // Wrap khatmah lookup + insert + auto-rollover in a single transaction
   // under the per-user advisory lock so concurrent writes cannot race on
   // khatmah completion.
+  let insertedLogId: number | null = null;
   await db.transaction(async (tx) => {
     await tx.execute(
       sql`select pg_advisory_xact_lock(${TELAWA_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
@@ -235,12 +246,13 @@ router.post("/telawa/read", async (req, res): Promise<void> => {
 
     const active = await ensureActiveKhatmah(tx, userId);
 
-    await tx.insert(telawaLogTable).values({
+    const [insertedLog] = await tx.insert(telawaLogTable).values({
       userId,
       pageNumber: parsed.data.pageNumber,
       cycleNumber: active.cycleNumber,
       khatmahId: active.id,
-    });
+    }).returning({ id: telawaLogTable.id });
+    insertedLogId = insertedLog.id;
 
     const [{ inKhatmah }] = await tx
       .select({ inKhatmah: sql<number>`count(*)::int` })
@@ -265,12 +277,18 @@ router.post("/telawa/read", async (req, res): Promise<void> => {
     }
   });
 
+  if (insertedLogId !== null) {
+    await awardTelawaReadPoints(userId, insertedLogId);
+  }
+
   const today = await buildToday(userId);
+  await syncTelawaGoalPoints(userId, today.readToday, today.pagesPerDay);
   res.json(RecordTelawaReadResponse.parse(today));
 });
 
 router.delete("/telawa/read/last", async (req, res): Promise<void> => {
   const userId = req.userId!;
+  let removedLogId: number | null = null;
   const undone = await db.transaction(async (tx) => {
     await tx.execute(
       sql`select pg_advisory_xact_lock(${TELAWA_LOCK_NAMESPACE}::int, hashtext(${userId})::int)`,
@@ -285,6 +303,7 @@ router.delete("/telawa/read/last", async (req, res): Promise<void> => {
     if (!last) return false;
 
     const removedKhatmahId = last.khatmahId;
+    removedLogId = last.id;
     await tx.delete(telawaLogTable).where(eq(telawaLogTable.id, last.id));
 
     // If the removed log belonged to a Khatmah that was just auto-completed
@@ -330,7 +349,11 @@ router.delete("/telawa/read/last", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Nothing to undo" });
     return;
   }
+  if (removedLogId !== null) {
+    await revokeTelawaReadPoints(userId, removedLogId);
+  }
   const today = await buildToday(userId);
+  await syncTelawaGoalPoints(userId, today.readToday, today.pagesPerDay);
   res.json(UndoTelawaReadResponse.parse(today));
 });
 
@@ -392,6 +415,8 @@ router.post("/telawa/khatmah", async (req, res): Promise<void> => {
   });
 
   const today = await buildToday(userId);
+  // A new goal can move today's count above/below the bonus threshold.
+  await syncTelawaGoalPoints(userId, today.readToday, today.pagesPerDay);
   res.json(StartKhatmahResponse.parse(today));
 });
 
@@ -426,6 +451,8 @@ router.patch("/telawa/khatmah/active", async (req, res): Promise<void> => {
   });
 
   const today = await buildToday(userId);
+  // Changing pagesPerDay can move today's count above/below the threshold.
+  await syncTelawaGoalPoints(userId, today.readToday, today.pagesPerDay);
   res.json(UpdateActiveKhatmahResponse.parse(today));
 });
 

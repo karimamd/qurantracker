@@ -86,6 +86,16 @@ export const settingsTable = pgTable("settings", {
   // enters hide/practice mode so the user must reveal each ayah one at a
   // time rather than seeing the full page immediately.
   hideReaderOnJump: boolean("hide_reader_on_jump").notNull().default(true),
+  // ---- Reward system point values (0 disables the metric) ----
+  // Points for one unique page recitation per day.
+  pointsRecitation: integer("points_recitation").notNull().default(1),
+  // Points per quality-ladder level climbed (relearn→hard→good→excellent)
+  // relative to the page's quality before today's first recitation.
+  pointsStatusUpgrade: integer("points_status_upgrade").notNull().default(1),
+  // Points per Telawa page read.
+  pointsTelawaRead: integer("points_telawa_read").notNull().default(1),
+  // Points when the Telawa daily page goal is met (once per day).
+  pointsTelawaGoal: integer("points_telawa_goal").notNull().default(2),
 }, (table) => ({
   userIdUnique: uniqueIndex("settings_user_id_unique").on(table.userId),
 }));

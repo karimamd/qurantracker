@@ -45,7 +45,7 @@ export interface Settings {
   language: SettingsLanguage;
   /** Number of pages per day for the recurring Telawa (read-only) rotation. Default 5. */
   telawaPagesPerDay: number;
-  /** Font size in pixels used for the Quran page text in the Reader. Default 24. */
+  /** Font size in pixels used for the Quran page text in the Reader. Default 32. */
   readerFontSize: number;
   /** Default font size in pixels used for the single-ayah detail page (/ayahs/:n). Default 40. */
   ayahViewFontSize: number;
@@ -80,6 +80,14 @@ export interface Settings {
   duePagesSectionCollapsed: boolean;
   /** When true (default), opening the Reader from the Dashboard due-pages section or from the Homework screen automatically enters hide/practice mode. */
   hideReaderOnJump: boolean;
+  /** Reward points for one unique page recitation per day. 0 disables. Default 1. */
+  pointsRecitation: number;
+  /** Reward points per quality-ladder level climbed (relearn→hard→good→excellent). 0 disables. Default 1. */
+  pointsStatusUpgrade: number;
+  /** Reward points per Telawa page read. 0 disables. Default 1. */
+  pointsTelawaRead: number;
+  /** Reward points when the Telawa daily page goal is met (once per day). 0 disables. Default 2. */
+  pointsTelawaGoal: number;
 }
 
 export type UpdateSettingsBodyLanguage = typeof UpdateSettingsBodyLanguage[keyof typeof UpdateSettingsBodyLanguage];
@@ -151,6 +159,98 @@ export interface UpdateSettingsBody {
   homeworkWeeklyReadGoal?: number;
   duePagesSectionCollapsed?: boolean;
   hideReaderOnJump?: boolean;
+  /**
+   * @minimum 0
+   * @maximum 1000
+   */
+  pointsRecitation?: number;
+  /**
+   * @minimum 0
+   * @maximum 1000
+   */
+  pointsStatusUpgrade?: number;
+  /**
+   * @minimum 0
+   * @maximum 1000
+   */
+  pointsTelawaRead?: number;
+  /**
+   * @minimum 0
+   * @maximum 1000
+   */
+  pointsTelawaGoal?: number;
+}
+
+export type RewardsSummaryDailyPointsItem = {
+  date: string;
+  points: number;
+};
+
+export type RewardsSummaryByMetricItem = {
+  metric: string;
+  points: number;
+};
+
+export interface RewardsSummary {
+  /** Available points (total earned minus total spent). */
+  balance: number;
+  totalEarned: number;
+  totalSpent: number;
+  /** Points earned today (server-local day). */
+  todayPoints: number;
+  /** Highest single-day points within the dailyPoints window. */
+  bestDayPoints: number;
+  /** Points earned per day for the last 14 days (oldest first). */
+  dailyPoints: RewardsSummaryDailyPointsItem[];
+  /** Earned-points breakdown by metric over the last 30 days. */
+  byMetric: RewardsSummaryByMetricItem[];
+}
+
+export interface RewardPrize {
+  id: number;
+  name: string;
+  cost: number;
+  createdAt: string;
+}
+
+export interface CreateRewardPrizeBody {
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  name: string;
+  /**
+   * @minimum 1
+   * @maximum 100000
+   */
+  cost: number;
+}
+
+export interface UpdateRewardPrizeBody {
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  name?: string;
+  /**
+   * @minimum 1
+   * @maximum 100000
+   */
+  cost?: number;
+}
+
+export interface RewardRedemption {
+  id: number;
+  prizeId?: number | null;
+  prizeName: string;
+  cost: number;
+  redeemedAt: string;
+}
+
+export interface RedeemRewardPrizeResult {
+  redemption: RewardRedemption;
+  /** Remaining balance after the redemption. */
+  balance: number;
 }
 
 export interface ProgressOverview {

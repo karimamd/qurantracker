@@ -227,7 +227,8 @@
     "default": "الافتراضي",
     "rename": "إعادة تسمية",
     "open": "فتح",
-    "notFound": "غير موجود"
+    "notFound": "غير موجود",
+    "edit": "تعديل"
   },
   "quality": {
     "excellent": "مُمتاز",
@@ -1079,5 +1080,54 @@
     "addedToast_few": "تمت إضافة {{count}} صفحات إلى النطاق بتقييم {{quality}}",
     "addedToast_many": "تمت إضافة {{count}} صفحة إلى النطاق بتقييم {{quality}}",
     "addedToast_other": "تمت إضافة {{count}} صفحة إلى النطاق بتقييم {{quality}}"
+  },
+  "rewards": {
+    "title": "المكافآت",
+    "balance": "النقاط المتاحة",
+    "today": "اليوم",
+    "spent": "المصروف",
+    "dailyChartTitle": "النقاط اليومية",
+    "last14Days": "آخر 14 يومًا",
+    "last30Days": "آخر 30 يومًا",
+    "noPointsYet": "لم تكسب أي نقاط بعد — اقرأ صفحة لتبدأ بجمع النقاط!",
+    "pointsCount_zero": "{{count}} نقطة",
+    "pointsCount_one": "نقطة واحدة",
+    "pointsCount_two": "نقطتان",
+    "pointsCount_few": "{{count}} نقاط",
+    "pointsCount_many": "{{count}} نقطة",
+    "pointsCount_other": "{{count}} نقطة",
+    "breakdownTitle": "النقاط حسب النشاط",
+    "metric": {
+      "recitation": "تسميع صفحة (لكل صفحة في اليوم)",
+      "statusUpgrade": "تحسّن حالة الصفحة (لكل مستوى)",
+      "telawaRead": "قراءة صفحة تلاوة",
+      "telawaGoal": "تحقيق هدف التلاوة اليومي"
+    },
+    "prizesTitle": "الجوائز",
+    "addPrize": "إضافة جائزة",
+    "editPrize": "تعديل الجائزة",
+    "noPrizes": "لا توجد جوائز بعد. أضف جائزة لتصرف نقاطك عليها!",
+    "prizeName": "اسم الجائزة",
+    "prizeCost": "التكلفة (نقاط)",
+    "redeem": "استلام",
+    "redeemConfirmTitle": "استلام هذه الجائزة؟",
+    "redeemConfirmDescription": "ستكلف \"{{name}}\" {{cost}} نقطة من رصيدك.",
+    "redeemSuccess": "استمتع بجائزتك: {{name}}!",
+    "redeemInsufficient": "لا توجد نقاط كافية لهذه الجائزة.",
+    "deletePrizeTitle": "حذف الجائزة؟",
+    "deletePrizeDescription": "سيؤدي هذا إلى إزالة الجائزة من القائمة. تبقى عمليات الاستلام السابقة محفوظة.",
+    "redemptionsTitle": "الجوائز المستلمة",
+    "configTitle": "قيم النقاط",
+    "configHint": "عدد النقاط التي يمنحها كل نشاط. اجعلها 0 للتعطيل.",
+    "dashboard": {
+      "title": "المكافآت",
+      "todayPoints_zero": "لم تكسب نقاطًا اليوم",
+      "todayPoints_one": "كسبت نقطة واحدة اليوم",
+      "todayPoints_two": "كسبت نقطتين اليوم",
+      "todayPoints_few": "كسبت {{count}} نقاط اليوم",
+      "todayPoints_many": "كسبت {{count}} نقطة اليوم",
+      "todayPoints_other": "كسبت {{count}} نقطة اليوم",
+      "balanceLabel": "الرصيد"
+    }
   }
 }

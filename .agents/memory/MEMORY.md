@@ -9,3 +9,5 @@
 - [First-paint settings need a sync mirror](first-paint-settings-mirror.md) — server-backed UI settings must be mirrored in localStorage and identity-stamped, or they flash/stick on defaults and can bleed across accounts.
 - [TanStack persist must version-lock to react-query](tanstack-persist-version-lock.md) — a query-core version split makes the persister hydrate a different QueryClient class and restore silently no-ops.
 - [Lazy per-user row creation must tolerate conflicts](lazy-row-creation-races.md) — concurrent first-load endpoints race on unique indexes; use onConflictDoNothing + re-select or the first load 500s.
+- [Orval nullable codegen bug](orval-nullable-codegen-bug.md) — codegen re-emits invalid `interface X {...} | null`; patch generated files + run tsc -b on shared libs after every codegen.
+- [User-scoped table hook sites](user-scoped-table-hook-sites.md) — new user-scoped tables/settings must be wired into backup export/import/wipe AND guest→account migration, or data is silently lost.

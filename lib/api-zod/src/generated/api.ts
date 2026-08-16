@@ -43,7 +43,7 @@ export const GetSettingsResponse = zod.object({
   readerFontSize: zod
     .number()
     .describe(
-      "Font size in pixels used for the Quran page text in the Reader. Default 24.",
+      "Font size in pixels used for the Quran page text in the Reader. Default 32.",
     ),
   ayahViewFontSize: zod
     .number()
@@ -113,6 +113,24 @@ export const GetSettingsResponse = zod.object({
     .describe(
       "When true (default), opening the Reader from the Dashboard due-pages section or from the Homework screen automatically enters hide\/practice mode.",
     ),
+  pointsRecitation: zod
+    .number()
+    .describe(
+      "Reward points for one unique page recitation per day. 0 disables. Default 1.",
+    ),
+  pointsStatusUpgrade: zod
+    .number()
+    .describe(
+      "Reward points per quality-ladder level climbed (relearn→hard→good→excellent). 0 disables. Default 1.",
+    ),
+  pointsTelawaRead: zod
+    .number()
+    .describe("Reward points per Telawa page read. 0 disables. Default 1."),
+  pointsTelawaGoal: zod
+    .number()
+    .describe(
+      "Reward points when the Telawa daily page goal is met (once per day). 0 disables. Default 2.",
+    ),
 });
 
 /**
@@ -135,6 +153,18 @@ export const updateSettingsBodyMistakesHardMaxMin = 0;
 export const updateSettingsBodyMistakesHardMaxMax = 100;
 
 export const updateSettingsBodyHomeworkWeeklyReadGoalMax = 50;
+
+export const updateSettingsBodyPointsRecitationMin = 0;
+export const updateSettingsBodyPointsRecitationMax = 1000;
+
+export const updateSettingsBodyPointsStatusUpgradeMin = 0;
+export const updateSettingsBodyPointsStatusUpgradeMax = 1000;
+
+export const updateSettingsBodyPointsTelawaReadMin = 0;
+export const updateSettingsBodyPointsTelawaReadMax = 1000;
+
+export const updateSettingsBodyPointsTelawaGoalMin = 0;
+export const updateSettingsBodyPointsTelawaGoalMax = 1000;
 
 export const UpdateSettingsBody = zod.object({
   excellentDays: zod.number().optional(),
@@ -196,6 +226,26 @@ export const UpdateSettingsBody = zod.object({
     .optional(),
   duePagesSectionCollapsed: zod.boolean().optional(),
   hideReaderOnJump: zod.boolean().optional(),
+  pointsRecitation: zod
+    .number()
+    .min(updateSettingsBodyPointsRecitationMin)
+    .max(updateSettingsBodyPointsRecitationMax)
+    .optional(),
+  pointsStatusUpgrade: zod
+    .number()
+    .min(updateSettingsBodyPointsStatusUpgradeMin)
+    .max(updateSettingsBodyPointsStatusUpgradeMax)
+    .optional(),
+  pointsTelawaRead: zod
+    .number()
+    .min(updateSettingsBodyPointsTelawaReadMin)
+    .max(updateSettingsBodyPointsTelawaReadMax)
+    .optional(),
+  pointsTelawaGoal: zod
+    .number()
+    .min(updateSettingsBodyPointsTelawaGoalMin)
+    .max(updateSettingsBodyPointsTelawaGoalMax)
+    .optional(),
 });
 
 export const updateSettingsResponseBottomNavKeysMax = 5;
@@ -223,7 +273,7 @@ export const UpdateSettingsResponse = zod.object({
   readerFontSize: zod
     .number()
     .describe(
-      "Font size in pixels used for the Quran page text in the Reader. Default 24.",
+      "Font size in pixels used for the Quran page text in the Reader. Default 32.",
     ),
   ayahViewFontSize: zod
     .number()
@@ -292,6 +342,24 @@ export const UpdateSettingsResponse = zod.object({
     .boolean()
     .describe(
       "When true (default), opening the Reader from the Dashboard due-pages section or from the Homework screen automatically enters hide\/practice mode.",
+    ),
+  pointsRecitation: zod
+    .number()
+    .describe(
+      "Reward points for one unique page recitation per day. 0 disables. Default 1.",
+    ),
+  pointsStatusUpgrade: zod
+    .number()
+    .describe(
+      "Reward points per quality-ladder level climbed (relearn→hard→good→excellent). 0 disables. Default 1.",
+    ),
+  pointsTelawaRead: zod
+    .number()
+    .describe("Reward points per Telawa page read. 0 disables. Default 1."),
+  pointsTelawaGoal: zod
+    .number()
+    .describe(
+      "Reward points when the Telawa daily page goal is met (once per day). 0 disables. Default 2.",
     ),
 });
 
@@ -2133,3 +2201,119 @@ export const GetTelawaHomeworkReadingResponse = zod
     ),
   })
   .describe("Homework reading-goal progress across active homework pages.");
+
+/**
+ * @summary Reward points balance, today's points, daily history, and metric breakdown
+ */
+export const GetRewardsSummaryResponse = zod.object({
+  balance: zod
+    .number()
+    .describe("Available points (total earned minus total spent)."),
+  totalEarned: zod.number(),
+  totalSpent: zod.number(),
+  todayPoints: zod.number().describe("Points earned today (server-local day)."),
+  bestDayPoints: zod
+    .number()
+    .describe("Highest single-day points within the dailyPoints window."),
+  dailyPoints: zod
+    .array(
+      zod.object({
+        date: zod.string(),
+        points: zod.number(),
+      }),
+    )
+    .describe("Points earned per day for the last 14 days (oldest first)."),
+  byMetric: zod
+    .array(
+      zod.object({
+        metric: zod.string(),
+        points: zod.number(),
+      }),
+    )
+    .describe("Earned-points breakdown by metric over the last 30 days."),
+});
+
+/**
+ * @summary List the user's prizes
+ */
+export const ListRewardPrizesResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  cost: zod.number(),
+  createdAt: zod.coerce.date(),
+});
+export const ListRewardPrizesResponse = zod.array(ListRewardPrizesResponseItem);
+
+/**
+ * @summary Create a prize
+ */
+export const createRewardPrizeBodyNameMax = 200;
+
+export const createRewardPrizeBodyCostMax = 100000;
+
+export const CreateRewardPrizeBody = zod.object({
+  name: zod.string().min(1).max(createRewardPrizeBodyNameMax),
+  cost: zod.number().min(1).max(createRewardPrizeBodyCostMax),
+});
+
+/**
+ * @summary Update a prize
+ */
+export const UpdateRewardPrizeParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const updateRewardPrizeBodyNameMax = 200;
+
+export const updateRewardPrizeBodyCostMax = 100000;
+
+export const UpdateRewardPrizeBody = zod.object({
+  name: zod.string().min(1).max(updateRewardPrizeBodyNameMax).optional(),
+  cost: zod.number().min(1).max(updateRewardPrizeBodyCostMax).optional(),
+});
+
+export const UpdateRewardPrizeResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  cost: zod.number(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a prize
+ */
+export const DeleteRewardPrizeParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Redeem (collect) a prize using earned points
+ */
+export const RedeemRewardPrizeParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RedeemRewardPrizeResponse = zod.object({
+  redemption: zod.object({
+    id: zod.number(),
+    prizeId: zod.number().nullish(),
+    prizeName: zod.string(),
+    cost: zod.number(),
+    redeemedAt: zod.coerce.date(),
+  }),
+  balance: zod.number().describe("Remaining balance after the redemption."),
+});
+
+/**
+ * @summary List recent prize redemptions
+ */
+export const ListRewardRedemptionsResponseItem = zod.object({
+  id: zod.number(),
+  prizeId: zod.number().nullish(),
+  prizeName: zod.string(),
+  cost: zod.number(),
+  redeemedAt: zod.coerce.date(),
+});
+export const ListRewardRedemptionsResponse = zod.array(
+  ListRewardRedemptionsResponseItem,
+);

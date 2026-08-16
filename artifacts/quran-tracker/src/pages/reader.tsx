@@ -48,6 +48,7 @@ import {
   getGetMistakesQueryKey,
   getListActivePageMistakesQueryKey,
   getGetHomeworkQueryKey,
+  getGetRewardsSummaryQueryKey,
 } from "@workspace/api-client-react";
 import type { PageProgress, ActiveAyahMistake } from "@workspace/api-client-react";
 import { isOfflineQueued } from "@workspace/api-client-react";
@@ -170,6 +171,7 @@ export default function Reader() {
 
   const invalidateTelawa = () => {
     queryClient.invalidateQueries({ queryKey: getGetTelawaTodayQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetRewardsSummaryQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetTelawaStatsQueryKey() });
   };
 
@@ -413,6 +415,7 @@ export default function Reader() {
     queryClient.invalidateQueries({ queryKey: getListSurahProgressQueryKey() });
     queryClient.invalidateQueries({ queryKey: getListRob3ProgressQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetRewardsSummaryQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetJuzDetailQueryKey(juzNumber) });
     for (const s of surahsOnPage) {
       queryClient.invalidateQueries({ queryKey: getGetSurahDetailQueryKey(s.number) });

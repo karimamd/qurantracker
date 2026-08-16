@@ -22,6 +22,7 @@ import type {
   AyahMistakeInput,
   BatchRecitationBody,
   CreateHomeworkBody,
+  CreateRewardPrizeBody,
   DailyChartEntry,
   GetDailyChartParams,
   GetMistakesParams,
@@ -42,8 +43,12 @@ import type {
   RecordRecitationBody,
   RecordTelawaReadBody,
   RecordTelawaScopeReadBody,
+  RedeemRewardPrizeResult,
   RemoveActiveMistakeBody,
   RenamePageBody,
+  RewardPrize,
+  RewardRedemption,
+  RewardsSummary,
   Rob3ProgressItem,
   ScopeBody,
   Settings,
@@ -58,6 +63,7 @@ import type {
   UpdateActiveKhatmahBody,
   UpdateHomeworkBody,
   UpdateHomeworkItemBody,
+  UpdateRewardPrizeBody,
   UpdateScopeCycleBody,
   UpdateSettingsBody,
 } from "./api.schemas";
@@ -3760,6 +3766,572 @@ export function useGetTelawaHomeworkReading<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetTelawaHomeworkReadingQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Reward points balance, today's points, daily history, and metric breakdown
+ */
+export const getGetRewardsSummaryUrl = () => {
+  return `/api/rewards/summary`;
+};
+
+export const getRewardsSummary = async (
+  options?: RequestInit,
+): Promise<RewardsSummary> => {
+  return customFetch<RewardsSummary>(getGetRewardsSummaryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetRewardsSummaryQueryKey = () => {
+  return [`/api/rewards/summary`] as const;
+};
+
+export const getGetRewardsSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRewardsSummary>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRewardsSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetRewardsSummaryQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getRewardsSummary>>
+  > = ({ signal }) => getRewardsSummary({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getRewardsSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetRewardsSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getRewardsSummary>>
+>;
+export type GetRewardsSummaryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Reward points balance, today's points, daily history, and metric breakdown
+ */
+
+export function useGetRewardsSummary<
+  TData = Awaited<ReturnType<typeof getRewardsSummary>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRewardsSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetRewardsSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List the user's prizes
+ */
+export const getListRewardPrizesUrl = () => {
+  return `/api/rewards/prizes`;
+};
+
+export const listRewardPrizes = async (
+  options?: RequestInit,
+): Promise<RewardPrize[]> => {
+  return customFetch<RewardPrize[]>(getListRewardPrizesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListRewardPrizesQueryKey = () => {
+  return [`/api/rewards/prizes`] as const;
+};
+
+export const getListRewardPrizesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listRewardPrizes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listRewardPrizes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListRewardPrizesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listRewardPrizes>>
+  > = ({ signal }) => listRewardPrizes({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listRewardPrizes>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListRewardPrizesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listRewardPrizes>>
+>;
+export type ListRewardPrizesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List the user's prizes
+ */
+
+export function useListRewardPrizes<
+  TData = Awaited<ReturnType<typeof listRewardPrizes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listRewardPrizes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListRewardPrizesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a prize
+ */
+export const getCreateRewardPrizeUrl = () => {
+  return `/api/rewards/prizes`;
+};
+
+export const createRewardPrize = async (
+  createRewardPrizeBody: CreateRewardPrizeBody,
+  options?: RequestInit,
+): Promise<RewardPrize> => {
+  return customFetch<RewardPrize>(getCreateRewardPrizeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createRewardPrizeBody),
+  });
+};
+
+export const getCreateRewardPrizeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createRewardPrize>>,
+    TError,
+    { data: BodyType<CreateRewardPrizeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createRewardPrize>>,
+  TError,
+  { data: BodyType<CreateRewardPrizeBody> },
+  TContext
+> => {
+  const mutationKey = ["createRewardPrize"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createRewardPrize>>,
+    { data: BodyType<CreateRewardPrizeBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createRewardPrize(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateRewardPrizeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createRewardPrize>>
+>;
+export type CreateRewardPrizeMutationBody = BodyType<CreateRewardPrizeBody>;
+export type CreateRewardPrizeMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a prize
+ */
+export const useCreateRewardPrize = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createRewardPrize>>,
+    TError,
+    { data: BodyType<CreateRewardPrizeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createRewardPrize>>,
+  TError,
+  { data: BodyType<CreateRewardPrizeBody> },
+  TContext
+> => {
+  return useMutation(getCreateRewardPrizeMutationOptions(options));
+};
+
+/**
+ * @summary Update a prize
+ */
+export const getUpdateRewardPrizeUrl = (id: number) => {
+  return `/api/rewards/prizes/${id}`;
+};
+
+export const updateRewardPrize = async (
+  id: number,
+  updateRewardPrizeBody: UpdateRewardPrizeBody,
+  options?: RequestInit,
+): Promise<RewardPrize> => {
+  return customFetch<RewardPrize>(getUpdateRewardPrizeUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateRewardPrizeBody),
+  });
+};
+
+export const getUpdateRewardPrizeMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateRewardPrize>>,
+    TError,
+    { id: number; data: BodyType<UpdateRewardPrizeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateRewardPrize>>,
+  TError,
+  { id: number; data: BodyType<UpdateRewardPrizeBody> },
+  TContext
+> => {
+  const mutationKey = ["updateRewardPrize"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateRewardPrize>>,
+    { id: number; data: BodyType<UpdateRewardPrizeBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateRewardPrize(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateRewardPrizeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateRewardPrize>>
+>;
+export type UpdateRewardPrizeMutationBody = BodyType<UpdateRewardPrizeBody>;
+export type UpdateRewardPrizeMutationError = ErrorType<void>;
+
+/**
+ * @summary Update a prize
+ */
+export const useUpdateRewardPrize = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateRewardPrize>>,
+    TError,
+    { id: number; data: BodyType<UpdateRewardPrizeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateRewardPrize>>,
+  TError,
+  { id: number; data: BodyType<UpdateRewardPrizeBody> },
+  TContext
+> => {
+  return useMutation(getUpdateRewardPrizeMutationOptions(options));
+};
+
+/**
+ * @summary Delete a prize
+ */
+export const getDeleteRewardPrizeUrl = (id: number) => {
+  return `/api/rewards/prizes/${id}`;
+};
+
+export const deleteRewardPrize = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteRewardPrizeUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteRewardPrizeMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteRewardPrize>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteRewardPrize>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteRewardPrize"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteRewardPrize>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteRewardPrize(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteRewardPrizeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteRewardPrize>>
+>;
+
+export type DeleteRewardPrizeMutationError = ErrorType<void>;
+
+/**
+ * @summary Delete a prize
+ */
+export const useDeleteRewardPrize = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteRewardPrize>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteRewardPrize>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteRewardPrizeMutationOptions(options));
+};
+
+/**
+ * @summary Redeem (collect) a prize using earned points
+ */
+export const getRedeemRewardPrizeUrl = (id: number) => {
+  return `/api/rewards/prizes/${id}/redeem`;
+};
+
+export const redeemRewardPrize = async (
+  id: number,
+  options?: RequestInit,
+): Promise<RedeemRewardPrizeResult> => {
+  return customFetch<RedeemRewardPrizeResult>(getRedeemRewardPrizeUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRedeemRewardPrizeMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof redeemRewardPrize>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof redeemRewardPrize>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["redeemRewardPrize"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof redeemRewardPrize>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return redeemRewardPrize(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RedeemRewardPrizeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof redeemRewardPrize>>
+>;
+
+export type RedeemRewardPrizeMutationError = ErrorType<void>;
+
+/**
+ * @summary Redeem (collect) a prize using earned points
+ */
+export const useRedeemRewardPrize = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof redeemRewardPrize>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof redeemRewardPrize>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getRedeemRewardPrizeMutationOptions(options));
+};
+
+/**
+ * @summary List recent prize redemptions
+ */
+export const getListRewardRedemptionsUrl = () => {
+  return `/api/rewards/redemptions`;
+};
+
+export const listRewardRedemptions = async (
+  options?: RequestInit,
+): Promise<RewardRedemption[]> => {
+  return customFetch<RewardRedemption[]>(getListRewardRedemptionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListRewardRedemptionsQueryKey = () => {
+  return [`/api/rewards/redemptions`] as const;
+};
+
+export const getListRewardRedemptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listRewardRedemptions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listRewardRedemptions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListRewardRedemptionsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listRewardRedemptions>>
+  > = ({ signal }) => listRewardRedemptions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listRewardRedemptions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListRewardRedemptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listRewardRedemptions>>
+>;
+export type ListRewardRedemptionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List recent prize redemptions
+ */
+
+export function useListRewardRedemptions<
+  TData = Awaited<ReturnType<typeof listRewardRedemptions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listRewardRedemptions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListRewardRedemptionsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

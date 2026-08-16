@@ -97,6 +97,7 @@ import {
 } from "../lib/quran-data";
 import { enrichPageProgress, getSettings, calculateDueDate, ensurePageExists, getDefaultPageName, aggregateQuality } from "../lib/progress-helpers";
 import { maybeAutoAssignPageRecitation } from "../lib/auto-assign-page";
+import { awardRecitationPoints, revokeRecitationPointsIfNone } from "../lib/rewards";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -483,6 +484,12 @@ router.patch("/progress/pages/:pageNumber", async (req, res): Promise<void> => {
   const recitedAt = parsed.data.recitedAt ? new Date(parsed.data.recitedAt) : new Date();
   const dueDate = calculateDueDate(recitedAt, parsed.data.quality, settings);
 
+  const [priorPage] = await db
+    .select({ quality: pageProgressTable.quality })
+    .from(pageProgressTable)
+    .where(and(eq(pageProgressTable.userId, userId), eq(pageProgressTable.pageNumber, pageNumber)))
+    .limit(1);
+
   const [updated] = await db
     .update(pageProgressTable)
     .set({
@@ -503,6 +510,8 @@ router.patch("/progress/pages/:pageNumber", async (req, res): Promise<void> => {
     recitedAt,
     dueDate,
   });
+
+  await awardRecitationPoints(userId, pageNumber, priorPage?.quality ?? null, parsed.data.quality, recitedAt);
 
   // NOTE: per-ayah mistake marks are now persisted instantly via the
   // /progress/pages/:pageNumber/active-mistakes endpoints. The legacy
@@ -923,6 +932,13 @@ router.post("/progress/recite-batch", async (req, res): Promise<void> => {
     .values(validPageNumbers.map(pageNumber => ({ userId, pageNumber })))
     .onConflictDoNothing();
 
+  // Snapshot pre-update qualities for reward status-upgrade detection.
+  const priorRows = await db
+    .select({ pageNumber: pageProgressTable.pageNumber, quality: pageProgressTable.quality })
+    .from(pageProgressTable)
+    .where(and(eq(pageProgressTable.userId, userId), inArray(pageProgressTable.pageNumber, validPageNumbers)));
+  const priorQualityByPage = new Map(priorRows.map(r => [r.pageNumber, r.quality]));
+
   // Bulk-update all page_progress rows in one query
   const updatedRows = await db
     .update(pageProgressTable)
@@ -947,6 +963,10 @@ router.post("/progress/recite-batch", async (req, res): Promise<void> => {
       dueDate,
     }))
   );
+
+  for (const pageNumber of validPageNumbers) {
+    await awardRecitationPoints(userId, pageNumber, priorQualityByPage.get(pageNumber) ?? null, parsed.data.quality, recitedAt);
+  }
 
   const results = updatedRows.map(enrichPageProgress);
   if (validPageNumbers.length > 0) {
@@ -1258,6 +1278,7 @@ router.delete("/progress/activity/:id", async (req, res): Promise<void> => {
   // the value it had when the prior log was first recorded.
   const settings = await getSettings(userId);
 
+  let undoneRecitation: { pageNumber: number; recitedAt: Date } | null = null;
   const updated = await db.transaction(async (tx) => {
     // Lock the page_progress row to serialize concurrent writes for this page
     // (e.g. two simultaneous undos, or undo racing with a new recitation).
@@ -1285,6 +1306,7 @@ router.delete("/progress/activity/:id", async (req, res): Promise<void> => {
       .where(and(eq(recitationLogTable.id, params.data.id), eq(recitationLogTable.userId, userId)));
 
     const pageNumber = logEntry.pageNumber;
+    undoneRecitation = { pageNumber, recitedAt: logEntry.recitedAt };
 
     const [mostRecent] = await tx
       .select()
@@ -1366,6 +1388,11 @@ router.delete("/progress/activity/:id", async (req, res): Promise<void> => {
   if (!updated) {
     res.status(404).json({ error: "Activity entry not found" });
     return;
+  }
+
+  const undone = undoneRecitation as { pageNumber: number; recitedAt: Date } | null;
+  if (undone) {
+    await revokeRecitationPointsIfNone(userId, undone.pageNumber, undone.recitedAt);
   }
 
   res.json(UndoRecitationResponse.parse(enrichPageProgress(updated)));

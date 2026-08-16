@@ -24,3 +24,4 @@ export * from "./ayah-attempts";
 export * from "./telawa";
 export * from "./telawa-khatmah";
 export * from "./telawa-scope";
+export * from "./rewards";

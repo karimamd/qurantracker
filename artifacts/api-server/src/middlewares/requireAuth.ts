@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 import { randomUUID } from "node:crypto";
 import { getAuth, clerkClient } from "@clerk/express";
-import { db, pageProgressTable, recitationLogTable, homeworkSessionsTable, homeworkItemsTable, settingsTable, ayahMistakesTable, telawaLogTable } from "@workspace/db";
+import { db, pageProgressTable, recitationLogTable, homeworkSessionsTable, homeworkItemsTable, settingsTable, ayahMistakesTable, telawaLogTable, rewardEventsTable, rewardPrizesTable, rewardRedemptionsTable } from "@workspace/db";
 import { and, eq, exists, isNull, notExists, sql } from "drizzle-orm";
 
 declare global {
@@ -125,6 +125,41 @@ async function migrateGuestData(guestUserId: string, newUserId: string, log: Req
         .set({ userId: newUserId })
         .where(eq(telawaLogTable.userId, guestUserId));
 
+      // reward_events: unique(user_id, metric, source_ref) — same policy as
+      // page_progress: the signed-in user's existing ledger row wins; drop
+      // the colliding guest row, then move the rest.
+      const droppedRewardEvents = await tx
+        .delete(rewardEventsTable)
+        .where(
+          and(
+            eq(rewardEventsTable.userId, guestUserId),
+            exists(
+              tx
+                .select({ one: sql`1` })
+                .from(sql`${rewardEventsTable} AS existing`)
+                .where(
+                  sql`existing.user_id = ${newUserId} AND existing.metric = ${rewardEventsTable.metric} AND existing.source_ref = ${rewardEventsTable.sourceRef}`,
+                ),
+            ),
+          ),
+        );
+      const rewardEvents = await tx
+        .update(rewardEventsTable)
+        .set({ userId: newUserId })
+        .where(eq(rewardEventsTable.userId, guestUserId));
+
+      // reward_prizes / reward_redemptions: no user-scoped uniqueness, and
+      // redemptions reference prizes by id (row ids don't change), so plain
+      // updates preserve the prize↔redemption relationship.
+      const rewardPrizes = await tx
+        .update(rewardPrizesTable)
+        .set({ userId: newUserId })
+        .where(eq(rewardPrizesTable.userId, guestUserId));
+      const rewardRedemptions = await tx
+        .update(rewardRedemptionsTable)
+        .set({ userId: newUserId })
+        .where(eq(rewardRedemptionsTable.userId, guestUserId));
+
       return {
         settingsDropped: droppedSettings.rowCount ?? 0,
         settingsMoved: updatedSettings.rowCount ?? 0,
@@ -135,6 +170,10 @@ async function migrateGuestData(guestUserId: string, newUserId: string, log: Req
         itemsMoved: items.rowCount ?? 0,
         ayahMistakesMoved: ayahMistakes.rowCount ?? 0,
         telawaMoved: telawa.rowCount ?? 0,
+        rewardEventsDropped: droppedRewardEvents.rowCount ?? 0,
+        rewardEventsMoved: rewardEvents.rowCount ?? 0,
+        rewardPrizesMoved: rewardPrizes.rowCount ?? 0,
+        rewardRedemptionsMoved: rewardRedemptions.rowCount ?? 0,
       };
     });
     log?.info({ guestUserId, newUserId, ...counts }, "Migrated guest data to signed-in user");
@@ -193,6 +232,9 @@ async function maybeClaimOrphansForUser(userId: string, log: Request["log"]): Pr
       db.update(settingsTable).set({ userId }).where(isNull(settingsTable.userId)),
       db.update(ayahMistakesTable).set({ userId }).where(isNull(ayahMistakesTable.userId)),
       db.update(telawaLogTable).set({ userId }).where(isNull(telawaLogTable.userId)),
+      db.update(rewardEventsTable).set({ userId }).where(isNull(rewardEventsTable.userId)),
+      db.update(rewardPrizesTable).set({ userId }).where(isNull(rewardPrizesTable.userId)),
+      db.update(rewardRedemptionsTable).set({ userId }).where(isNull(rewardRedemptionsTable.userId)),
     ]);
     log?.info(
       {

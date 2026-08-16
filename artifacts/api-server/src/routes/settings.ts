@@ -16,6 +16,8 @@ import { db, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { UpdateSettingsBody, GetSettingsResponse, UpdateSettingsResponse } from "@workspace/api-zod";
 import { getSettings } from "../lib/progress-helpers";
+import { syncTelawaGoalPoints } from "../lib/rewards";
+import { getTelawaTodaySnapshot } from "./telawa";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -53,6 +55,18 @@ router.patch("/settings", requireAuth, async (req, res): Promise<void> => {
     .set(parsed.data)
     .where(eq(settingsTable.id, current.id))
     .returning();
+
+  // Changing the default Telawa daily goal (or the goal-bonus point value)
+  // can move today's read count above/below the bonus threshold — resync
+  // the once-per-day goal reward. Non-fatal like all reward writes.
+  if (parsed.data.telawaPagesPerDay !== undefined || parsed.data.pointsTelawaGoal !== undefined) {
+    try {
+      const today = await getTelawaTodaySnapshot(req.userId!);
+      await syncTelawaGoalPoints(req.userId!, today.readToday, today.pagesPerDay);
+    } catch {
+      // reward sync is best-effort
+    }
+  }
 
   res.json(UpdateSettingsResponse.parse(updated));
 });

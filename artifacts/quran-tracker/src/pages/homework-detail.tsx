@@ -13,6 +13,7 @@ import {
   getListActivePageMistakesQueryKey,
   isOfflineQueued,
   type ActiveAyahMistake,
+  getGetRewardsSummaryQueryKey,
 } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -441,6 +442,7 @@ export default function HomeworkDetail() {
           // refetch too or it keeps showing ayahs for the old page set.
           queryClient.invalidateQueries({ queryKey: getGetHomeworkAyahsQueryKey(homeworkId) });
           queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetRewardsSummaryQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
         },
         onError: () => toast({ title: t("homework.updateFailed"), variant: "destructive" }),
@@ -451,6 +453,7 @@ export default function HomeworkDetail() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetHomeworkQueryKey(homeworkId) });
     queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetRewardsSummaryQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetProgressOverviewQueryKey() });
     queryClient.invalidateQueries({ queryKey: getListPageProgressQueryKey() });
   };

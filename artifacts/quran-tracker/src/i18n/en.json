@@ -227,7 +227,8 @@
     "default": "Default",
     "rename": "Rename",
     "open": "Open",
-    "notFound": "Not found"
+    "notFound": "Not found",
+    "edit": "Edit"
   },
   "quality": {
     "excellent": "Excellent",
@@ -983,5 +984,46 @@
     "submitting": "Adding…",
     "addedToast_one": "Added {{count}} page to scope as {{quality}}",
     "addedToast_other": "Added {{count}} pages to scope as {{quality}}"
+  },
+  "rewards": {
+    "title": "Rewards",
+    "balance": "Available points",
+    "today": "Today",
+    "spent": "Spent",
+    "dailyChartTitle": "Daily points",
+    "last14Days": "Last 14 days",
+    "last30Days": "Last 30 days",
+    "noPointsYet": "No points earned yet — recite a page to start earning!",
+    "pointsCount_one": "{{count}} point",
+    "pointsCount_other": "{{count}} points",
+    "breakdownTitle": "Points by activity",
+    "metric": {
+      "recitation": "Page recitation (per page, per day)",
+      "statusUpgrade": "Page status upgrade (per level)",
+      "telawaRead": "Telawa page read",
+      "telawaGoal": "Telawa daily goal met"
+    },
+    "prizesTitle": "Prizes",
+    "addPrize": "Add prize",
+    "editPrize": "Edit prize",
+    "noPrizes": "No prizes yet. Add one to spend your points on!",
+    "prizeName": "Prize name",
+    "prizeCost": "Cost (points)",
+    "redeem": "Collect",
+    "redeemConfirmTitle": "Collect this prize?",
+    "redeemConfirmDescription": "\"{{name}}\" will cost {{cost}} points from your balance.",
+    "redeemSuccess": "Enjoy your prize: {{name}}!",
+    "redeemInsufficient": "Not enough points for this prize.",
+    "deletePrizeTitle": "Delete prize?",
+    "deletePrizeDescription": "This removes the prize from the list. Past redemptions are kept.",
+    "redemptionsTitle": "Collected prizes",
+    "configTitle": "Point values",
+    "configHint": "How many points each activity earns. Set to 0 to disable.",
+    "dashboard": {
+      "title": "Rewards",
+      "todayPoints_one": "{{count}} point earned today",
+      "todayPoints_other": "{{count}} points earned today",
+      "balanceLabel": "Balance"
+    }
   }
 }

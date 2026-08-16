@@ -8,6 +8,7 @@ import {
   useGetSettings,
   getGetTelawaTodayQueryKey,
   getGetTelawaStatsQueryKey,
+  getGetRewardsSummaryQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ export default function TelawaPage() {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetTelawaTodayQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetRewardsSummaryQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetTelawaStatsQueryKey() });
   };
 

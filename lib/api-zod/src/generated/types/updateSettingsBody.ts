@@ -50,4 +50,24 @@ export interface UpdateSettingsBody {
   homeworkWeeklyReadGoal?: number;
   duePagesSectionCollapsed?: boolean;
   hideReaderOnJump?: boolean;
+  /**
+   * @minimum 0
+   * @maximum 1000
+   */
+  pointsRecitation?: number;
+  /**
+   * @minimum 0
+   * @maximum 1000
+   */
+  pointsStatusUpgrade?: number;
+  /**
+   * @minimum 0
+   * @maximum 1000
+   */
+  pointsTelawaRead?: number;
+  /**
+   * @minimum 0
+   * @maximum 1000
+   */
+  pointsTelawaGoal?: number;
 }

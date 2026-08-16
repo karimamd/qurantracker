@@ -11,6 +11,7 @@ import homeworkRouter from "./homework";
 import telawaRouter from "./telawa";
 import telawaScopeRouter from "./telawa-scope";
 import backupRouter from "./backup";
+import rewardsRouter from "./rewards";
 
 const router: IRouter = Router();
 
@@ -21,5 +22,6 @@ router.use(homeworkRouter);
 router.use(telawaRouter);
 router.use(telawaScopeRouter);
 router.use(backupRouter);
+router.use(rewardsRouter);
 
 export default router;

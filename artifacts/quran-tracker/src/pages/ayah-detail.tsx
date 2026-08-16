@@ -42,6 +42,7 @@ import {
   getGetJuzDetailQueryKey,
   getGetSurahDetailQueryKey,
   getListHomeworkQueryKey,
+  getGetRewardsSummaryQueryKey,
 } from "@workspace/api-client-react";
 import type { ActiveAyahMistake } from "@workspace/api-client-react";
 import { isOfflineQueued } from "@workspace/api-client-react";
@@ -291,6 +292,7 @@ export default function AyahDetail() {
     queryClient.invalidateQueries({ queryKey: getListSurahProgressQueryKey() });
     queryClient.invalidateQueries({ queryKey: getListRob3ProgressQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetRewardsSummaryQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetJuzDetailQueryKey(ayah.juzNumber) });
     queryClient.invalidateQueries({ queryKey: getGetSurahDetailQueryKey(ayah.surahNumber) });
     queryClient.invalidateQueries({ queryKey: getListHomeworkQueryKey() });

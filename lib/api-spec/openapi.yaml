@@ -18,6 +18,8 @@ tags:
     description: Homework session tracking
   - name: telawa
     description: Recurring read-only Telawa rotation across all 604 pages
+  - name: rewards
+    description: Reward points, prizes, and redemptions
 paths:
   /healthz:
     get:
@@ -887,6 +889,131 @@ paths:
               schema:
                 $ref: "#/components/schemas/TelawaHomeworkReading"
 
+  /rewards/summary:
+    get:
+      operationId: getRewardsSummary
+      tags: [rewards]
+      summary: Reward points balance, today's points, daily history, and metric breakdown
+      responses:
+        "200":
+          description: Rewards summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RewardsSummary"
+
+  /rewards/prizes:
+    get:
+      operationId: listRewardPrizes
+      tags: [rewards]
+      summary: List the user's prizes
+      responses:
+        "200":
+          description: Prize list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RewardPrize"
+    post:
+      operationId: createRewardPrize
+      tags: [rewards]
+      summary: Create a prize
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRewardPrizeBody"
+      responses:
+        "201":
+          description: Created prize
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RewardPrize"
+
+  /rewards/prizes/{id}:
+    patch:
+      operationId: updateRewardPrize
+      tags: [rewards]
+      summary: Update a prize
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRewardPrizeBody"
+      responses:
+        "200":
+          description: Updated prize
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RewardPrize"
+        "404":
+          description: Prize not found
+    delete:
+      operationId: deleteRewardPrize
+      tags: [rewards]
+      summary: Delete a prize
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Prize not found
+
+  /rewards/prizes/{id}/redeem:
+    post:
+      operationId: redeemRewardPrize
+      tags: [rewards]
+      summary: Redeem (collect) a prize using earned points
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Redemption recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedeemRewardPrizeResult"
+        "400":
+          description: Insufficient points
+        "404":
+          description: Prize not found
+
+  /rewards/redemptions:
+    get:
+      operationId: listRewardRedemptions
+      tags: [rewards]
+      summary: List recent prize redemptions
+      responses:
+        "200":
+          description: Redemption history (most recent first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RewardRedemption"
+
 components:
   schemas:
     HealthStatus:
@@ -956,6 +1083,18 @@ components:
         hideReaderOnJump:
           type: boolean
           description: When true (default), opening the Reader from the Dashboard due-pages section or from the Homework screen automatically enters hide/practice mode.
+        pointsRecitation:
+          type: integer
+          description: Reward points for one unique page recitation per day. 0 disables. Default 1.
+        pointsStatusUpgrade:
+          type: integer
+          description: Reward points per quality-ladder level climbed (relearn→hard→good→excellent). 0 disables. Default 1.
+        pointsTelawaRead:
+          type: integer
+          description: Reward points per Telawa page read. 0 disables. Default 1.
+        pointsTelawaGoal:
+          type: integer
+          description: Reward points when the Telawa daily page goal is met (once per day). 0 disables. Default 2.
       required:
         - id
         - excellentDays
@@ -974,6 +1113,10 @@ components:
         - homeworkWeeklyReadGoal
         - duePagesSectionCollapsed
         - hideReaderOnJump
+        - pointsRecitation
+        - pointsStatusUpgrade
+        - pointsTelawaRead
+        - pointsTelawaGoal
 
     UpdateSettingsBody:
       type: object
@@ -1027,6 +1170,135 @@ components:
           type: boolean
         hideReaderOnJump:
           type: boolean
+        pointsRecitation:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        pointsStatusUpgrade:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        pointsTelawaRead:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        pointsTelawaGoal:
+          type: integer
+          minimum: 0
+          maximum: 1000
+
+    RewardsSummary:
+      type: object
+      properties:
+        balance:
+          type: integer
+          description: Available points (total earned minus total spent).
+        totalEarned:
+          type: integer
+        totalSpent:
+          type: integer
+        todayPoints:
+          type: integer
+          description: Points earned today (server-local day).
+        bestDayPoints:
+          type: integer
+          description: Highest single-day points within the dailyPoints window.
+        dailyPoints:
+          type: array
+          description: Points earned per day for the last 14 days (oldest first).
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              points:
+                type: integer
+            required: [date, points]
+        byMetric:
+          type: array
+          description: Earned-points breakdown by metric over the last 30 days.
+          items:
+            type: object
+            properties:
+              metric:
+                type: string
+              points:
+                type: integer
+            required: [metric, points]
+      required:
+        - balance
+        - totalEarned
+        - totalSpent
+        - todayPoints
+        - bestDayPoints
+        - dailyPoints
+        - byMetric
+
+    RewardPrize:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        cost:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, cost, createdAt]
+
+    CreateRewardPrizeBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        cost:
+          type: integer
+          minimum: 1
+          maximum: 100000
+      required: [name, cost]
+
+    UpdateRewardPrizeBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        cost:
+          type: integer
+          minimum: 1
+          maximum: 100000
+
+    RewardRedemption:
+      type: object
+      properties:
+        id:
+          type: integer
+        prizeId:
+          type: integer
+          nullable: true
+        prizeName:
+          type: string
+        cost:
+          type: integer
+        redeemedAt:
+          type: string
+          format: date-time
+      required: [id, prizeName, cost, redeemedAt]
+
+    RedeemRewardPrizeResult:
+      type: object
+      properties:
+        redemption:
+          $ref: "#/components/schemas/RewardRedemption"
+        balance:
+          type: integer
+          description: Remaining balance after the redemption.
+      required: [redemption, balance]
 
     ProgressOverview:
       type: object
