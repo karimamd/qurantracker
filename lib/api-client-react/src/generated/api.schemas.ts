@@ -81,7 +81,7 @@ export interface Settings {
   duePagesSectionCollapsed: boolean;
   /** When true (default), opening the Reader from the Dashboard due-pages section or from the Homework screen automatically enters hide/practice mode. */
   hideReaderOnJump: boolean;
-  /** Reward points for one unique page recitation per day. 0 disables. Default 1. */
+  /** Reward points for one unique page recall-from-memory recitation per day. 0 disables. Default 2. */
   pointsRecitation: number;
   /** Reward points per quality-ladder level climbed (relearn→hard→good→excellent). 0 disables. Default 1. */
   pointsStatusUpgrade: number;

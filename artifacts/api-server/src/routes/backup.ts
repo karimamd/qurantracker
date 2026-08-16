@@ -112,7 +112,7 @@ const SettingsImport = z.object({
   // and restore with the schema default (true).
   duePagesSectionCollapsed: z.boolean().optional(),
   // Optional for backward compatibility — older backups predate the
-  // reward system and restore with the schema defaults (1/1/1/2).
+  // reward system and restore with the schema defaults (2/1/1/2).
   pointsRecitation: z.number().int().min(0).max(1000).optional(),
   pointsStatusUpgrade: z.number().int().min(0).max(1000).optional(),
   pointsTelawaRead: z.number().int().min(0).max(1000).optional(),

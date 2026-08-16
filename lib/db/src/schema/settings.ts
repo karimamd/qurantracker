@@ -88,7 +88,7 @@ export const settingsTable = pgTable("settings", {
   hideReaderOnJump: boolean("hide_reader_on_jump").notNull().default(true),
   // ---- Reward system point values (0 disables the metric) ----
   // Points for one unique page recitation per day.
-  pointsRecitation: integer("points_recitation").notNull().default(1),
+  pointsRecitation: integer("points_recitation").notNull().default(2),
   // Points per quality-ladder level climbed (relearn→hard→good→excellent)
   // relative to the page's quality before today's first recitation.
   pointsStatusUpgrade: integer("points_status_upgrade").notNull().default(1),

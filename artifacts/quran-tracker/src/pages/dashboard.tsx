@@ -213,19 +213,53 @@ function ActiveHomeworkSection() {
 function RewardsCard() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
-  const { data, isLoading } = useGetRewardsSummary();
+  const { data, isLoading, isError, refetch, isFetching } = useGetRewardsSummary();
 
-  if (isLoading) return <Skeleton className="h-20 rounded-xl" />;
-  if (!data) return null;
+  if (isLoading) return <Skeleton className="h-28 rounded-xl" />;
+
+  // The card stays visible even when the summary cannot be loaded, but it
+  // must never impersonate a real zero balance — show an explicit error
+  // state with a retry instead.
+  if (isError || !data) {
+    return (
+      <div
+        className="rounded-xl border-2 border-amber-300 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-800 py-4 px-5 flex items-center justify-between gap-3"
+        data-testid="dashboard-rewards-card-error"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-11 h-11 rounded-full bg-amber-400/20 flex items-center justify-center shrink-0">
+            <Trophy className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-0.5">
+              {t("rewards.dashboard.title")}
+            </p>
+            <p className="text-sm text-muted-foreground truncate">{t("common.loadError")}</p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0"
+          disabled={isFetching}
+          onClick={() => void refetch()}
+        >
+          {t("common.retry")}
+        </Button>
+      </div>
+    );
+  }
+
+  const summary = data;
 
   // Scale today's bar against the best day in the window (min 10 so a
   // fresh account still shows a sensible partial bar).
-  const scale = Math.max(10, data.bestDayPoints);
-  const pct = Math.min(100, Math.round((data.todayPoints / scale) * 100));
+  const scale = Math.max(10, summary.bestDayPoints);
+  const pct = Math.min(100, Math.round((summary.todayPoints / scale) * 100));
 
   return (
     <div
-      className="border rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer bg-card"
+      className="rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/40 dark:to-yellow-950/30 dark:border-amber-700"
       onClick={() => setLocation("/rewards")}
       data-testid="dashboard-rewards-card"
       role="button"
@@ -233,22 +267,28 @@ function RewardsCard() {
       onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setLocation("/rewards"); }}
     >
       <div className="py-4 px-5">
-        <div className="flex items-center justify-between mb-2">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-primary uppercase tracking-wide mb-0.5 flex items-center gap-1.5">
-              <Trophy className="w-3.5 h-3.5" />
-              {t("rewards.dashboard.title")}
-            </p>
-            <p className="font-semibold text-sm truncate">
-              {t("rewards.dashboard.todayPoints", { count: data.todayPoints })}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 ms-3">
-            <div className="text-end">
-              <p className="text-xs text-muted-foreground">{t("rewards.dashboard.balanceLabel")}</p>
-              <p className="text-xs font-medium">{t("rewards.pointsCount", { count: data.balance })}</p>
+        <div className="flex items-center justify-between mb-3 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-full bg-amber-400/25 flex items-center justify-center shrink-0">
+              <Trophy className="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground rtl:rotate-180" />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-0.5">
+                {t("rewards.dashboard.title")}
+              </p>
+              <p className="font-semibold text-sm truncate">
+                {t("rewards.dashboard.todayPoints", { count: summary.todayPoints })}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="text-end">
+              <p className="text-[11px] text-muted-foreground leading-tight">{t("rewards.dashboard.balanceLabel")}</p>
+              <p className="text-2xl font-bold text-amber-700 dark:text-amber-400 leading-tight tabular-nums">
+                {summary.balance}
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-amber-600/70 rtl:rotate-180" />
           </div>
         </div>
         <Progress value={pct} className="h-2" />
@@ -1553,10 +1593,11 @@ export default function Dashboard() {
         ))}
       </div>
 
+      <RewardsCard />
+
       <ActiveHomeworkSection />
 
       <TelawaCard />
-      <RewardsCard />
 
       <TelawaScopeCard />
 

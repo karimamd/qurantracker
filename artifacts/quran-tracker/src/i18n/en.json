@@ -205,6 +205,8 @@
     "saving": "Saving...",
     "creating": "Creating...",
     "loading": "Loading...",
+    "loadError": "Couldn't load right now.",
+    "retry": "Retry",
     "search": "Search",
     "filter": "Filter",
     "clear": "Clear",
@@ -994,12 +996,12 @@
     "dailyChartTitle": "Daily points",
     "last14Days": "Last 14 days",
     "last30Days": "Last 30 days",
-    "noPointsYet": "No points earned yet — recite a page to start earning!",
+    "noPointsYet": "No points earned yet — recall a page from memory or read Telawa to start earning!",
     "pointsCount_one": "{{count}} point",
     "pointsCount_other": "{{count}} points",
     "breakdownTitle": "Points by activity",
     "metric": {
-      "recitation": "Page recitation (per page, per day)",
+      "recitation": "Recall from memory (per page, per day)",
       "statusUpgrade": "Page status upgrade (per level)",
       "telawaRead": "Telawa page read",
       "telawaGoal": "Telawa daily goal met"

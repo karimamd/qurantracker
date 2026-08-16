@@ -116,7 +116,7 @@ export const GetSettingsResponse = zod.object({
   pointsRecitation: zod
     .number()
     .describe(
-      "Reward points for one unique page recitation per day. 0 disables. Default 1.",
+      "Reward points for one unique page recall-from-memory recitation per day. 0 disables. Default 2.",
     ),
   pointsStatusUpgrade: zod
     .number()
@@ -346,7 +346,7 @@ export const UpdateSettingsResponse = zod.object({
   pointsRecitation: zod
     .number()
     .describe(
-      "Reward points for one unique page recitation per day. 0 disables. Default 1.",
+      "Reward points for one unique page recall-from-memory recitation per day. 0 disables. Default 2.",
     ),
   pointsStatusUpgrade: zod
     .number()

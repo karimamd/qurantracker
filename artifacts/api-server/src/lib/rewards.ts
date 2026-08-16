@@ -50,7 +50,7 @@ async function getPointConfig(userId: string) {
     .from(settingsTable)
     .where(eq(settingsTable.userId, userId))
     .limit(1);
-  return row ?? { recitation: 1, statusUpgrade: 1, telawaRead: 1, telawaGoal: 2 };
+  return row ?? { recitation: 2, statusUpgrade: 1, telawaRead: 1, telawaGoal: 2 };
 }
 
 /**

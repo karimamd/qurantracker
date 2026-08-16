@@ -10,4 +10,6 @@
 - [TanStack persist must version-lock to react-query](tanstack-persist-version-lock.md) — a query-core version split makes the persister hydrate a different QueryClient class and restore silently no-ops.
 - [Lazy per-user row creation must tolerate conflicts](lazy-row-creation-races.md) — concurrent first-load endpoints race on unique indexes; use onConflictDoNothing + re-select or the first load 500s.
 - [Orval nullable codegen bug](orval-nullable-codegen-bug.md) — codegen re-emits invalid `interface X {...} | null`; patch generated files + run tsc -b on shared libs after every codegen.
+- [Schema default changes need a backfill](drizzle-push-no-migrations.md) — drizzle-kit push, no migrations dir; a new column default never reaches existing rows without an explicit UPDATE.
+- [Rewards metric naming](rewards-metric-naming.md) — DB key stays `recitation`; English label is "Recall from memory", Arabic تسميع. Don't sync key and label.
 - [User-scoped table hook sites](user-scoped-table-hook-sites.md) — new user-scoped tables/settings must be wired into backup export/import/wipe AND guest→account migration, or data is silently lost.
