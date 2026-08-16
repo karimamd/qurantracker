@@ -25,6 +25,7 @@ export const ALLOWED_BOTTOM_NAV_KEYS = [
   "recite",
   "welcome",
   "settings",
+  "rewards",
 ] as const;
 
 export type BottomNavKey = (typeof ALLOWED_BOTTOM_NAV_KEYS)[number];

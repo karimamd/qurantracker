@@ -1055,7 +1055,7 @@ components:
           maxItems: 5
           items:
             type: string
-            enum: [homework, dashboard, telawa, reader, mistakes, juz, rub, surah, pages, ayahs, recite, welcome, settings]
+            enum: [homework, dashboard, telawa, reader, mistakes, juz, rub, surah, pages, ayahs, recite, welcome, settings, rewards]
         autoAssignPageFromAyahs:
           type: boolean
           description: When true, the server automatically records a page recitation once every ayah on that page has been marked (cleared or with mistake types) today. Default false.
@@ -1149,7 +1149,7 @@ components:
           maxItems: 5
           items:
             type: string
-            enum: [homework, dashboard, telawa, reader, mistakes, juz, rub, surah, pages, ayahs, recite, welcome, settings]
+            enum: [homework, dashboard, telawa, reader, mistakes, juz, rub, surah, pages, ayahs, recite, welcome, settings, rewards]
         autoAssignPageFromAyahs:
           type: boolean
         mistakesGoodMax:

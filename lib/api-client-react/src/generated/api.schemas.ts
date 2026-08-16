@@ -34,6 +34,7 @@ export const SettingsBottomNavKeysItem = {
   recite: 'recite',
   welcome: 'welcome',
   settings: 'settings',
+  rewards: 'rewards',
 } as const;
 
 export interface Settings {
@@ -115,6 +116,7 @@ export const UpdateSettingsBodyBottomNavKeysItem = {
   recite: 'recite',
   welcome: 'welcome',
   settings: 'settings',
+  rewards: 'rewards',
 } as const;
 
 export interface UpdateSettingsBody {

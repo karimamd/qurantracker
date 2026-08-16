@@ -15,7 +15,7 @@
  * here for guest exit) so the next user's data starts cold.
  */
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info, AlertTriangle, Repeat, Sparkles, Compass, WifiOff } from "lucide-react";
+import { LayoutDashboard, BookOpen, BookMarked, Layers, Grid3x3, FileText, PenLine, ClipboardList, Settings, LogOut, UserPlus, Info, AlertTriangle, Repeat, Sparkles, Compass, WifiOff, Trophy } from "lucide-react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { UserButton, useUser, useClerk, useAuth } from "@clerk/react";
@@ -41,6 +41,7 @@ const navItems = [
   { href: "/recite", key: "recite", testId: "recite", icon: PenLine },
   { href: "/welcome", key: "welcome", testId: "welcome", icon: Compass },
   { href: "/settings", key: "settings", testId: "settings", icon: Settings },
+  { href: "/rewards", key: "rewards", testId: "rewards", icon: Trophy },
 ] as const;
 
 // Mobile bottom-nav: the user picks which screens (and order) appear here

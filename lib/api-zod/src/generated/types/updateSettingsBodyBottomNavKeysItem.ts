@@ -23,4 +23,5 @@ export const UpdateSettingsBodyBottomNavKeysItem = {
   recite: "recite",
   welcome: "welcome",
   settings: "settings",
+  rewards: "rewards",
 } as const;
